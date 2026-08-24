@@ -7,8 +7,6 @@ describe("App", () => {
   it("renders the application shell heading", () => {
     render(<App />);
 
-    expect(
-      screen.getByRole("heading", { name: "Monitoramento de Rotas" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Monitoramento de Rotas" })).toBeInTheDocument();
   });
 });
