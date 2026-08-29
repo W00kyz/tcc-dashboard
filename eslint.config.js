@@ -16,6 +16,7 @@ export default tseslint.config(
       "coverage/**",
       "node_modules/**",
       "eslint.config.js",
+      "src/api/generated/**",
       "src/components/ui/**",
       "src/lib/utils.ts",
     ],
