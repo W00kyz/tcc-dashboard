@@ -1,7 +1,12 @@
-import { describe, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
+import { App } from "./App";
 
 describe("App", () => {
-  // Real assertion moves to src/routes/LoginPage.test.tsx once Task 12 adds
-  // the login screen at /entrar; the root path only redirects there.
-  it.todo("redirects the root path to the login screen");
+  it("redirects the root path to the login screen", async () => {
+    render(<App />);
+
+    expect(await screen.findByText("PU · UFCG")).toBeInTheDocument();
+  });
 });

@@ -20,6 +20,12 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // No .env file exists for tests (infra/docker-compose.yml injects the real value at
+    // build time — Task 8). Without this, apiBaseUrl is undefined and openapi-fetch's
+    // Request construction throws "Failed to parse URL from /auth/login" before the
+    // mocked fetch ever runs, making any test that hits the API client fail for the
+    // wrong reason regardless of the mocked response.
+    env: { VITE_API_BASE_URL: "http://localhost:8000" },
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
