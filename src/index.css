@@ -1,0 +1,83 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --radius: 0.375rem;
+
+  --color-background: #f7f7f4;
+  --color-foreground: #1a1f1c;
+  --color-primary: #1b4332;
+  --color-primary-foreground: #f7f7f4;
+  --color-muted: #e7e5de;
+  --color-muted-foreground: #5c6058;
+  --color-border: #d8d5cc;
+  --color-card: #ffffff;
+  --color-card-foreground: #1a1f1c;
+  --color-destructive: #b23a34;
+  --color-destructive-foreground: #f7f7f4;
+
+  /* Semantic slots shadcn's generated components expect (focus rings, form
+   * borders, secondary/accent surfaces) but Step 2's palette didn't name —
+   * mapped onto already-decided tokens above, not new color decisions. */
+  --color-ring: #1b4332;
+  --color-input: #d8d5cc;
+  --color-secondary: #e7e5de;
+  --color-secondary-foreground: #1a1f1c;
+  --color-accent: #e7e5de;
+  --color-accent-foreground: #1a1f1c;
+
+  --color-status-pending: #8a8f87;
+  --color-status-progress: #b5792b;
+  --color-status-done: #2f7a4c;
+  --color-status-late: #b23a34;
+}
+
+/* Dark overrides go on a plain :root, not another @theme block: @theme is a
+ * compile-time registry Tailwind v4 flattens into a single namespace, so a
+ * second @theme with the same custom property names — even nested inside a
+ * @media block — silently wins over the first at build time instead of
+ * applying conditionally at runtime (verified against the compiled output:
+ * the light values never reached the bundle). A plain :root override inside
+ * the media query is the correct, standard CSS-custom-property mechanism for
+ * a runtime-conditional value swap; the utilities still reference
+ * var(--color-*), so the cascade resolves it normally. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: #12160f;
+    --color-foreground: #ede9df;
+    --color-primary: #4e8467;
+    --color-primary-foreground: #12160f;
+    --color-muted: #1c2118;
+    --color-muted-foreground: #a3a89b;
+    --color-border: #2a2f25;
+    --color-card: #171b13;
+    --color-card-foreground: #ede9df;
+    --color-destructive: #d9534b;
+    --color-destructive-foreground: #12160f;
+
+    --color-ring: #4e8467;
+    --color-input: #2a2f25;
+    --color-secondary: #1c2118;
+    --color-secondary-foreground: #ede9df;
+    --color-accent: #1c2118;
+    --color-accent-foreground: #ede9df;
+
+    --color-status-pending: #6f746a;
+    --color-status-progress: #c98f45;
+    --color-status-done: #4a9968;
+    --color-status-late: #d9534b;
+  }
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}

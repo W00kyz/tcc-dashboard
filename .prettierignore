@@ -2,3 +2,8 @@ dist
 coverage
 node_modules
 package-lock.json
+
+# shadcn/ui CLI output: kept verbatim as generated, not reformatted to this
+# project's style (Task 10 of Etapa 2).
+src/components/ui
+src/lib/utils.ts

@@ -7,7 +7,19 @@ export default tseslint.config(
   // eslint.config.js fica fora do projeto TS: linká-lo ao type checking do
   // typescript-eslint via projectService é um caso conhecido e instável
   // (o próprio arquivo de config não pertence a nenhum tsconfig do projeto).
-  { ignores: ["dist/**", "coverage/**", "node_modules/**", "eslint.config.js"] },
+  {
+    // src/components/ui and src/lib/utils.ts are shadcn/ui CLI output, kept
+    // verbatim as generated rather than hand-edited to this project's strict
+    // lint rules (Task 10 of Etapa 2).
+    ignores: [
+      "dist/**",
+      "coverage/**",
+      "node_modules/**",
+      "eslint.config.js",
+      "src/components/ui/**",
+      "src/lib/utils.ts",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,

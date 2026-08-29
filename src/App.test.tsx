@@ -1,12 +1,7 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-
-import { App } from "./App";
+import { describe, it } from "vitest";
 
 describe("App", () => {
-  it("renders the application shell heading", () => {
-    render(<App />);
-
-    expect(screen.getByRole("heading", { name: "Monitoramento de Rotas" })).toBeInTheDocument();
-  });
+  // Real assertion moves to src/routes/LoginPage.test.tsx once Task 12 adds
+  // the login screen at /entrar; the root path only redirects there.
+  it.todo("redirects the root path to the login screen");
 });
