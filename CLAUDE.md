@@ -56,9 +56,14 @@ Etapa 2.
 Todas exatas em `package.json`, sem `^` nem `~`, e `package-lock.json` é commitado.
 `npm config save-exact` está ativo no projeto.
 
-**DO NOT CHANGE:** `typescript` fica em `6.0.3`. `typescript-eslint@8.67.0` declara
-peer `typescript: ">=4.8.4 <6.1.0"`; o TypeScript 7.x quebra o lint. Reavaliar só
-quando typescript-eslint publicar suporte a 7.
+**DO NOT CHANGE:** `typescript` fica em `5.9.3`. `typescript-eslint@8.67.0` declara
+peer `typescript: ">=4.8.4 <6.1.0"`, que sozinho permitiria até 6.0.x — mas
+`openapi-typescript@7.13.0` (Task 11) declara peer `typescript: "^5.x"`, que é mais
+restritivo e trava a versão em 5.x. `6.0.3` (a escolha original da Etapa 1) satisfaz
+o range do typescript-eslint mas não o do openapi-typescript, quebrando `npm ci`
+(embora `npm install` tolere isso silenciosamente). Reavaliar só quando
+openapi-typescript publicar suporte a TypeScript 6.x, ou typescript-eslint a 7.x —
+o que vier depois.
 
 ## Working with this team
 
