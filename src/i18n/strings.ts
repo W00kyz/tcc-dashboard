@@ -16,6 +16,7 @@ export const strings = {
   routeBoardError: "Não foi possível carregar as rotas.",
   routeBoardEmpty: "Nenhuma rota atribuída para hoje.",
   routeBoardNotStarted: "Não iniciada",
+  routeStartedAtPrefix: "Iniciada às",
 } as const;
 
 export type StringKey = keyof typeof strings;
