@@ -35,6 +35,13 @@ export const strings = {
   contractorCompaniesFieldName: "Nome",
   contractorCompaniesFieldCnpj: "CNPJ",
   contractorCompaniesSubmitCreate: "Cadastrar",
+  fieldWorkersPageTitle: "Profissionais de Campo",
+  fieldWorkersFieldName: "Nome completo",
+  fieldWorkersFieldCompany: "Empresa terceirizada",
+  fieldWorkersFieldServiceTypes: "Tipos de serviço",
+  fieldWorkersFieldLinkedUser: "Vincular usuário de login (opcional)",
+  fieldWorkersSubmitCreate: "Cadastrar",
+  fieldWorkersNoLinkedUser: "Nenhum",
 } as const;
 
 export type StringKey = keyof typeof strings;
