@@ -1,6 +1,6 @@
-/** Textos visíveis ao usuário (RNF02, pt-BR). Um dicionário tipado — sem framework externo:
- * o sistema tem um só idioma nesta fase, e a regra que importa é "nunca string fixa no
- * componente", não suporte a troca de locale em runtime. */
+/** User-visible strings (RNF02, pt-BR). A typed dictionary — no external framework:
+ * the system has a single language at this stage, and the rule that matters is "never
+ * a hardcoded string in the component", not runtime locale switching. */
 export const strings = {
   loginTitle: "Monitoramento de Rotas",
   loginSubtitle: "PU · UFCG",

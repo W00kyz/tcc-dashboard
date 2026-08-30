@@ -44,6 +44,18 @@ sinal de corrigir a mudança, não a validação.
 Título segue a convenção de commit. A descrição diz o que mudou, por que, como testar,
 e quais requisitos atendeu. CI verde é obrigatório.
 
+## Contrato OpenAPI (AD-04)
+
+```bash
+npm run generate:api
+```
+
+Gera `src/api/generated/schema.d.ts` a partir de `../docs/api/openapi.json`
+(publicado pelo `tcc-backend`, ver `backend/CONTRIBUTING.md`). Nunca editar esse
+arquivo à mão — ele é regenerado inteiro a cada execução. Rodar de novo sempre que
+o schema OpenAPI mudar, isto é, depois de qualquer mudança de request/response de
+rota no `tcc-backend`.
+
 ## Versões
 
 Todas travadas. Imagens Docker por digest, GitHub Actions por SHA, dependências por

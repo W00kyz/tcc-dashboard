@@ -65,6 +65,14 @@ o range do typescript-eslint mas não o do openapi-typescript, quebrando `npm ci
 openapi-typescript publicar suporte a TypeScript 6.x, ou typescript-eslint a 7.x —
 o que vier depois.
 
+**DO NOT CHANGE:** `zod` fica em `3.25.76`, não no `4.4.3` do plano original de
+implementação. A instalação transitiva do CLI do shadcn trouxe a linha 3.x, e
+`@hookform/resolvers@5.9.1` (o que `LoginPage.tsx` usa via `zodResolver`) suporta
+essa versão sem problema — tipagem e testes passam. Sem defeito funcional, adotada
+como a versão real do projeto; o pino explícito em `dependencies` existe para não
+depender de resolução transitiva num pacote que o código da aplicação importa
+diretamente.
+
 ## Working with this team
 
 Most people writing code here are undergraduates and recent graduates, many of them
