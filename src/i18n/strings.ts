@@ -17,6 +17,16 @@ export const strings = {
   routeBoardEmpty: "Nenhuma rota atribuída para hoje.",
   routeBoardNotStarted: "Não iniciada",
   routeStartedAtPrefix: "Iniciada às",
+  usersPageTitle: "Usuários",
+  usersFieldName: "Nome",
+  usersFieldEmail: "E-mail",
+  usersFieldRole: "Perfil",
+  usersSubmitCreate: "Cadastrar",
+  usersRoleAdmin: "Administrador",
+  usersRoleManager: "Gestor",
+  usersRoleFieldWorker: "Profissional de Campo",
+  usersActivate: "Ativar",
+  usersDeactivate: "Desativar",
 } as const;
 
 export type StringKey = keyof typeof strings;

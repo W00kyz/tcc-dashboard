@@ -5,6 +5,7 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { LoginPage } from "@/routes/LoginPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
+import { UsersPage } from "@/routes/UsersPage";
 
 const queryClient = new QueryClient();
 
@@ -14,6 +15,10 @@ const router = createBrowserRouter([
   {
     element: <ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]} />,
     children: [{ path: "/rotas", element: <RouteBoardPage /> }],
+  },
+  {
+    element: <ProtectedRoute allowedRoles={["ADMIN"]} />,
+    children: [{ path: "/usuarios", element: <UsersPage /> }],
   },
 ]);
 

@@ -174,6 +174,393 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Users */
+    get: operations["list_users_users_get"];
+    put?: never;
+    /** Create User */
+    post: operations["create_user_users_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/users/{user_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update User */
+    patch: operations["update_user_users__user_id__patch"];
+    trace?: never;
+  };
+  "/users/{user_id}/activate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Activate User */
+    post: operations["activate_user_users__user_id__activate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/users/{user_id}/deactivate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Deactivate User */
+    post: operations["deactivate_user_users__user_id__deactivate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/service-types": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Service Types */
+    get: operations["list_service_types_service_types_get"];
+    put?: never;
+    /** Create Service Type */
+    post: operations["create_service_type_service_types_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/service-types/{service_type_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Service Type */
+    patch: operations["update_service_type_service_types__service_type_id__patch"];
+    trace?: never;
+  };
+  "/contractor-companies": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Contractor Companies */
+    get: operations["list_contractor_companies_contractor_companies_get"];
+    put?: never;
+    /** Create Contractor Company */
+    post: operations["create_contractor_company_contractor_companies_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/contractor-companies/{company_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Contractor Company */
+    patch: operations["update_contractor_company_contractor_companies__company_id__patch"];
+    trace?: never;
+  };
+  "/field-workers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Field Workers */
+    get: operations["list_field_workers_field_workers_get"];
+    put?: never;
+    /** Create Field Worker */
+    post: operations["create_field_worker_field_workers_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/field-workers/{worker_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Field Worker */
+    patch: operations["update_field_worker_field_workers__worker_id__patch"];
+    trace?: never;
+  };
+  "/buildings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Buildings */
+    get: operations["list_buildings_buildings_get"];
+    put?: never;
+    /** Create Building */
+    post: operations["create_building_buildings_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/buildings/{building_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Building */
+    patch: operations["update_building_buildings__building_id__patch"];
+    trace?: never;
+  };
+  "/floors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Floors */
+    get: operations["list_floors_floors_get"];
+    put?: never;
+    /** Create Floor */
+    post: operations["create_floor_floors_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/floors/{floor_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Floor */
+    patch: operations["update_floor_floors__floor_id__patch"];
+    trace?: never;
+  };
+  "/events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Events */
+    get: operations["list_events_events_get"];
+    put?: never;
+    /** Create Event */
+    post: operations["create_event_events_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/events/{event_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Event */
+    patch: operations["update_event_events__event_id__patch"];
+    trace?: never;
+  };
+  "/service-points": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Service Points
+     * @description RF25 — an OCCASIONAL point past its event's valid_until is hidden here by default (no
+     *     archived_at column: computed at query time, spec Ruling 1). include_archived=true is what
+     *     the historical-reports view (RF43, later etapa) will pass.
+     */
+    get: operations["list_service_points_service_points_get"];
+    put?: never;
+    /** Create Service Point */
+    post: operations["create_service_point_service_points_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/service-points/{point_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Service Point */
+    patch: operations["update_service_point_service_points__point_id__patch"];
+    trace?: never;
+  };
+  "/service-points/{point_id}/promote": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Promote Service Point */
+    post: operations["promote_service_point_service_points__point_id__promote_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/floors/{floor_id}/qr-codes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Issue Qr Code Endpoint */
+    post: operations["issue_qr_code_endpoint_floors__floor_id__qr_codes_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/floors/{floor_id}/qr-codes/active/pdf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Download Active Qr Code Pdf */
+    get: operations["download_active_qr_code_pdf_floors__floor_id__qr_codes_active_pdf_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/qr-codes/{qr_code_id}/revoke": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Revoke Qr Code Endpoint */
+    post: operations["revoke_qr_code_endpoint_qr_codes__qr_code_id__revoke_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -187,6 +574,32 @@ export interface components {
        * @default bearer
        */
       token_type: string;
+    };
+    /** BuildingCreateRequest */
+    BuildingCreateRequest: {
+      /** Name */
+      name: string;
+      /** Campus Area */
+      campus_area: string;
+    };
+    /** BuildingOut */
+    BuildingOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Campus Area */
+      campus_area: string;
+    };
+    /** BuildingUpdateRequest */
+    BuildingUpdateRequest: {
+      /** Name */
+      name: string;
+      /** Campus Area */
+      campus_area: string;
     };
     /** CheckInRequest */
     CheckInRequest: {
@@ -225,6 +638,159 @@ export interface components {
        */
       checked_in_at: string;
     };
+    /** ContractorCompanyCreateRequest */
+    ContractorCompanyCreateRequest: {
+      /** Name */
+      name: string;
+      /** Cnpj */
+      cnpj: string;
+    };
+    /** ContractorCompanyOut */
+    ContractorCompanyOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Cnpj */
+      cnpj: string;
+    };
+    /** ContractorCompanyUpdateRequest */
+    ContractorCompanyUpdateRequest: {
+      /** Name */
+      name: string;
+      /** Cnpj */
+      cnpj: string;
+    };
+    /** EventCreateRequest */
+    EventCreateRequest: {
+      /** Name */
+      name: string;
+      /**
+       * Valid From
+       * Format: date
+       */
+      valid_from: string;
+      /**
+       * Valid Until
+       * Format: date
+       */
+      valid_until: string;
+    };
+    /** EventOut */
+    EventOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /**
+       * Valid From
+       * Format: date
+       */
+      valid_from: string;
+      /**
+       * Valid Until
+       * Format: date
+       */
+      valid_until: string;
+    };
+    /** EventUpdateRequest */
+    EventUpdateRequest: {
+      /** Name */
+      name: string;
+      /**
+       * Valid From
+       * Format: date
+       */
+      valid_from: string;
+      /**
+       * Valid Until
+       * Format: date
+       */
+      valid_until: string;
+    };
+    /** FieldWorkerCreateRequest */
+    FieldWorkerCreateRequest: {
+      /** Full Name */
+      full_name: string;
+      /**
+       * Contractor Company Id
+       * Format: uuid
+       */
+      contractor_company_id: string;
+      /** Service Type Ids */
+      service_type_ids: string[];
+      /** User Id */
+      user_id?: string | null;
+    };
+    /** FieldWorkerOut */
+    FieldWorkerOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Contractor Company Id
+       * Format: uuid
+       */
+      contractor_company_id: string;
+      /** Service Type Ids */
+      service_type_ids: string[];
+      /** User Id */
+      user_id: string | null;
+    };
+    /** FieldWorkerUpdateRequest */
+    FieldWorkerUpdateRequest: {
+      /** Full Name */
+      full_name: string;
+      /**
+       * Contractor Company Id
+       * Format: uuid
+       */
+      contractor_company_id: string;
+      /** Service Type Ids */
+      service_type_ids: string[];
+      /** User Id */
+      user_id?: string | null;
+    };
+    /** FloorCreateRequest */
+    FloorCreateRequest: {
+      /**
+       * Building Id
+       * Format: uuid
+       */
+      building_id: string;
+      /** Label */
+      label: string;
+    };
+    /** FloorOut */
+    FloorOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Building Id
+       * Format: uuid
+       */
+      building_id: string;
+      /** Label */
+      label: string;
+    };
+    /** FloorUpdateRequest */
+    FloorUpdateRequest: {
+      /** Label */
+      label: string;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -237,6 +803,11 @@ export interface components {
     HealthResponse: {
       /** Status */
       status: string;
+    };
+    /** IssueQrCodeRequest */
+    IssueQrCodeRequest: {
+      /** Reason */
+      reason: string;
     };
     /** LoginRequest */
     LoginRequest: {
@@ -263,10 +834,39 @@ export interface components {
        */
       email: string;
     };
+    /**
+     * PointType
+     * @enum {string}
+     */
+    PointType: "REGULAR" | "OCCASIONAL";
+    /** QrCodeOut */
+    QrCodeOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Floor Id
+       * Format: uuid
+       */
+      floor_id: string;
+      /** Public Code */
+      public_code: string;
+      /** Version */
+      version: number;
+      /** Status */
+      status: string;
+    };
     /** RefreshRequest */
     RefreshRequest: {
       /** Refresh Token */
       refresh_token: string;
+    };
+    /** RevokeQrCodeRequest */
+    RevokeQrCodeRequest: {
+      /** Reason */
+      reason: string;
     };
     /** RouteOut */
     RouteOut: {
@@ -298,6 +898,87 @@ export interface components {
       /** Service Point Name */
       service_point_name: string;
     };
+    /** ServicePointCreateRequest */
+    ServicePointCreateRequest: {
+      /**
+       * Floor Id
+       * Format: uuid
+       */
+      floor_id: string;
+      /** Name */
+      name: string;
+      /** Description */
+      description: string;
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+      /** @default REGULAR */
+      point_type: components["schemas"]["PointType"];
+      /** Event Id */
+      event_id?: string | null;
+    };
+    /** ServicePointOut */
+    ServicePointOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Floor Id
+       * Format: uuid
+       */
+      floor_id: string;
+      /** Name */
+      name: string;
+      /** Description */
+      description: string;
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+      point_type: components["schemas"]["PointType"];
+      /** Event Id */
+      event_id: string | null;
+    };
+    /** ServicePointUpdateRequest */
+    ServicePointUpdateRequest: {
+      /** Name */
+      name: string;
+      /** Description */
+      description: string;
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+    };
+    /** ServiceTypeCreateRequest */
+    ServiceTypeCreateRequest: {
+      /** Name */
+      name: string;
+      /** Average Duration Minutes */
+      average_duration_minutes: number;
+    };
+    /** ServiceTypeOut */
+    ServiceTypeOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Average Duration Minutes */
+      average_duration_minutes: number;
+    };
+    /** ServiceTypeUpdateRequest */
+    ServiceTypeUpdateRequest: {
+      /** Name */
+      name: string;
+      /** Average Duration Minutes */
+      average_duration_minutes: number;
+    };
     /** StartRouteRequest */
     StartRouteRequest: {
       /** Latitude */
@@ -321,6 +1002,48 @@ export interface components {
        * @default bearer
        */
       token_type: string;
+    };
+    /** UserCreateRequest */
+    UserCreateRequest: {
+      /** Name */
+      name: string;
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+      role: components["schemas"]["UserRole"];
+    };
+    /** UserOut */
+    UserOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Email */
+      email: string;
+      role: components["schemas"]["UserRole"];
+      /** Is Active */
+      is_active: boolean;
+    };
+    /**
+     * UserRole
+     * @enum {string}
+     */
+    UserRole: "FIELD_WORKER" | "MANAGER" | "ADMIN";
+    /** UserUpdateRequest */
+    UserUpdateRequest: {
+      /** Name */
+      name: string;
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+      role: components["schemas"]["UserRole"];
     };
     /** ValidationError */
     ValidationError: {
@@ -607,6 +1330,927 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CheckInResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_users_users_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserOut"][];
+        };
+      };
+    };
+  };
+  create_user_users_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_user_users__user_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  activate_user_users__user_id__activate_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  deactivate_user_users__user_id__deactivate_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_service_types_service_types_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceTypeOut"][];
+        };
+      };
+    };
+  };
+  create_service_type_service_types_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ServiceTypeCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceTypeOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_service_type_service_types__service_type_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        service_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ServiceTypeUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceTypeOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_contractor_companies_contractor_companies_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractorCompanyOut"][];
+        };
+      };
+    };
+  };
+  create_contractor_company_contractor_companies_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContractorCompanyCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractorCompanyOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_contractor_company_contractor_companies__company_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        company_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContractorCompanyUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractorCompanyOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_field_workers_field_workers_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FieldWorkerOut"][];
+        };
+      };
+    };
+  };
+  create_field_worker_field_workers_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FieldWorkerCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FieldWorkerOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_field_worker_field_workers__worker_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        worker_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FieldWorkerUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FieldWorkerOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_buildings_buildings_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BuildingOut"][];
+        };
+      };
+    };
+  };
+  create_building_buildings_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BuildingCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BuildingOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_building_buildings__building_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        building_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BuildingUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BuildingOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_floors_floors_get: {
+    parameters: {
+      query?: {
+        building_id?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FloorOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_floor_floors_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FloorCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FloorOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_floor_floors__floor_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        floor_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FloorUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FloorOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_events_events_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EventOut"][];
+        };
+      };
+    };
+  };
+  create_event_events_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EventCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EventOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_event_events__event_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        event_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EventUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EventOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_service_points_service_points_get: {
+    parameters: {
+      query?: {
+        floor_id?: string | null;
+        include_archived?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServicePointOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_service_point_service_points_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ServicePointCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServicePointOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_service_point_service_points__point_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        point_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ServicePointUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServicePointOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  promote_service_point_service_points__point_id__promote_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        point_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServicePointOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  issue_qr_code_endpoint_floors__floor_id__qr_codes_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        floor_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IssueQrCodeRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QrCodeOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  download_active_qr_code_pdf_floors__floor_id__qr_codes_active_pdf_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        floor_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  revoke_qr_code_endpoint_qr_codes__qr_code_id__revoke_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        qr_code_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RevokeQrCodeRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QrCodeOut"];
         };
       };
       /** @description Validation Error */
