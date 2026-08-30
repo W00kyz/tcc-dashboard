@@ -3,8 +3,10 @@ import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom"
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
+import { BuildingsPage } from "@/routes/BuildingsPage";
 import { ContractorCompaniesPage } from "@/routes/ContractorCompaniesPage";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
+import { FloorsPage } from "@/routes/FloorsPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
 import { ServiceTypesPage } from "@/routes/ServiceTypesPage";
@@ -22,6 +24,8 @@ const router = createBrowserRouter([
       { path: "/tipos-de-servico", element: <ServiceTypesPage /> },
       { path: "/empresas-terceirizadas", element: <ContractorCompaniesPage /> },
       { path: "/profissionais", element: <FieldWorkersPage /> },
+      { path: "/predios", element: <BuildingsPage /> },
+      { path: "/predios/:buildingId/andares", element: <FloorsPage /> },
     ],
   },
   {

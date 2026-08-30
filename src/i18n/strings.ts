@@ -42,6 +42,19 @@ export const strings = {
   fieldWorkersFieldLinkedUser: "Vincular usuário de login (opcional)",
   fieldWorkersSubmitCreate: "Cadastrar",
   fieldWorkersNoLinkedUser: "Nenhum",
+  buildingsPageTitle: "Prédios",
+  buildingsFieldName: "Nome",
+  buildingsFieldCampusArea: "Área do campus",
+  buildingsSubmitCreate: "Cadastrar",
+  buildingsViewFloors: "Ver andares",
+  floorsPageTitle: "Andares",
+  floorsFieldLabel: "Rótulo do andar",
+  floorsSubmitCreate: "Cadastrar",
+  floorsGenerateQr: "Gerar QR",
+  floorsRevokeQr: "Revogar QR",
+  floorsDownloadPdf: "Baixar PDF",
+  floorsQrReasonPrompt: "Motivo da geração/substituição",
+  floorsRevokeReasonPrompt: "Motivo da revogação",
 } as const;
 
 export type StringKey = keyof typeof strings;
