@@ -10,6 +10,7 @@ import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { FloorsPage } from "@/routes/FloorsPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
+import { ServicePointsPage } from "@/routes/ServicePointsPage";
 import { ServiceTypesPage } from "@/routes/ServiceTypesPage";
 import { UsersPage } from "@/routes/UsersPage";
 
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
       { path: "/predios", element: <BuildingsPage /> },
       { path: "/predios/:buildingId/andares", element: <FloorsPage /> },
       { path: "/eventos", element: <EventsPage /> },
+      { path: "/pontos-de-servico", element: <ServicePointsPage /> },
     ],
   },
   {

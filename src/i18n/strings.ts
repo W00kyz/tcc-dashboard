@@ -60,6 +60,19 @@ export const strings = {
   eventsFieldValidFrom: "Início da janela",
   eventsFieldValidUntil: "Fim da janela",
   eventsSubmitCreate: "Cadastrar",
+  servicePointsPageTitle: "Pontos de Serviço",
+  servicePointsFieldFloor: "Andar",
+  servicePointsFieldName: "Nome",
+  servicePointsFieldDescription: "Descrição",
+  servicePointsFieldLatitude: "Latitude",
+  servicePointsFieldLongitude: "Longitude",
+  servicePointsFieldType: "Tipo",
+  servicePointsFieldEvent: "Evento",
+  servicePointsTypeRegular: "Regular",
+  servicePointsTypeOccasional: "Eventual",
+  servicePointsSubmitCreate: "Cadastrar",
+  servicePointsPromote: "Promover a regular",
+  servicePointsShowArchived: "Mostrar arquivados",
 } as const;
 
 export type StringKey = keyof typeof strings;
