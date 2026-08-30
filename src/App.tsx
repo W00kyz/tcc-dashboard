@@ -5,6 +5,7 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { BuildingsPage } from "@/routes/BuildingsPage";
 import { ContractorCompaniesPage } from "@/routes/ContractorCompaniesPage";
+import { EventsPage } from "@/routes/EventsPage";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { FloorsPage } from "@/routes/FloorsPage";
 import { LoginPage } from "@/routes/LoginPage";
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
       { path: "/profissionais", element: <FieldWorkersPage /> },
       { path: "/predios", element: <BuildingsPage /> },
       { path: "/predios/:buildingId/andares", element: <FloorsPage /> },
+      { path: "/eventos", element: <EventsPage /> },
     ],
   },
   {

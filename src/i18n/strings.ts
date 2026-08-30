@@ -55,6 +55,11 @@ export const strings = {
   floorsDownloadPdf: "Baixar PDF",
   floorsQrReasonPrompt: "Motivo da geração/substituição",
   floorsRevokeReasonPrompt: "Motivo da revogação",
+  eventsPageTitle: "Eventos",
+  eventsFieldName: "Nome do evento",
+  eventsFieldValidFrom: "Início da janela",
+  eventsFieldValidUntil: "Fim da janela",
+  eventsSubmitCreate: "Cadastrar",
 } as const;
 
 export type StringKey = keyof typeof strings;
