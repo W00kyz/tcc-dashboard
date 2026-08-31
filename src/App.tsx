@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, type RouteObject, RouterProvider } from "react-router-dom";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
@@ -10,19 +10,24 @@ import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { FloorsPage } from "@/routes/FloorsPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
+import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
 import { ServicePointsPage } from "@/routes/ServicePointsPage";
 import { ServiceTypesPage } from "@/routes/ServiceTypesPage";
 import { UsersPage } from "@/routes/UsersPage";
 
 const queryClient = new QueryClient();
 
-const router = createBrowserRouter([
+// Exported so tests can assert which ProtectedRoute branch a page sits under without
+// standing up the whole browser router.
+export const appRoutes: RouteObject[] = [
   { path: "/", element: <Navigate to="/entrar" replace /> },
   { path: "/entrar", element: <LoginPage /> },
   {
     element: <ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]} />,
     children: [
       { path: "/rotas", element: <RouteBoardPage /> },
+      { path: "/rotas/nova", element: <RouteBuilderPage /> },
+      { path: "/rotas/:routeId/editar", element: <RouteBuilderPage /> },
       { path: "/tipos-de-servico", element: <ServiceTypesPage /> },
       { path: "/empresas-terceirizadas", element: <ContractorCompaniesPage /> },
       { path: "/profissionais", element: <FieldWorkersPage /> },
@@ -36,7 +41,9 @@ const router = createBrowserRouter([
     element: <ProtectedRoute allowedRoles={["ADMIN"]} />,
     children: [{ path: "/usuarios", element: <UsersPage /> }],
   },
-]);
+];
+
+const router = createBrowserRouter(appRoutes);
 
 export function App() {
   return (
