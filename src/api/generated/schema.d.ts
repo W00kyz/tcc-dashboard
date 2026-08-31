@@ -106,6 +106,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/routes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Routes */
+    get: operations["list_routes_routes_get"];
+    put?: never;
+    /** Create Route Endpoint */
+    post: operations["create_route_endpoint_routes_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/routes/occasional": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Create Occasional Routes
+     * @description RF23 / spec §3.5 Ruling 2 — an occasional route assigned to N workers is N independent
+     *     routes, one per worker, each a copy of the same stops. One transaction: if any worker id
+     *     is unknown, nothing is committed.
+     */
+    post: operations["create_occasional_routes_routes_occasional_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/routes/me": {
     parameters: {
       query?: never;
@@ -113,7 +153,12 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List My Routes */
+    /**
+     * List My Routes
+     * @description RF27 "rota do dia": the mobile feed for the signed-in worker. Same `RouteOut` shape the
+     *     manager endpoints return, so mobile and the dashboard render a route identically. Without
+     *     `?date=` it defaults to today; CANCELLED routes are never shown.
+     */
     get: operations["list_my_routes_routes_me_get"];
     put?: never;
     post?: never;
@@ -123,17 +168,69 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/routes": {
+  "/routes/{route_id}": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** List All Routes */
-    get: operations["list_all_routes_routes_get"];
+    /** Get Route */
+    get: operations["get_route_routes__route_id__get"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Patch Route */
+    patch: operations["patch_route_routes__route_id__patch"];
+    trace?: never;
+  };
+  "/routes/{route_id}/optimize": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Optimize Route Endpoint */
+    post: operations["optimize_route_endpoint_routes__route_id__optimize_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/routes/{route_id}/reassign": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reassign Route Endpoint */
+    post: operations["reassign_route_endpoint_routes__route_id__reassign_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/routes/{route_id}/cancel": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cancel Route Endpoint */
+    post: operations["cancel_route_endpoint_routes__route_id__cancel_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -151,6 +248,59 @@ export interface paths {
     put?: never;
     /** Start Route Endpoint */
     post: operations["start_route_endpoint_routes__route_id__start_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/route-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Route Templates */
+    get: operations["list_route_templates_route_templates_get"];
+    put?: never;
+    /** Create Route Template */
+    post: operations["create_route_template_route_templates_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/route-templates/{template_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Route Template */
+    get: operations["get_route_template_route_templates__template_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Route Template */
+    patch: operations["update_route_template_route_templates__template_id__patch"];
+    trace?: never;
+  };
+  "/route-templates/{template_id}/materialize": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Materialize Route Template */
+    post: operations["materialize_route_template_route_templates__template_id__materialize_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -626,6 +776,11 @@ export interface components {
       /** Campus Area */
       campus_area: string;
     };
+    /** CancelBody */
+    CancelBody: {
+      /** Reason */
+      reason: string;
+    };
     /** CheckInRequest */
     CheckInRequest: {
       /**
@@ -861,6 +1016,30 @@ export interface components {
       /** Password */
       password: string;
     };
+    /** MaterializeBody */
+    MaterializeBody: {
+      /**
+       * Route Date
+       * Format: date
+       */
+      route_date: string;
+      /** Field Worker Id */
+      field_worker_id?: string | null;
+    };
+    /** OccasionalRouteBody */
+    OccasionalRouteBody: {
+      /** Field Worker Ids */
+      field_worker_ids: string[];
+      /**
+       * Route Date
+       * Format: date
+       */
+      route_date: string;
+      /** Scheduled Start At */
+      scheduled_start_at?: string | null;
+      /** Stops */
+      stops: components["schemas"]["StopBody"][];
+    };
     /** PasswordResetConfirm */
     PasswordResetConfirm: {
       /** Token */
@@ -900,6 +1079,16 @@ export interface components {
       /** Status */
       status: string;
     };
+    /** ReassignBody */
+    ReassignBody: {
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Reason */
+      reason: string;
+    };
     /** RefreshRequest */
     RefreshRequest: {
       /** Refresh Token */
@@ -910,6 +1099,29 @@ export interface components {
       /** Reason */
       reason: string;
     };
+    /** RouteCreateBody */
+    RouteCreateBody: {
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /**
+       * Route Date
+       * Format: date
+       */
+      route_date: string;
+      /**
+       * Route Type
+       * @default REGULAR
+       * @enum {string}
+       */
+      route_type: "REGULAR" | "OCCASIONAL";
+      /** Scheduled Start At */
+      scheduled_start_at?: string | null;
+      /** Stops */
+      stops: components["schemas"]["StopBody"][];
+    };
     /** RouteOut */
     RouteOut: {
       /**
@@ -917,12 +1129,28 @@ export interface components {
        * Format: uuid
        */
       id: string;
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
       /** Field Worker Name */
       field_worker_name: string;
+      /**
+       * Route Date
+       * Format: date
+       */
+      route_date: string;
+      /** Route Type */
+      route_type: string;
+      /** Status */
+      status: string;
       /** Scheduled Start At */
       scheduled_start_at: string | null;
       /** Started At */
       started_at: string | null;
+      /** Routing Degraded */
+      routing_degraded: boolean;
       /** Stops */
       stops: components["schemas"]["RouteStopOut"][];
     };
@@ -937,8 +1165,44 @@ export interface components {
       order_index: number;
       /** Status */
       status: string;
+      /**
+       * Service Point Id
+       * Format: uuid
+       */
+      service_point_id: string;
       /** Service Point Name */
       service_point_name: string;
+      /** Floor Label */
+      floor_label: string;
+      /** Building Name */
+      building_name: string;
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+      /** Point Type */
+      point_type: string;
+      /** Expected Arrival From */
+      expected_arrival_from: string | null;
+      /** Expected Arrival To */
+      expected_arrival_to: string | null;
+      /** Distance From Prev M */
+      distance_from_prev_m: number | null;
+      /** Duration From Prev S */
+      duration_from_prev_s: number | null;
+      /** Leg Geometry */
+      leg_geometry: number[][] | null;
+    };
+    /** RouteUpdateBody */
+    RouteUpdateBody: {
+      /** Field Worker Id */
+      field_worker_id?: string | null;
+      /** Route Date */
+      route_date?: string | null;
+      /** Scheduled Start At */
+      scheduled_start_at?: string | null;
+      /** Stops */
+      stops?: components["schemas"]["StopBody"][] | null;
     };
     /** ServicePointCreateRequest */
     ServicePointCreateRequest: {
@@ -1032,6 +1296,105 @@ export interface components {
        * Format: date-time
        */
       started_at: string;
+    };
+    /** StopBody */
+    StopBody: {
+      /**
+       * Service Point Id
+       * Format: uuid
+       */
+      service_point_id: string;
+      /** Expected Arrival From */
+      expected_arrival_from?: string | null;
+      /** Expected Arrival To */
+      expected_arrival_to?: string | null;
+    };
+    /** TemplateCreateBody */
+    TemplateCreateBody: {
+      /** Name */
+      name: string;
+      /** Field Worker Id */
+      field_worker_id?: string | null;
+      /**
+       * Recurrence
+       * @enum {string}
+       */
+      recurrence: "DAILY" | "WEEKLY";
+      /** Weekdays */
+      weekdays?: number[] | null;
+      /**
+       * Route Type
+       * @default REGULAR
+       * @enum {string}
+       */
+      route_type: "REGULAR" | "OCCASIONAL";
+      /** Stops */
+      stops: components["schemas"]["TemplateStopBody"][];
+    };
+    /** TemplateOut */
+    TemplateOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Field Worker Id */
+      field_worker_id: string | null;
+      /** Recurrence */
+      recurrence: string;
+      /** Weekdays */
+      weekdays: number[] | null;
+      /** Route Type */
+      route_type: string;
+      /** Is Active */
+      is_active: boolean;
+      /** Stops */
+      stops: components["schemas"]["TemplateStopOut"][];
+    };
+    /** TemplateStopBody */
+    TemplateStopBody: {
+      /**
+       * Service Point Id
+       * Format: uuid
+       */
+      service_point_id: string;
+      /** Expected Arrival From */
+      expected_arrival_from?: string | null;
+      /** Expected Arrival To */
+      expected_arrival_to?: string | null;
+    };
+    /** TemplateStopOut */
+    TemplateStopOut: {
+      /**
+       * Service Point Id
+       * Format: uuid
+       */
+      service_point_id: string;
+      /** Order Index */
+      order_index: number;
+      /** Expected Arrival From */
+      expected_arrival_from: string | null;
+      /** Expected Arrival To */
+      expected_arrival_to: string | null;
+    };
+    /** TemplateUpdateBody */
+    TemplateUpdateBody: {
+      /** Name */
+      name?: string | null;
+      /** Field Worker Id */
+      field_worker_id?: string | null;
+      /** Recurrence */
+      recurrence?: ("DAILY" | "WEEKLY") | null;
+      /** Weekdays */
+      weekdays?: number[] | null;
+      /** Route Type */
+      route_type?: ("REGULAR" | "OCCASIONAL") | null;
+      /** Is Active */
+      is_active?: boolean | null;
+      /** Stops */
+      stops?: components["schemas"]["TemplateStopBody"][] | null;
     };
     /** TokenResponse */
     TokenResponse: {
@@ -1277,9 +1640,14 @@ export interface operations {
       };
     };
   };
-  list_my_routes_routes_me_get: {
+  list_routes_routes_get: {
     parameters: {
-      query?: never;
+      query?: {
+        date?: string | null;
+        field_worker_id?: string | null;
+        route_type?: string | null;
+        status?: string | null;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -1295,11 +1663,88 @@ export interface operations {
           "application/json": components["schemas"]["RouteOut"][];
         };
       };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
   };
-  list_all_routes_routes_get: {
+  create_route_endpoint_routes_post: {
     parameters: {
       query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RouteCreateBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_occasional_routes_routes_occasional_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OccasionalRouteBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_my_routes_routes_me_get: {
+    parameters: {
+      query?: {
+        date?: string | null;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -1313,6 +1758,182 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RouteOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_route_routes__route_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        route_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  patch_route_routes__route_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        route_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RouteUpdateBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  optimize_route_endpoint_routes__route_id__optimize_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        route_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  reassign_route_endpoint_routes__route_id__reassign_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        route_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReassignBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  cancel_route_endpoint_routes__route_id__cancel_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        route_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CancelBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -1334,6 +1955,160 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_route_templates_route_templates_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TemplateOut"][];
+        };
+      };
+    };
+  };
+  create_route_template_route_templates_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TemplateCreateBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TemplateOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_route_template_route_templates__template_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        template_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TemplateOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_route_template_route_templates__template_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        template_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TemplateUpdateBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TemplateOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  materialize_route_template_route_templates__template_id__materialize_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        template_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MaterializeBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
         headers: {
           [name: string]: unknown;
         };
