@@ -63,5 +63,17 @@ describe("ContractorCompaniesPage", () => {
     await waitFor(() => {
       expect(fakeFetch).toHaveBeenCalledTimes(3);
     });
+    // openapi-fetch calls the injected fetch with a single Request object rather than a
+    // (url, init) pair, so the submitted body has to be read off that Request's own clone.
+    const submitCall = fakeFetch.mock.calls.find(
+      ([request]) => (request as Request).method === "POST",
+    );
+    if (submitCall === undefined) {
+      throw new Error(
+        "expected a POST request to /contractor-companies among the fake fetch calls",
+      );
+    }
+    const body = (await (submitCall[0] as Request).clone().json()) as Record<string, unknown>;
+    expect(body).toEqual({ name: "Verde Jardins Ltda", cnpj: "98765432000188" });
   });
 });

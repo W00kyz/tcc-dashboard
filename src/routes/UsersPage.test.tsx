@@ -74,4 +74,40 @@ describe("UsersPage", () => {
       expect(fakeFetch).toHaveBeenCalledTimes(3);
     });
   });
+
+  it("resets the role selector to Field Worker after a successful create", async () => {
+    const fakeFetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "u3",
+            name: "Ana Souza",
+            email: "ana@pu.ufcg.edu.br",
+            role: "ADMIN",
+            is_active: true,
+          }),
+          { status: 201 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
+    const { default: userEvent } = await import("@testing-library/user-event");
+
+    renderPage(fakeFetch);
+    await waitFor(() => {
+      expect(fakeFetch).toHaveBeenCalledTimes(1);
+    });
+
+    const roleSelect = screen.getByLabelText<HTMLSelectElement>("Perfil");
+    await userEvent.type(screen.getByLabelText("Nome"), "Ana Souza");
+    await userEvent.type(screen.getByLabelText("E-mail"), "ana@pu.ufcg.edu.br");
+    await userEvent.selectOptions(roleSelect, "ADMIN");
+    await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
+
+    await waitFor(() => {
+      expect(fakeFetch).toHaveBeenCalledTimes(3);
+    });
+    expect(roleSelect.value).toBe("FIELD_WORKER");
+  });
 });

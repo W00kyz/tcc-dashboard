@@ -43,9 +43,13 @@ export function UsersPage() {
     mutationFn: async () => {
       await client.POST("/users", { body: { name, email, role } });
     },
+    // Reset every field the form owns, not just name/email (the same partial-reset bug
+    // Tasks 12/14/15 each found and fixed in this etapa's other create forms) — leaving
+    // role behind would keep the selector on, e.g., "Administrador" for the next entry.
     onSuccess: () => {
       setName("");
       setEmail("");
+      setRole("FIELD_WORKER");
       void queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });

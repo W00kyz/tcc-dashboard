@@ -60,5 +60,18 @@ describe("ServiceTypesPage", () => {
     await waitFor(() => {
       expect(fakeFetch).toHaveBeenCalledTimes(3);
     });
+    // openapi-fetch calls the injected fetch with a single Request object rather than a
+    // (url, init) pair, so the submitted body has to be read off that Request's own clone.
+    const submitCall = fakeFetch.mock.calls.find(
+      ([request]) => (request as Request).method === "POST",
+    );
+    if (submitCall === undefined) {
+      throw new Error("expected a POST request to /service-types among the fake fetch calls");
+    }
+    const body = (await (submitCall[0] as Request).clone().json()) as Record<string, unknown>;
+    // The duration input is never touched by this test, so its default (30) is what's sent —
+    // asserting on that, not just the call count, is what actually proves the form field maps
+    // to the right request field.
+    expect(body).toEqual({ name: "Poda de árvores", average_duration_minutes: 30 });
   });
 });
