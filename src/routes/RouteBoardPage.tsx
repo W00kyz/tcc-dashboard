@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
@@ -43,6 +42,40 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// The board's filters live in the URL, not in component state: a route just created elsewhere
+// navigates here with `?route_type=OCCASIONAL` (Task 11) or `?date=<materialized>` (Task 12),
+// and the board must land already filtered. Deriving the filters from the query string also
+// makes the board deep-linkable and refreshable. An absent `date` param means "today"; an
+// explicit empty `date=` means "every date" (the user cleared the native date input).
+function filtersFromParams(params: URLSearchParams): RouteFilters {
+  // `?? todayIso()` only fills a *missing* param; an explicit empty `date=` (user cleared the
+  // input) is kept as "" so the fetch omits the date and the backend returns every date.
+  return {
+    date: params.get("date") ?? todayIso(),
+    fieldWorkerId: params.get("field_worker_id") ?? "",
+    routeType: (params.get("route_type") as RouteFilters["routeType"] | null) ?? "",
+    status: (params.get("status") as RouteFilters["status"] | null) ?? "",
+  };
+}
+
+function paramsFromFilters(filters: RouteFilters): URLSearchParams {
+  const params = new URLSearchParams();
+  // Always written (even when empty) so a cleared date stays cleared instead of snapping
+  // back to today on the next render.
+  params.set("date", filters.date);
+  if (filters.fieldWorkerId !== "") {
+    params.set("field_worker_id", filters.fieldWorkerId);
+  }
+  if (filters.routeType !== "") {
+    params.set("route_type", filters.routeType);
+  }
+  if (filters.status !== "") {
+    params.set("status", filters.status);
+  }
+
+  return params;
+}
+
 // `RouteOut.status` is a bare string in the OpenAPI contract; fold any unknown value
 // back to PLANNED so the pill never renders undefined.
 function toRouteStatus(value: string): RouteStatus {
@@ -82,12 +115,12 @@ export function RouteBoardPage() {
   // non-null session, so the page renders (and its requests fail cleanly) before hydration.
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
 
-  const [filters, setFilters] = useState<RouteFilters>({
-    date: todayIso(),
-    fieldWorkerId: "",
-    routeType: "",
-    status: "",
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filters = filtersFromParams(searchParams);
+
+  function updateFilters(patch: Partial<RouteFilters>) {
+    setSearchParams(paramsFromFilters({ ...filters, ...patch }), { replace: true });
+  }
 
   const { data: workers } = useQuery({
     queryKey: ["field-workers"],
@@ -139,7 +172,7 @@ export function RouteBoardPage() {
             className={FILTER_SELECT_CLASS}
             value={filters.date}
             onChange={(event) => {
-              setFilters((current) => ({ ...current, date: event.target.value }));
+              updateFilters({ date: event.target.value });
             }}
           />
         </div>
@@ -150,7 +183,7 @@ export function RouteBoardPage() {
             className={FILTER_SELECT_CLASS}
             value={filters.fieldWorkerId}
             onChange={(event) => {
-              setFilters((current) => ({ ...current, fieldWorkerId: event.target.value }));
+              updateFilters({ fieldWorkerId: event.target.value });
             }}
           >
             <option value="">{t("routeBoardFilterAll")}</option>
@@ -168,10 +201,7 @@ export function RouteBoardPage() {
             className={FILTER_SELECT_CLASS}
             value={filters.routeType}
             onChange={(event) => {
-              setFilters((current) => ({
-                ...current,
-                routeType: event.target.value as RouteFilters["routeType"],
-              }));
+              updateFilters({ routeType: event.target.value as RouteFilters["routeType"] });
             }}
           >
             <option value="">{t("routeBoardFilterAll")}</option>
@@ -186,10 +216,7 @@ export function RouteBoardPage() {
             className={FILTER_SELECT_CLASS}
             value={filters.status}
             onChange={(event) => {
-              setFilters((current) => ({
-                ...current,
-                status: event.target.value as RouteFilters["status"],
-              }));
+              updateFilters({ status: event.target.value as RouteFilters["status"] });
             }}
           >
             <option value="">{t("routeBoardFilterAll")}</option>

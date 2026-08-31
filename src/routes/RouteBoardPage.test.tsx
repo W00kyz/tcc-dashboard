@@ -69,12 +69,12 @@ function makeFakeFetch() {
   });
 }
 
-function renderPage(fetchImpl: typeof fetch) {
+function renderPage(fetchImpl: typeof fetch, path = "/rotas") {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   vi.stubGlobal("fetch", fetchImpl);
 
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <RouteBoardPage />
@@ -82,6 +82,12 @@ function renderPage(fetchImpl: typeof fetch) {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+}
+
+function routeListQueries(fakeFetch: ReturnType<typeof makeFakeFetch>): string[] {
+  return fakeFetch.mock.calls
+    .map(([input]) => requestUrl(input))
+    .filter((url) => url.includes("/routes"));
 }
 
 describe("RouteBoardPage", () => {
@@ -142,6 +148,37 @@ describe("RouteBoardPage", () => {
         .filter((url) => url.includes("/routes"));
       expect(routeCallsAfterClear.length).toBeGreaterThan(0);
       expect(routeCallsAfterClear.every((url) => !/[?&]date=/.test(url))).toBe(true);
+    });
+  });
+
+  it("pre-applies the type filter from the query string", async () => {
+    const fakeFetch = makeFakeFetch();
+    renderPage(fakeFetch, "/rotas?route_type=OCCASIONAL");
+
+    await screen.findByTestId("route-card-r1");
+
+    expect(screen.getByLabelText("Tipo")).toHaveValue("OCCASIONAL");
+    await waitFor(() => {
+      expect(routeListQueries(fakeFetch).some((url) => url.includes("route_type=OCCASIONAL"))).toBe(
+        true,
+      );
+    });
+    expect(routeListQueries(fakeFetch).every((url) => !url.includes("route_type=REGULAR"))).toBe(
+      true,
+    );
+  });
+
+  it("writes a filter change back to the query string", async () => {
+    const fakeFetch = makeFakeFetch();
+    renderPage(fakeFetch);
+
+    await screen.findByTestId("route-card-r1");
+    fireEvent.change(screen.getByLabelText("Situação"), { target: { value: "CANCELLED" } });
+
+    await waitFor(() => {
+      expect(routeListQueries(fakeFetch).some((url) => url.includes("status=CANCELLED"))).toBe(
+        true,
+      );
     });
   });
 

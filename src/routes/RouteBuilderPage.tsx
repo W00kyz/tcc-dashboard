@@ -62,8 +62,12 @@ export function RouteBuilderPage() {
 
   const isEdit = routeId !== undefined;
   const routeType: RouteType = searchParams.get("type") === "OCCASIONAL" ? "OCCASIONAL" : "REGULAR";
+  // Occasional routes are create-only (RF23 / spec §3.5): editing an existing route always
+  // stays REGULAR, single-worker. Only the /rotas/nova?type=OCCASIONAL entry point branches.
+  const isOccasional = !isEdit && routeType === "OCCASIONAL";
 
   const [fieldWorkerId, setFieldWorkerId] = useState("");
+  const [fieldWorkerIds, setFieldWorkerIds] = useState<string[]>([]);
   const [routeDate, setRouteDate] = useState(todayIso());
   const [buildingId, setBuildingId] = useState("");
   const [floorId, setFloorId] = useState("");
@@ -167,6 +171,12 @@ export function RouteBuilderPage() {
     setServicePointId("");
   }
 
+  function toggleWorker(id: string, checked: boolean) {
+    setFieldWorkerIds((current) =>
+      checked ? [...current, id] : current.filter((workerId) => workerId !== id),
+    );
+  }
+
   function editWindow(key: string, field: "from" | "to", value: string) {
     const property = field === "from" ? "expectedArrivalFrom" : "expectedArrivalTo";
     setStops((current) =>
@@ -194,6 +204,21 @@ export function RouteBuilderPage() {
         return null;
       }
 
+      if (isOccasional) {
+        const { response } = await client.POST("/routes/occasional", {
+          body: {
+            field_worker_ids: fieldWorkerIds,
+            route_date: routeDate,
+            stops: stopBodies,
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`POST /routes/occasional failed with status ${String(response.status)}`);
+        }
+
+        return null;
+      }
+
       const { data, response } = await client.POST("/routes", {
         body: {
           field_worker_id: fieldWorkerId,
@@ -209,11 +234,18 @@ export function RouteBuilderPage() {
       return data ?? null;
     },
     onSuccess: (created) => {
+      if (isOccasional) {
+        void navigate("/rotas?route_type=OCCASIONAL");
+
+        return;
+      }
       if (created !== null) {
         void navigate(`/rotas/${created.id}/editar`);
       }
     },
   });
+
+  const submitDisabled = isOccasional && (fieldWorkerIds.length === 0 || stops.length === 0);
 
   if (isEdit && routeQuery.isError) {
     return (
@@ -229,8 +261,16 @@ export function RouteBuilderPage() {
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-6">
       <h1 className="text-xl font-semibold">
-        {isEdit ? t("routeBuilderTitleEdit") : t("routeBuilderTitleNew")}
+        {isEdit
+          ? t("routeBuilderTitleEdit")
+          : isOccasional
+            ? t("routeBuilderOccasionalTitle")
+            : t("routeBuilderTitleNew")}
       </h1>
+
+      {isOccasional && (
+        <p className="text-muted-foreground text-sm">{t("routeBuilderOccasionalHint")}</p>
+      )}
 
       {save.isError && (
         <p role="alert" className="text-destructive">
@@ -242,27 +282,54 @@ export function RouteBuilderPage() {
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
+          // The disabled attribute stops a click, but pressing Enter from another field can
+          // still fire submit — guard the occasional path against an empty worker/stop list.
+          if (submitDisabled) {
+            return;
+          }
           save.mutate();
         }}
       >
-        <div>
-          <Label htmlFor="route-worker">{t("routeBuilderWorker")}</Label>
-          <select
-            id="route-worker"
-            className={SELECT_CLASS}
-            value={fieldWorkerId}
-            onChange={(event) => {
-              setFieldWorkerId(event.target.value);
-            }}
-          >
-            <option value="" />
-            {workers?.map((worker) => (
-              <option key={worker.id} value={worker.id}>
-                {worker.full_name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {isOccasional ? (
+          <fieldset>
+            <legend className="text-sm leading-none font-medium">
+              {t("routeBuilderPickWorkers")}
+            </legend>
+            <div className="mt-2 space-y-1">
+              {workers?.map((worker) => (
+                <Label key={worker.id} className="font-normal">
+                  <input
+                    type="checkbox"
+                    checked={fieldWorkerIds.includes(worker.id)}
+                    onChange={(event) => {
+                      toggleWorker(worker.id, event.target.checked);
+                    }}
+                  />
+                  {worker.full_name}
+                </Label>
+              ))}
+            </div>
+          </fieldset>
+        ) : (
+          <div>
+            <Label htmlFor="route-worker">{t("routeBuilderWorker")}</Label>
+            <select
+              id="route-worker"
+              className={SELECT_CLASS}
+              value={fieldWorkerId}
+              onChange={(event) => {
+                setFieldWorkerId(event.target.value);
+              }}
+            >
+              <option value="" />
+              {workers?.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <Label htmlFor="route-date">{t("routeBuilderDate")}</Label>
@@ -347,7 +414,9 @@ export function RouteBuilderPage() {
           onEditWindow={editWindow}
         />
 
-        <Button type="submit">{t("routeBuilderSave")}</Button>
+        <Button type="submit" disabled={submitDisabled}>
+          {t("routeBuilderSave")}
+        </Button>
       </form>
     </main>
   );
