@@ -102,11 +102,12 @@ describe("RouteBoardPage", () => {
     expect(within(cancelledCard).getByText("Cancelada")).toBeInTheDocument();
   });
 
-  it("leaves a placeholder slot for the route actions menu", async () => {
+  it("renders the route actions menu inside each card", async () => {
     renderPage(makeFakeFetch());
 
     const occasionalCard = await screen.findByTestId("route-card-r1");
-    expect(within(occasionalCard).getByTestId("route-actions")).toBeInTheDocument();
+    const actions = within(occasionalCard).getByTestId("route-actions");
+    expect(within(actions).getByRole("button", { name: "Otimizar" })).toBeInTheDocument();
   });
 
   it("pushes the chosen date into the /routes query string", async () => {

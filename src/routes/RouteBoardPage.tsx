@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
+import { RouteActionsMenu } from "@/components/RouteActionsMenu";
 import { RouteStopStrip } from "@/components/RouteStopStrip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -239,8 +240,7 @@ export function RouteBoardPage() {
                   status: stop.status as "PENDING" | "DONE",
                 }))}
               />
-              {/* Filled in by Task 10 (RouteActionsMenu). */}
-              <div data-testid="route-actions" />
+              <RouteActionsMenu route={route} />
             </CardContent>
           </Card>
         );
