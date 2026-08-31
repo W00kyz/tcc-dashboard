@@ -165,6 +165,47 @@ describe("ServicePointsPage", () => {
     });
   });
 
+  // Finding I4: the design spec calls for a floor filter alongside "show archived" — the
+  // backend already supports ?floor_id=, this page just never sent it.
+  it("filters by floor once one is selected, and omits the param for 'all floors'", async () => {
+    const fakeFetch = mockListResponses({
+      floors: [
+        { id: "f1", building_id: "b1", label: "Térreo" },
+        { id: "f2", building_id: "b1", label: "1º andar" },
+      ],
+    });
+    fakeFetch.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
+    fakeFetch.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
+    const { default: userEvent } = await import("@testing-library/user-event");
+
+    renderPage(fakeFetch);
+    await waitFor(() => {
+      expect(fakeFetch).toHaveBeenCalledTimes(3);
+    });
+    const firstPointsRequest = requestAt(fakeFetch, 0);
+    expect(new URL(firstPointsRequest.url).searchParams.has("floor_id")).toBe(false);
+
+    const floorFilter = screen.getByLabelText("Filtrar por andar");
+    await waitFor(() => {
+      expect(within(floorFilter).getByText("1º andar")).toBeInTheDocument();
+    });
+    await userEvent.selectOptions(floorFilter, "f2");
+
+    await waitFor(() => {
+      expect(fakeFetch).toHaveBeenCalledTimes(4);
+    });
+    const filteredRequest = requestAt(fakeFetch, 3);
+    expect(new URL(filteredRequest.url).searchParams.get("floor_id")).toBe("f2");
+
+    await userEvent.selectOptions(screen.getByLabelText("Filtrar por andar"), "");
+
+    await waitFor(() => {
+      expect(fakeFetch).toHaveBeenCalledTimes(5);
+    });
+    const allFloorsRequest = requestAt(fakeFetch, 4);
+    expect(new URL(allFloorsRequest.url).searchParams.has("floor_id")).toBe(false);
+  });
+
   it("submits the create form and resets every field, including type and event", async () => {
     const fakeFetch = mockListResponses({
       floors: [{ id: "f1", building_id: "b1", label: "Térreo" }],

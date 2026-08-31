@@ -41,12 +41,22 @@ export function ServicePointsPage() {
   // fail cleanly) even before the session has hydrated from storage.
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
   const [showArchived, setShowArchived] = useState(false);
+  // Finding I4: the design spec calls for this screen to have "filtro por andar" alongside
+  // the archived toggle — the backend already supports and tests ?floor_id=, this page just
+  // never sent it. "" means no filter (every floor), matching the create-form's floor picker's
+  // own empty-option convention.
+  const [floorFilterId, setFloorFilterId] = useState("");
 
   const { data: points } = useQuery({
-    queryKey: ["service-points", showArchived],
+    queryKey: ["service-points", showArchived, floorFilterId],
     queryFn: async () => {
       const { data } = await client.GET("/service-points", {
-        params: { query: { include_archived: showArchived } },
+        params: {
+          query: {
+            include_archived: showArchived,
+            floor_id: floorFilterId === "" ? undefined : floorFilterId,
+          },
+        },
       });
 
       return data as ServicePointRow[];
@@ -236,6 +246,25 @@ export function ServicePointsPage() {
         )}
         <Button type="submit">{t("servicePointsSubmitCreate")}</Button>
       </form>
+
+      <div>
+        <Label htmlFor="point-floor-filter">{t("servicePointsFilterFloor")}</Label>
+        <select
+          id="point-floor-filter"
+          className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+          value={floorFilterId}
+          onChange={(event) => {
+            setFloorFilterId(event.target.value);
+          }}
+        >
+          <option value="">{t("servicePointsFilterFloorAll")}</option>
+          {floors?.map((floor) => (
+            <option key={floor.id} value={floor.id}>
+              {floor.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <Label className="text-sm">
         <input

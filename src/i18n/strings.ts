@@ -74,6 +74,8 @@ export const strings = {
   servicePointsSubmitCreate: "Cadastrar",
   servicePointsPromote: "Promover a regular",
   servicePointsShowArchived: "Mostrar arquivados",
+  servicePointsFilterFloor: "Filtrar por andar",
+  servicePointsFilterFloorAll: "Todos os andares",
 } as const;
 
 export type StringKey = keyof typeof strings;
