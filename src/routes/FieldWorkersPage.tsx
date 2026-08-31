@@ -25,12 +25,14 @@ interface ServiceTypeRow {
   name: string;
   average_duration_minutes: number;
 }
-interface UserRow {
+// Finding C2: mirrors the backend's LinkableUserOut — the dedicated projection
+// GET /field-workers/linkable-users returns for this dropdown (already filtered
+// server-side to FIELD_WORKER-role users not yet linked to a worker), not the full
+// UserOut shape GET /users returns.
+interface LinkableUserRow {
   id: string;
   name: string;
   email: string;
-  role: string;
-  is_active: boolean;
 }
 
 export function FieldWorkersPage() {
@@ -66,24 +68,18 @@ export function FieldWorkersPage() {
       return data as ServiceTypeRow[];
     },
   });
-  const { data: users } = useQuery({
-    queryKey: ["users"],
+  // Finding C2: GET /users is Admin-only, so a Manager (who owns this whole screen) got a
+  // silent 403 here and an empty dropdown. GET /field-workers/linkable-users is Manager-or-
+  // Admin and already does the "FIELD_WORKER-role, not yet linked" filtering server-side, so
+  // there is no client-side filter to compute any more — render its response directly.
+  const { data: linkableUsers } = useQuery({
+    queryKey: ["field-workers", "linkable-users"],
     queryFn: async () => {
-      const { data } = await client.GET("/users");
+      const { data } = await client.GET("/field-workers/linkable-users");
 
-      return data as UserRow[];
+      return data as LinkableUserRow[];
     },
   });
-
-  // A user counts as "available for linking" only if their id does not appear as the
-  // user_id of ANY existing field worker (not just the one being created here — this
-  // page is create-only, there is no "current worker" to exempt from its own link).
-  const linkedUserIds = new Set(
-    (workers ?? []).map((worker) => worker.user_id).filter((id) => id !== null),
-  );
-  const availableUsers = (users ?? []).filter(
-    (user) => user.role === "FIELD_WORKER" && !linkedUserIds.has(user.id),
-  );
 
   const [fullName, setFullName] = useState("");
   const [companyId, setCompanyId] = useState("");
@@ -183,7 +179,7 @@ export function FieldWorkersPage() {
             }}
           >
             <option value="">{t("fieldWorkersNoLinkedUser")}</option>
-            {availableUsers.map((user) => (
+            {linkableUsers?.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name} — {user.email}
               </option>

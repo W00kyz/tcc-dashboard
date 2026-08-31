@@ -19,24 +19,25 @@ function renderPage(fetchImpl: typeof fetch) {
 }
 
 // Every test hits the four GET queries the page fires on mount, in the order the
-// component declares them: field workers, contractor companies, service types, users.
+// component declares them: field workers, contractor companies, service types,
+// linkable users (Finding C2 — GET /field-workers/linkable-users, not GET /users).
 function mockListResponses({
   workers = [],
   companies = [],
   serviceTypes = [],
-  users = [],
+  linkableUsers = [],
 }: {
   workers?: unknown[];
   companies?: unknown[];
   serviceTypes?: unknown[];
-  users?: unknown[];
+  linkableUsers?: unknown[];
 }) {
   return vi
     .fn()
     .mockResolvedValueOnce(new Response(JSON.stringify(workers), { status: 200 }))
     .mockResolvedValueOnce(new Response(JSON.stringify(companies), { status: 200 }))
     .mockResolvedValueOnce(new Response(JSON.stringify(serviceTypes), { status: 200 }))
-    .mockResolvedValueOnce(new Response(JSON.stringify(users), { status: 200 }));
+    .mockResolvedValueOnce(new Response(JSON.stringify(linkableUsers), { status: 200 }));
 }
 
 describe("FieldWorkersPage", () => {
@@ -67,7 +68,13 @@ describe("FieldWorkersPage", () => {
     expect(within(worker).getByText("Limpa Tudo")).toBeInTheDocument();
   });
 
-  it("offers only FIELD_WORKER-role users not already linked to a worker for linking", async () => {
+  // Finding C2: the dropdown used to fetch the full GET /users list (Admin-only) and filter
+  // it client-side to FIELD_WORKER-role, not-yet-linked users — a Manager (who owns this
+  // whole screen) got a silent 403 there and an empty dropdown. GET /field-workers/
+  // linkable-users is Manager-or-Admin and does that filtering server-side, so this test only
+  // needs to confirm the dropdown renders exactly what that endpoint returns — there is no
+  // client-side filter left to exercise.
+  it("populates the linked-user dropdown from GET /field-workers/linkable-users", async () => {
     const fakeFetch = mockListResponses({
       workers: [
         {
@@ -79,29 +86,7 @@ describe("FieldWorkersPage", () => {
         },
       ],
       companies: [{ id: "c1", name: "Limpa Tudo", cnpj: "12345678000199" }],
-      users: [
-        {
-          id: "u1",
-          name: "Usuário Já Vinculado",
-          email: "u1@example.com",
-          role: "FIELD_WORKER",
-          is_active: true,
-        },
-        {
-          id: "u2",
-          name: "Maria Souza",
-          email: "u2@example.com",
-          role: "FIELD_WORKER",
-          is_active: true,
-        },
-        {
-          id: "u3",
-          name: "Gestora Ana",
-          email: "u3@example.com",
-          role: "MANAGER",
-          is_active: true,
-        },
-      ],
+      linkableUsers: [{ id: "u2", name: "Maria Souza", email: "u2@example.com" }],
     });
 
     renderPage(fakeFetch);
@@ -110,8 +95,19 @@ describe("FieldWorkersPage", () => {
     await waitFor(() => {
       expect(within(linkedUserSelect).getByText(/Maria Souza/)).toBeInTheDocument();
     });
-    expect(within(linkedUserSelect).queryByText(/Usuário Já Vinculado/)).not.toBeInTheDocument();
-    expect(within(linkedUserSelect).queryByText(/Gestora Ana/)).not.toBeInTheDocument();
+    // The already-linked worker and any non-FIELD_WORKER user were never in the mocked
+    // response to begin with — the backend excludes them, not this component — so the only
+    // thing left to prove client-side is that nothing else got added on top of the response.
+    expect(within(linkedUserSelect).getAllByRole("option")).toHaveLength(2); // "Nenhum" + u2
+
+    // Confirms the fix at the network level: exactly one GET went to
+    // /field-workers/linkable-users, and GET /users (Admin-only, the endpoint that used to
+    // 403 for a Manager) was never called at all.
+    const requestedPaths = fakeFetch.mock.calls.map(
+      ([request]) => new URL((request as Request).url).pathname,
+    );
+    expect(requestedPaths).toContain("/field-workers/linkable-users");
+    expect(requestedPaths).not.toContain("/users");
   });
 
   it("submits the create-field-worker form with the selected service types", async () => {
@@ -131,6 +127,12 @@ describe("FieldWorkersPage", () => {
         { status: 201 },
       ),
     );
+    // Two refetches after the mutation: react-query's invalidateQueries({ queryKey:
+    // ["field-workers"] }) matches by prefix, not exact key, so it also refetches
+    // ["field-workers", "linkable-users"] (Finding C2's query) alongside ["field-workers"]
+    // itself — correct, since a newly-created worker can change who still counts as
+    // "linkable".
+    fakeFetch.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
     fakeFetch.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
     const { default: userEvent } = await import("@testing-library/user-event");
 
@@ -145,7 +147,7 @@ describe("FieldWorkersPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
     await waitFor(() => {
-      expect(fakeFetch).toHaveBeenCalledTimes(6);
+      expect(fakeFetch).toHaveBeenCalledTimes(7);
     });
     // openapi-fetch calls the injected fetch with a single Request object rather than a
     // (url, init) pair, so the submitted body has to be read off that Request's own clone.

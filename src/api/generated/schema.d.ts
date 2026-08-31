@@ -331,6 +331,31 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/field-workers/linkable-users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Linkable Users
+     * @description Finding C2: the dashboard's /profissionais screen needs FIELD_WORKER-role Users not yet
+     *     linked to a FieldWorker, for its link dropdown. GET /users is Admin-only (RF05), so a
+     *     Manager gets 403 there — this router serves its own minimal projection instead. Registered
+     *     before any `/{worker_id}`-shaped route so "linkable-users" is never captured as a path
+     *     parameter (this router currently has no GET "/{worker_id}", so no collision exists today
+     *     either way, but the ordering is kept safe against one being added later).
+     */
+    get: operations["list_linkable_users_field_workers_linkable_users_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/field-workers/{worker_id}": {
     parameters: {
       query?: never;
@@ -808,6 +833,23 @@ export interface components {
     IssueQrCodeRequest: {
       /** Reason */
       reason: string;
+    };
+    /**
+     * LinkableUserOut
+     * @description Minimal projection for the dashboard /profissionais link-dropdown (Finding C2) — a
+     *     dedicated model instead of importing UserOut from app/api/users.py, so this router stays
+     *     self-contained per this repo's "no cross-router imports" convention.
+     */
+    LinkableUserOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Email */
+      email: string;
     };
     /** LoginRequest */
     LoginRequest: {
@@ -1718,6 +1760,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_linkable_users_field_workers_linkable_users_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LinkableUserOut"][];
         };
       };
     };
