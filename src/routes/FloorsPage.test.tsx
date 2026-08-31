@@ -210,4 +210,30 @@ describe("FloorsPage", () => {
     expect(createObjectUrlSpy).toHaveBeenCalled();
     expect(openSpy).toHaveBeenCalledWith("blob:mock-url", "_blank");
   });
+
+  // Finding I3: a floor with no active QR (every new floor, every floor right after a
+  // revoke) 404s here — the bug was blob-opening that JSON error body as if it were the
+  // PDF. This proves the fix shows a message instead of ever calling window.open.
+  it("shows an error message instead of opening a tab when the PDF download 404s", async () => {
+    const { fakeFetch } = renderPage([
+      floorResponse(),
+      new Response(JSON.stringify({ detail: 'Floor "f1" has no active QR code.' }), {
+        status: 404,
+      }),
+    ]);
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    const { default: userEvent } = await import("@testing-library/user-event");
+
+    await screen.findByText("Térreo");
+    await userEvent.click(screen.getByRole("button", { name: "Baixar PDF" }));
+
+    await waitFor(() => {
+      expect(fakeFetch).toHaveBeenCalledTimes(2);
+    });
+    await screen.findByRole("alert");
+    expect(
+      screen.getByText("Não foi possível baixar o PDF — este andar não tem um QR ativo."),
+    ).toBeInTheDocument();
+    expect(openSpy).not.toHaveBeenCalled();
+  });
 });

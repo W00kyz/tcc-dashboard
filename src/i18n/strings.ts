@@ -55,6 +55,7 @@ export const strings = {
   floorsDownloadPdf: "Baixar PDF",
   floorsQrReasonPrompt: "Motivo da geração/substituição",
   floorsRevokeReasonPrompt: "Motivo da revogação",
+  floorsPdfDownloadError: "Não foi possível baixar o PDF — este andar não tem um QR ativo.",
   eventsPageTitle: "Eventos",
   eventsFieldName: "Nome do evento",
   eventsFieldValidFrom: "Início da janela",

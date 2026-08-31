@@ -45,6 +45,13 @@ export function FloorsPage() {
     enabled: Boolean(buildingId),
   });
 
+  // Finding I3: downloadPdf used to ignore response.ok and blob-open whatever came back —
+  // for the common case of a floor with no active QR (every new floor, every floor right
+  // after a revoke) that meant opening a tab showing the raw {"detail": "..."} error body
+  // instead of any indication something went wrong. This tracks the most recent failure so
+  // the page can show a real message instead.
+  const [pdfDownloadError, setPdfDownloadError] = useState<string | null>(null);
+
   const [label, setLabel] = useState("");
   const create = useMutation({
     mutationFn: async () => {
@@ -124,12 +131,28 @@ export function FloorsPage() {
   }
 
   async function downloadPdf(floorId: string) {
+    setPdfDownloadError(null);
     const response = await fetch(`${apiBaseUrl}/floors/${floorId}/qr-codes/active/pdf`, {
       headers: { Authorization: `Bearer ${session?.accessToken ?? ""}` },
     });
+    // A 404 ("no active QR for this floor") is the common case, not an edge case — every
+    // freshly created floor and every floor right after a revoke hits it. Surfacing it as a
+    // message instead of blob-opening the JSON error body is the whole point of this check.
+    if (!response.ok) {
+      setPdfDownloadError(t("floorsPdfDownloadError"));
+
+      return;
+    }
+
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank");
+    // The new tab needs time to actually load the blob before its URL can safely go away;
+    // revoking immediately risks a race, so this just bounds the leak instead of chasing the
+    // load event of a tab this page doesn't otherwise track.
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 60_000);
   }
 
   return (
@@ -154,6 +177,11 @@ export function FloorsPage() {
         </div>
         <Button type="submit">{t("floorsSubmitCreate")}</Button>
       </form>
+      {pdfDownloadError !== null && (
+        <p role="alert" className="text-sm text-destructive">
+          {pdfDownloadError}
+        </p>
+      )}
       <ul className="divide-border divide-y">
         {floors?.map((floor) => {
           const activeQr = activeQrByFloor[floor.id];
