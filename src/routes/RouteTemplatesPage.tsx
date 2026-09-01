@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { toLocalIsoDate } from "@/lib/dates";
 
 type ApiClient = ReturnType<typeof createApiClient>;
 type Recurrence = "DAILY" | "WEEKLY";
@@ -34,15 +35,6 @@ const WEEKDAY_OPTIONS: readonly { iso: number; key: StringKey }[] = [
   { iso: 7, key: "routeTemplateWeekdaySun" },
 ];
 
-// Local calendar date, not the UTC day `toISOString().slice(0, 10)` would give near midnight
-// for a Brazil-time user (same reasoning as RouteBuilderPage.todayIso).
-function toIsoDate(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${String(date.getFullYear())}-${month}-${day}`;
-}
-
 function isoWeekday(date: Date): number {
   const day = date.getDay();
 
@@ -56,17 +48,17 @@ function nextMaterializeDate(recurrence: string, weekdays: number[] | null): str
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   if (recurrence !== "WEEKLY" || weekdays === null || weekdays.length === 0) {
-    return toIsoDate(start);
+    return toLocalIsoDate(start);
   }
   for (let offset = 0; offset < 7; offset += 1) {
     const candidate = new Date(start);
     candidate.setDate(start.getDate() + offset);
     if (weekdays.includes(isoWeekday(candidate))) {
-      return toIsoDate(candidate);
+      return toLocalIsoDate(candidate);
     }
   }
 
-  return toIsoDate(start);
+  return toLocalIsoDate(start);
 }
 
 // Templates carry a bare "HH:MM" time-of-day, never a datetime — unlike the route builder,

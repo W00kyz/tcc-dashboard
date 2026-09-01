@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { toLocalIsoDate } from "@/lib/dates";
 
 type ApiClient = ReturnType<typeof createApiClient>;
 
@@ -38,20 +39,16 @@ const STATUS_PILL_CLASS: Record<RouteStatus, string> = {
   CANCELLED: "bg-muted text-muted-foreground",
 };
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 // The board's filters live in the URL, not in component state: a route just created elsewhere
 // navigates here with `?route_type=OCCASIONAL` (Task 11) or `?date=<materialized>` (Task 12),
 // and the board must land already filtered. Deriving the filters from the query string also
 // makes the board deep-linkable and refreshable. An absent `date` param means "today"; an
 // explicit empty `date=` means "every date" (the user cleared the native date input).
 function filtersFromParams(params: URLSearchParams): RouteFilters {
-  // `?? todayIso()` only fills a *missing* param; an explicit empty `date=` (user cleared the
-  // input) is kept as "" so the fetch omits the date and the backend returns every date.
+  // `?? toLocalIsoDate()` only fills a *missing* param; an explicit empty `date=` (user cleared
+  // the input) is kept as "" so the fetch omits the date and the backend returns every date.
   return {
-    date: params.get("date") ?? todayIso(),
+    date: params.get("date") ?? toLocalIsoDate(),
     fieldWorkerId: params.get("field_worker_id") ?? "",
     routeType: (params.get("route_type") as RouteFilters["routeType"] | null) ?? "",
     status: (params.get("status") as RouteFilters["status"] | null) ?? "",

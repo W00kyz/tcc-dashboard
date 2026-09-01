@@ -50,6 +50,7 @@ export const strings = {
   routeBuilderPickWorkers: "Profissionais",
   routeBuilderOccasionalHint: "não altera as rotas regulares planejadas",
   routeBuilderWorker: "Profissional",
+  routeBuilderWorkerLockedHint: "Para reatribuir a rota, use o menu de ações no quadro de rotas.",
   routeBuilderDate: "Data",
   routeBuilderAddPoint: "Adicionar ponto",
   routeBuilderPickBuilding: "Prédio",

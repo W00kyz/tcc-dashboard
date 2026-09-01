@@ -10,21 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { toLocalIsoDate } from "@/lib/dates";
 
 type RouteType = "REGULAR" | "OCCASIONAL";
 type StopBody = components["schemas"]["StopBody"];
 
 const SELECT_CLASS = "border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm";
-
-// Local calendar date, not `new Date().toISOString().slice(0, 10)` — that is the UTC day
-// and rolls over early/late for a Brazil-time user near midnight.
-function todayIso(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-
-  return `${String(now.getFullYear())}-${month}-${day}`;
-}
 
 // The backend's expected_arrival_* columns are tz-aware (`DateTime(timezone=True)`) and the
 // backend normalises every arrival window to UTC (see routing/service.py `_combine_date_time`).
@@ -68,7 +59,7 @@ export function RouteBuilderPage() {
 
   const [fieldWorkerId, setFieldWorkerId] = useState("");
   const [fieldWorkerIds, setFieldWorkerIds] = useState<string[]>([]);
-  const [routeDate, setRouteDate] = useState(todayIso());
+  const [routeDate, setRouteDate] = useState(toLocalIsoDate());
   const [buildingId, setBuildingId] = useState("");
   const [floorId, setFloorId] = useState("");
   const [servicePointId, setServicePointId] = useState("");
@@ -195,7 +186,10 @@ export function RouteBuilderPage() {
       if (routeId !== undefined) {
         const { response } = await client.PATCH("/routes/{route_id}", {
           params: { path: { route_id: routeId } },
-          body: { field_worker_id: fieldWorkerId, route_date: routeDate, stops: stopBodies },
+          // No `field_worker_id`: the backend 409s a PATCH that changes the assigned worker
+          // (reassignment must go through the board's reassign dialog, with a reason). The
+          // edit form's worker <select> is disabled, so it could only ever resend the same id.
+          body: { route_date: routeDate, stops: stopBodies },
         });
         if (!response.ok) {
           throw new Error(`PATCH /routes/${routeId} failed with status ${String(response.status)}`);
@@ -235,7 +229,9 @@ export function RouteBuilderPage() {
     },
     onSuccess: (created) => {
       if (isOccasional) {
-        void navigate("/rotas?route_type=OCCASIONAL");
+        // Keep the route's own date in the redirect — the board defaults to today, which
+        // would hide an occasional route created for any other day.
+        void navigate(`/rotas?date=${routeDate}&route_type=OCCASIONAL`);
 
         return;
       }
@@ -317,6 +313,9 @@ export function RouteBuilderPage() {
               id="route-worker"
               className={SELECT_CLASS}
               value={fieldWorkerId}
+              // Reassignment is a dedicated action (mandatory reason) on the board, not a
+              // side effect of editing — and the backend 409s a PATCH that changes the worker.
+              disabled={isEdit}
               onChange={(event) => {
                 setFieldWorkerId(event.target.value);
               }}
@@ -328,6 +327,11 @@ export function RouteBuilderPage() {
                 </option>
               ))}
             </select>
+            {isEdit && (
+              <p className="text-muted-foreground mt-1 text-sm">
+                {t("routeBuilderWorkerLockedHint")}
+              </p>
+            )}
           </div>
         )}
 

@@ -355,16 +355,18 @@ describe("RouteBuilderPage", () => {
     expect(body.stops).toHaveLength(1);
     expect(body.stops[0]?.service_point_id).toBe("sp1");
 
-    // Lands on the board already filtered to occasional routes: the card shows and the
-    // board's own GET /routes carries the type filter from the query string.
+    // Lands on the board already filtered to occasional routes *for the route's own date*:
+    // the redirect keeps `date=` instead of dropping the manager on a board defaulted to
+    // today, and the board's own GET /routes carries both filters from the query string.
     expect(await screen.findByTestId("route-card-board1")).toBeInTheDocument();
     const boardQuery = fakeFetch.mock.calls
       .map(([input]) => (input instanceof Request ? input.url : String(input)))
       .find((url) => url.includes("/routes") && url.includes("route_type=OCCASIONAL"));
     expect(boardQuery).toBeDefined();
+    expect(boardQuery).toContain("date=2026-09-01");
   });
 
-  it("keeps the single-worker select and PATCHes field_worker_id in edit mode even with ?type=OCCASIONAL", async () => {
+  it("locks the single-worker select and omits field_worker_id from the PATCH in edit mode even with ?type=OCCASIONAL", async () => {
     const routeBody = {
       ...EMPTY_ROUTE,
       id: "r5",
@@ -385,15 +387,27 @@ describe("RouteBuilderPage", () => {
     renderBuilder("/rotas/r5/editar?type=OCCASIONAL", fakeFetch);
 
     await screen.findByText("Sala 101");
-    expect(screen.getByRole("combobox", { name: "Profissional" })).toBeInTheDocument();
+    // Still the single-worker <select> (not the occasional multi-checkbox), but disabled:
+    // reassignment goes through the board's reassign dialog, and the backend 409s a PATCH
+    // that changes the worker.
+    const workerSelect = screen.getByRole("combobox", { name: "Profissional" });
+    expect(workerSelect).toBeDisabled();
+    expect(workerSelect).toHaveValue("w1");
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Para reatribuir a rota, use o menu de ações no quadro de rotas."),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Salvar" }));
 
     const patchCall = await findWriteCall(fakeFetch, "PATCH");
     expect((patchCall[0] as Request).url).toContain("/routes/r5");
     const body = (await (patchCall[0] as Request).clone().json()) as Record<string, unknown>;
-    expect(body.field_worker_id).toBe("w1");
+    expect(body).not.toHaveProperty("field_worker_id");
+    expect(body).toEqual({
+      route_date: "2026-09-01",
+      stops: [{ service_point_id: "sp1", expected_arrival_from: null, expected_arrival_to: null }],
+    });
   });
 
   it("keeps submit disabled in occasional mode until a worker and a stop are added", async () => {
