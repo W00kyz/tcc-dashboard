@@ -11,6 +11,7 @@ import { FloorsPage } from "@/routes/FloorsPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
 import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
+import { RouteTemplatesPage } from "@/routes/RouteTemplatesPage";
 import { ServicePointsPage } from "@/routes/ServicePointsPage";
 import { ServiceTypesPage } from "@/routes/ServiceTypesPage";
 import { UsersPage } from "@/routes/UsersPage";
@@ -28,6 +29,7 @@ export const appRoutes: RouteObject[] = [
       { path: "/rotas", element: <RouteBoardPage /> },
       { path: "/rotas/nova", element: <RouteBuilderPage /> },
       { path: "/rotas/:routeId/editar", element: <RouteBuilderPage /> },
+      { path: "/templates-de-rota", element: <RouteTemplatesPage /> },
       { path: "/tipos-de-servico", element: <ServiceTypesPage /> },
       { path: "/empresas-terceirizadas", element: <ContractorCompaniesPage /> },
       { path: "/profissionais", element: <FieldWorkersPage /> },
