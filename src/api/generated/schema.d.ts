@@ -254,6 +254,29 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/routes/{route_id}/stops/{stop_id}/complete-manually": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Complete Stop Manually
+     * @description RF53 — a manager closes a stop the worker could not reach, with a reason and no
+     *     evidence. `complete_manually` owns and commits its own transaction (the execution module
+     *     exception to "service flushes, never commits"); the audit trail is appended in a second
+     *     transaction afterwards, exactly as `start_route` does.
+     */
+    post: operations["complete_stop_manually_routes__route_id__stops__stop_id__complete_manually_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/route-templates": {
     parameters: {
       query?: never;
@@ -318,6 +341,142 @@ export interface paths {
     put?: never;
     /** Create Check In */
     post: operations["create_check_in_check_ins_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/check-outs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create Check Out */
+    post: operations["create_check_out_check_outs_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/executions/{execution_id}/evidence/photo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Upload Photo */
+    post: operations["upload_photo_executions__execution_id__evidence_photo_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/executions/{execution_id}/evidence/note": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Upload Note */
+    post: operations["upload_note_executions__execution_id__evidence_note_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/executions/{execution_id}/evidence": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Execution Evidence */
+    get: operations["list_execution_evidence_executions__execution_id__evidence_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/evidence/{evidence_id}/content": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Evidence Content */
+    get: operations["get_evidence_content_evidence__evidence_id__content_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/executions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Execution History */
+    get: operations["list_execution_history_executions_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/executions/{execution_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Execution */
+    get: operations["get_execution_executions__execution_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/executions/{execution_id}/review/resolve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Resolve Execution Review */
+    post: operations["resolve_execution_review_executions__execution_id__review_resolve_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -736,6 +895,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Settings Endpoint */
+    get: operations["get_settings_endpoint_settings_get"];
+    /** Put Settings Endpoint */
+    put: operations["put_settings_endpoint_settings_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -749,6 +926,18 @@ export interface components {
        * @default bearer
        */
       token_type: string;
+    };
+    /** Body_upload_photo_executions__execution_id__evidence_photo_post */
+    Body_upload_photo_executions__execution_id__evidence_photo_post: {
+      /** File */
+      file: string;
+      /** Sha256 */
+      sha256: string;
+      /**
+       * Captured At
+       * Format: date-time
+       */
+      captured_at: string;
     };
     /** BuildingCreateRequest */
     BuildingCreateRequest: {
@@ -783,17 +972,12 @@ export interface components {
     };
     /** CheckInRequest */
     CheckInRequest: {
-      /**
-       * Route Stop Id
-       * Format: uuid
-       */
-      route_stop_id: string;
       /** Qr Payload */
       qr_payload: string;
       /** Latitude */
-      latitude: number;
+      latitude?: number | null;
       /** Longitude */
-      longitude: number;
+      longitude?: number | null;
       /**
        * Scanned At
        * Format: date-time
@@ -804,6 +988,8 @@ export interface components {
        * Format: uuid
        */
       idempotency_key: string;
+      /** Route Stop Id */
+      route_stop_id?: string | null;
     };
     /** CheckInResponse */
     CheckInResponse: {
@@ -813,10 +999,64 @@ export interface components {
        */
       execution_id: string;
       /**
-       * Checked In At
+       * Route Stop Id
+       * Format: uuid
+       */
+      route_stop_id: string;
+      /** Geo Validation */
+      geo_validation: string;
+      /** Validation Flags */
+      validation_flags: string[];
+      /** Review Status */
+      review_status: string;
+    };
+    /** CheckOutRequest */
+    CheckOutRequest: {
+      /** Qr Payload */
+      qr_payload: string;
+      /** Latitude */
+      latitude?: number | null;
+      /** Longitude */
+      longitude?: number | null;
+      /**
+       * Scanned At
        * Format: date-time
        */
-      checked_in_at: string;
+      scanned_at: string;
+      /**
+       * Checkout Idempotency Key
+       * Format: uuid
+       */
+      checkout_idempotency_key: string;
+      /** Route Stop Id */
+      route_stop_id?: string | null;
+    };
+    /** CheckOutResponse */
+    CheckOutResponse: {
+      /**
+       * Execution Id
+       * Format: uuid
+       */
+      execution_id: string;
+      /**
+       * Route Stop Id
+       * Format: uuid
+       */
+      route_stop_id: string;
+      /**
+       * Checked Out At
+       * Format: date-time
+       */
+      checked_out_at: string;
+      /** Validation Flags */
+      validation_flags: string[];
+      /** Review Status */
+      review_status: string;
+    };
+    /** CompleteManuallyBody */
+    CompleteManuallyBody: {
+      /** Reason */
+      reason: string;
     };
     /** ContractorCompanyCreateRequest */
     ContractorCompanyCreateRequest: {
@@ -893,6 +1133,203 @@ export interface components {
        * Format: date
        */
       valid_until: string;
+    };
+    /** EvidenceItemOut */
+    EvidenceItemOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Kind */
+      kind: string;
+      /** Text Body */
+      text_body: string | null;
+      /**
+       * Captured At
+       * Format: date-time
+       */
+      captured_at: string;
+      /** Content Type */
+      content_type: string | null;
+      /** Byte Size */
+      byte_size: number | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Content Url */
+      content_url: string | null;
+    };
+    /** EvidenceNoteRequest */
+    EvidenceNoteRequest: {
+      /** Text Body */
+      text_body: string;
+      /**
+       * Captured At
+       * Format: date-time
+       */
+      captured_at: string;
+    };
+    /** ExecutionDetail */
+    ExecutionDetail: {
+      /**
+       * Execution Id
+       * Format: uuid
+       */
+      execution_id: string;
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Field Worker Name */
+      field_worker_name: string;
+      /**
+       * Service Point Id
+       * Format: uuid
+       */
+      service_point_id: string;
+      /** Service Point Name */
+      service_point_name: string;
+      /**
+       * Building Id
+       * Format: uuid
+       */
+      building_id: string;
+      /** Building Name */
+      building_name: string;
+      /** Floor Label */
+      floor_label: string;
+      /**
+       * Checked In At
+       * Format: date-time
+       */
+      checked_in_at: string;
+      /** Checked Out At */
+      checked_out_at: string | null;
+      /** Geo Validation */
+      geo_validation: string | null;
+      /** Review Status */
+      review_status: string;
+      /** Validation Flags */
+      validation_flags: string[];
+      /** Source */
+      source: string;
+      /** Evidence Count */
+      evidence_count: number;
+      /**
+       * Route Id
+       * Format: uuid
+       */
+      route_id: string;
+      /** Scans */
+      scans: components["schemas"]["ExecutionScan"][];
+      /** Evidence */
+      evidence: components["schemas"]["ExecutionEvidence"][];
+      manual_completion: components["schemas"]["ManualCompletionOut"] | null;
+    };
+    /** ExecutionEvidence */
+    ExecutionEvidence: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Kind */
+      kind: string;
+      /** Text Body */
+      text_body: string | null;
+      /** Content Type */
+      content_type: string | null;
+      /** Byte Size */
+      byte_size: number | null;
+      /**
+       * Captured At
+       * Format: date-time
+       */
+      captured_at: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Content Url */
+      content_url: string | null;
+    };
+    /** ExecutionListItem */
+    ExecutionListItem: {
+      /**
+       * Execution Id
+       * Format: uuid
+       */
+      execution_id: string;
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Field Worker Name */
+      field_worker_name: string;
+      /**
+       * Service Point Id
+       * Format: uuid
+       */
+      service_point_id: string;
+      /** Service Point Name */
+      service_point_name: string;
+      /**
+       * Building Id
+       * Format: uuid
+       */
+      building_id: string;
+      /** Building Name */
+      building_name: string;
+      /** Floor Label */
+      floor_label: string;
+      /**
+       * Checked In At
+       * Format: date-time
+       */
+      checked_in_at: string;
+      /** Checked Out At */
+      checked_out_at: string | null;
+      /** Geo Validation */
+      geo_validation: string | null;
+      /** Review Status */
+      review_status: string;
+      /** Validation Flags */
+      validation_flags: string[];
+      /** Source */
+      source: string;
+      /** Evidence Count */
+      evidence_count: number;
+      /**
+       * Route Id
+       * Format: uuid
+       */
+      route_id: string;
+    };
+    /** ExecutionScan */
+    ExecutionScan: {
+      /** Kind */
+      kind: string;
+      /** Geo Validation */
+      geo_validation: string;
+      /** Latitude */
+      latitude: number | null;
+      /** Longitude */
+      longitude: number | null;
+      /** Distance M */
+      distance_m: number | null;
+      /** Service Point Id */
+      service_point_id: string | null;
+      /**
+       * Scanned At
+       * Format: date-time
+       */
+      scanned_at: string;
     };
     /** FieldWorkerCreateRequest */
     FieldWorkerCreateRequest: {
@@ -1016,6 +1453,21 @@ export interface components {
       /** Password */
       password: string;
     };
+    /** ManualCompletionOut */
+    ManualCompletionOut: {
+      /**
+       * Completed By
+       * Format: uuid
+       */
+      completed_by: string;
+      /** Reason */
+      reason: string;
+      /**
+       * Completed At
+       * Format: date-time
+       */
+      completed_at: string;
+    };
     /** MaterializeBody */
     MaterializeBody: {
       /**
@@ -1039,6 +1491,17 @@ export interface components {
       scheduled_start_at?: string | null;
       /** Stops */
       stops: components["schemas"]["StopBody"][];
+    };
+    /** PagedExecutions */
+    PagedExecutions: {
+      /** Items */
+      items: components["schemas"]["ExecutionListItem"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number;
+      /** Page Size */
+      page_size: number;
     };
     /** PasswordResetConfirm */
     PasswordResetConfirm: {
@@ -1093,6 +1556,11 @@ export interface components {
     RefreshRequest: {
       /** Refresh Token */
       refresh_token: string;
+    };
+    /** ResolveReviewRequest */
+    ResolveReviewRequest: {
+      /** Note */
+      note?: string | null;
     };
     /** RevokeQrCodeRequest */
     RevokeQrCodeRequest: {
@@ -1284,6 +1752,18 @@ export interface components {
       name: string;
       /** Average Duration Minutes */
       average_duration_minutes: number;
+    };
+    /** SettingsOut */
+    SettingsOut: {
+      /** Check Radius Meters */
+      check_radius_meters: number;
+      /** Updated At */
+      updated_at: string | null;
+    };
+    /** SettingsUpdate */
+    SettingsUpdate: {
+      /** Check Radius Meters */
+      check_radius_meters: number;
     };
     /** StartRouteRequest */
     StartRouteRequest: {
@@ -1973,6 +2453,42 @@ export interface operations {
       };
     };
   };
+  complete_stop_manually_routes__route_id__stops__stop_id__complete_manually_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        route_id: string;
+        stop_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompleteManuallyBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   list_route_templates_route_templates_get: {
     parameters: {
       query?: never;
@@ -2147,6 +2663,278 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CheckInResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_check_out_check_outs_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CheckOutRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CheckOutResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  upload_photo_executions__execution_id__evidence_photo_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        execution_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_photo_executions__execution_id__evidence_photo_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EvidenceItemOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  upload_note_executions__execution_id__evidence_note_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        execution_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EvidenceNoteRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EvidenceItemOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_execution_evidence_executions__execution_id__evidence_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        execution_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EvidenceItemOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_evidence_content_evidence__evidence_id__content_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        evidence_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_execution_history_executions_get: {
+    parameters: {
+      query?: {
+        date_from?: string | null;
+        date_to?: string | null;
+        field_worker_id?: string | null;
+        service_point_id?: string | null;
+        building_id?: string | null;
+        review_status?: string | null;
+        geo_validation?: string | null;
+        source?: string | null;
+        route_stop_status?: string | null;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedExecutions"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_execution_executions__execution_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        execution_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExecutionDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  resolve_execution_review_executions__execution_id__review_resolve_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        execution_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ResolveReviewRequest"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExecutionDetail"];
         };
       };
       /** @description Validation Error */
@@ -3088,6 +3876,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["QrCodeOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_settings_endpoint_settings_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SettingsOut"];
+        };
+      };
+    };
+  };
+  put_settings_endpoint_settings_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SettingsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SettingsOut"];
         };
       };
       /** @description Validation Error */

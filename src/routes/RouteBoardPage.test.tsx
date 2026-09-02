@@ -16,7 +16,10 @@ const OCCASIONAL_ROUTE = {
   scheduled_start_at: null,
   started_at: null,
   routing_degraded: false,
-  stops: [{ id: "s1", order_index: 1, status: "PENDING", service_point_name: "Sala 101" }],
+  stops: [
+    { id: "s1", order_index: 1, status: "IN_PROGRESS", service_point_name: "Sala 101" },
+    { id: "s2", order_index: 2, status: "PENDING", service_point_name: "Sala 102" },
+  ],
 };
 
 const CANCELLED_ROUTE = {
@@ -106,6 +109,13 @@ describe("RouteBoardPage", () => {
 
     const cancelledCard = await screen.findByTestId("route-card-r2");
     expect(within(cancelledCard).getByText("Cancelada")).toBeInTheDocument();
+  });
+
+  it("renders the amber in-progress dot for an IN_PROGRESS stop", async () => {
+    renderPage(makeFakeFetch());
+
+    const occasionalCard = await screen.findByTestId("route-card-r1");
+    expect(within(occasionalCard).getByLabelText("Ponto 1: Em andamento")).toBeInTheDocument();
   });
 
   it("renders the route actions menu inside each card", async () => {

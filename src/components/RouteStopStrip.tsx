@@ -1,7 +1,7 @@
 /** The product's recurring motif: one dot per route_stop, colored by status, in
- * route_stops.order_index order. Stages 4/5/8/9 reuse this component as more statuses
- * (IN_PROGRESS, LATE) join the two this stage knows about. */
-export type RouteStopUiStatus = "PENDING" | "DONE";
+ * route_stops.order_index order. Stages 5/8/9 reuse this component as more statuses
+ * (LATE) join the three this stage knows about. */
+export type RouteStopUiStatus = "PENDING" | "IN_PROGRESS" | "DONE";
 
 interface RouteStopStripProps {
   stops: { id: string; orderIndex: number; status: RouteStopUiStatus }[];
@@ -9,11 +9,15 @@ interface RouteStopStripProps {
 
 const STATUS_LABEL: Record<RouteStopUiStatus, string> = {
   PENDING: "Pendente",
+  IN_PROGRESS: "Em andamento",
   DONE: "Concluído",
 };
 
+// --color-status-progress is the amber token the theme already defines, matching
+// RouteBoardPage's amber IN_PROGRESS pill.
 const STATUS_COLOR_VAR: Record<RouteStopUiStatus, string> = {
   PENDING: "var(--color-status-pending)",
+  IN_PROGRESS: "var(--color-status-progress)",
   DONE: "var(--color-status-done)",
 };
 

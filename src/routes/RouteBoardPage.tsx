@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
 import { toLocalIsoDate } from "@/lib/dates";
+import { toStopStatus } from "@/lib/stopStatus";
 
 type ApiClient = ReturnType<typeof createApiClient>;
 
@@ -261,7 +262,7 @@ export function RouteBoardPage() {
                 stops={route.stops.map((stop) => ({
                   id: stop.id,
                   orderIndex: stop.order_index,
-                  status: stop.status as "PENDING" | "DONE",
+                  status: toStopStatus(stop.status),
                 }))}
               />
               <RouteActionsMenu route={route} />
