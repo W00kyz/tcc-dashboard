@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { EvidenceViewer } from "@/components/EvidenceViewer";
@@ -50,9 +50,14 @@ function renderViewer() {
   );
 }
 
+let revokeObjectUrl: Mock<(url: string) => void>;
+
 beforeEach(() => {
-  URL.createObjectURL = vi.fn(() => "blob:mock-photo");
-  URL.revokeObjectURL = vi.fn();
+  // A distinct URL per mint so a test can assert exactly which one was (not) revoked.
+  let counter = 0;
+  URL.createObjectURL = vi.fn(() => `blob:mock-${String(counter++)}`);
+  revokeObjectUrl = vi.fn<(url: string) => void>();
+  URL.revokeObjectURL = revokeObjectUrl;
   vi.stubGlobal(
     "fetch",
     vi.fn(() => Promise.resolve(new Response(new Blob(["img-bytes"]), { status: 200 }))),
@@ -93,5 +98,31 @@ describe("EvidenceViewer", () => {
     await waitFor(() => {
       expect(lightbox).not.toBeInTheDocument();
     });
+  });
+
+  it("keeps each consumer's object URL alive independently while navigating the lightbox", async () => {
+    renderViewer();
+
+    const thumbnails = await waitFor(() => {
+      const imgs = screen.getAllByRole("img");
+      expect(imgs).toHaveLength(2);
+
+      return imgs;
+    });
+    const [firstThumbnail] = thumbnails;
+    if (firstThumbnail === undefined) {
+      throw new Error("expected a photo thumbnail to render");
+    }
+    const firstThumbnailSrc = firstThumbnail.getAttribute("src");
+
+    fireEvent.click(firstThumbnail);
+    fireEvent.click(screen.getByRole("button", { name: "Próxima foto" }));
+    fireEvent.click(screen.getByRole("button", { name: "Foto anterior" }));
+
+    // The thumbnail never unmounted, so its blob URL must never be revoked out from under it,
+    // even though the lightbox minted and revoked its own URL for the same photo.
+    expect(firstThumbnailSrc).toMatch(/^blob:/);
+    expect(revokeObjectUrl).not.toHaveBeenCalledWith(firstThumbnailSrc);
+    expect(screen.getAllByRole("img")[0]?.getAttribute("src")).toBe(firstThumbnailSrc);
   });
 });

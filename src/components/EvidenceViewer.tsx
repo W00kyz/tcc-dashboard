@@ -12,14 +12,22 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
-// The `<img>` element cannot carry the bearer header, so each photo is fetched through the
-// authed `fetch` into a `blob:` URL and that object URL is revoked when the thumbnail unmounts
-// (React Query keeps the entry only while it is mounted here — `gcTime: 0`).
-function usePhotoObjectUrl(contentUrl: string, token: string): string | undefined {
+interface PhotoResource {
+  objectUrl: string | undefined;
+  isError: boolean;
+}
+
+// The `<img>` element cannot carry the bearer header, so the authed `fetch` pulls the bytes and
+// React Query caches the immutable `Blob` (never the object URL — see below). Each hook instance
+// then mints its OWN `blob:` URL from that Blob in an effect and revokes exactly that URL on
+// cleanup, so a thumbnail and the lightbox showing the same photo never revoke each other's URL,
+// and a result fetched after the drawer closed is never turned into an unobserved, leaked URL.
+function usePhotoResource(contentUrl: string, token: string): PhotoResource {
   const query = useQuery({
     queryKey: ["evidence-blob", contentUrl],
-    gcTime: 0,
-    queryFn: async () => {
+    // Evidence bytes are immutable; skip the refetch-on-focus churn that would swap the Blob.
+    staleTime: Infinity,
+    queryFn: async (): Promise<Blob> => {
       const response = await fetch(`${apiBaseUrl}${contentUrl}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -29,21 +37,39 @@ function usePhotoObjectUrl(contentUrl: string, token: string): string | undefine
         );
       }
 
-      return URL.createObjectURL(await response.blob());
+      return response.blob();
     },
   });
 
+  const [objectUrl, setObjectUrl] = useState<string>();
+
   useEffect(() => {
-    const url = query.data;
+    const blob = query.data;
+    if (blob === undefined) {
+      setObjectUrl(undefined);
+
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    setObjectUrl(url);
 
     return () => {
-      if (url !== undefined) {
-        URL.revokeObjectURL(url);
-      }
+      URL.revokeObjectURL(url);
     };
   }, [query.data]);
 
-  return query.data;
+  return { objectUrl, isError: query.isError };
+}
+
+function PhotoState({ resource }: { resource: PhotoResource }) {
+  const { t } = useTranslation();
+
+  return (
+    <span className="text-muted-foreground flex h-24 items-center justify-center px-2 text-center text-xs">
+      {resource.isError ? t("evidencePhotoError") : t("evidencePhotoLoading")}
+    </span>
+  );
 }
 
 interface PhotoThumbnailProps {
@@ -54,7 +80,7 @@ interface PhotoThumbnailProps {
 
 function PhotoThumbnail({ item, token, onOpen }: PhotoThumbnailProps) {
   const { t } = useTranslation();
-  const objectUrl = usePhotoObjectUrl(item.content_url ?? "", token);
+  const resource = usePhotoResource(item.content_url ?? "", token);
 
   return (
     <li>
@@ -63,13 +89,11 @@ function PhotoThumbnail({ item, token, onOpen }: PhotoThumbnailProps) {
         className="border-input block w-full overflow-hidden rounded-md border"
         onClick={onOpen}
       >
-        {objectUrl === undefined ? (
-          <span className="text-muted-foreground flex h-24 items-center justify-center text-xs">
-            {t("evidencePhotoLoading")}
-          </span>
+        {resource.objectUrl === undefined ? (
+          <PhotoState resource={resource} />
         ) : (
           <img
-            src={objectUrl}
+            src={resource.objectUrl}
             alt={t("evidencePhotoAlt")}
             loading="lazy"
             className="h-24 w-full object-cover"
@@ -94,13 +118,11 @@ interface LightboxProps {
 function Lightbox({ photos, index, token, onIndexChange, onClose }: LightboxProps) {
   const { t } = useTranslation();
   const current = photos[index];
-  const objectUrl = usePhotoObjectUrl(current?.content_url ?? "", token);
+  const resource = usePhotoResource(current?.content_url ?? "", token);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        // Stop the drawer's own Escape listener from also firing: close the lightbox only.
-        event.stopImmediatePropagation();
         onClose();
       } else if (event.key === "ArrowLeft" && index > 0) {
         onIndexChange(index - 1);
@@ -143,9 +165,13 @@ function Lightbox({ photos, index, token, onIndexChange, onClose }: LightboxProp
       >
         ◀
       </button>
-      {objectUrl !== undefined && (
+      {resource.objectUrl === undefined ? (
+        <span className="text-sm text-white">
+          {resource.isError ? t("evidencePhotoError") : t("evidencePhotoLoading")}
+        </span>
+      ) : (
         <img
-          src={objectUrl}
+          src={resource.objectUrl}
           alt={t("evidencePhotoAlt")}
           className="max-h-full max-w-full object-contain"
           onClick={(event) => {
@@ -171,13 +197,27 @@ function Lightbox({ photos, index, token, onIndexChange, onClose }: LightboxProp
 
 interface EvidenceViewerProps {
   items: ExecutionEvidence[];
+  // Lets the drawer suppress its own Escape-to-close handler while the lightbox owns Escape.
+  onLightboxOpenChange?: (open: boolean) => void;
 }
 
-export function EvidenceViewer({ items }: EvidenceViewerProps) {
+export function EvidenceViewer({ items, onLightboxOpenChange }: EvidenceViewerProps) {
   const { t } = useTranslation();
   const { session } = useAuth();
   const token = session?.accessToken ?? "";
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    onLightboxOpenChange?.(lightboxIndex !== null);
+  }, [lightboxIndex, onLightboxOpenChange]);
+
+  // Unmounting the viewer (drawer closed, detail refetching) closes the lightbox too — tell the
+  // drawer so its Escape handler is not left permanently suppressed.
+  useEffect(() => {
+    return () => {
+      onLightboxOpenChange?.(false);
+    };
+  }, [onLightboxOpenChange]);
 
   if (items.length === 0) {
     return null;

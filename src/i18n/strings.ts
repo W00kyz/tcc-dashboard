@@ -187,6 +187,7 @@ export const strings = {
   executionTimelineHeading: "Linha do tempo",
   executionCheckInLabel: "Check-in",
   executionCheckOutLabel: "Check-out",
+  executionGeoValidationLabel: "Validação GPS",
   executionFlagsHeading: "Sinalizações",
   executionScansHeading: "Leituras de QR",
   executionScanCheckIn: "Check-in",

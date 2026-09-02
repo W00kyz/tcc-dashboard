@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
@@ -34,12 +34,43 @@ const SCAN_KIND_LABEL_KEY: Record<string, StringKey> = {
   CHECK_OUT: "executionScanCheckOut",
 };
 
-// Same green/amber/grey vocabulary as ExecutionHistoryPage's GEO_BADGE.
+// Same green/amber/grey vocabulary and label keys as ExecutionHistoryPage's GEO_BADGE.
 const GEO_BADGE_CLASS: Record<string, string> = {
   VALIDATED: "bg-green-100 text-green-800",
   OUT_OF_RADIUS: "bg-amber-100 text-amber-800",
   NOT_VALIDATED: "bg-muted text-muted-foreground",
 };
+
+const GEO_LABEL_KEY: Record<string, StringKey> = {
+  VALIDATED: "executionsGeoValidated",
+  OUT_OF_RADIUS: "executionsGeoOutOfRadius",
+  NOT_VALIDATED: "executionsGeoNotValidated",
+};
+
+type Translate = ReturnType<typeof useTranslation>["t"];
+
+// `geo_validation` is a bare `string` in the schema; an unknown value falls back to its raw
+// text, and a null execution-level value renders as an em dash.
+function geoLabel(t: Translate, value: string | null): string {
+  if (value === null) {
+    return "—";
+  }
+  const key = GEO_LABEL_KEY[value];
+
+  return key ? t(key) : value;
+}
+
+function GeoBadge({ value }: { value: string }) {
+  const { t } = useTranslation();
+
+  return (
+    <span
+      className={`${BADGE_CLASS} ${GEO_BADGE_CLASS[value] ?? "bg-muted text-muted-foreground"}`}
+    >
+      {geoLabel(t, value)}
+    </span>
+  );
+}
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -56,9 +87,7 @@ function ScanRow({ scan }: { scan: ExecutionScan }) {
   return (
     <li className="flex flex-wrap items-center gap-2 text-sm">
       <span className="font-medium">{kindKey ? t(kindKey) : scan.kind}</span>
-      <span className={`${BADGE_CLASS} ${GEO_BADGE_CLASS[scan.geo_validation] ?? "bg-muted"}`}>
-        {scan.geo_validation}
-      </span>
+      <GeoBadge value={scan.geo_validation} />
       <span className="text-muted-foreground">{formatDistance(scan.distance_m)}</span>
     </li>
   );
@@ -68,10 +97,12 @@ function DetailBody({
   detail,
   executionId,
   onClose,
+  onLightboxOpenChange,
 }: {
   detail: ExecutionDetail;
   executionId: string;
   onClose: () => void;
+  onLightboxOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -112,6 +143,10 @@ function DetailBody({
           ) : (
             "—"
           )}
+        </p>
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">{t("executionGeoValidationLabel")}: </span>
+          {detail.geo_validation === null ? "—" : <GeoBadge value={detail.geo_validation} />}
         </p>
       </section>
 
@@ -169,7 +204,7 @@ function DetailBody({
           <p className="text-muted-foreground mt-1 text-sm">{t("executionNoEvidence")}</p>
         ) : (
           <div className="mt-1">
-            <EvidenceViewer items={detail.evidence} />
+            <EvidenceViewer items={detail.evidence} onLightboxOpenChange={onLightboxOpenChange} />
           </div>
         )}
       </section>
@@ -206,6 +241,11 @@ export function ExecutionDetailDrawer({ executionId, onClose }: ExecutionDetailD
   const { session } = useAuth();
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
 
+  // While the evidence lightbox is open it owns Escape (closes itself first); the drawer's own
+  // Escape-to-close stands down until the lightbox is gone. Both listeners fire on every
+  // Escape — order is irrelevant because the drawer's is guarded by this flag, not by timing.
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
   const { data: detail, isError } = useQuery({
     queryKey: ["execution", executionId],
     enabled: executionId !== null,
@@ -225,7 +265,7 @@ export function ExecutionDetailDrawer({ executionId, onClose }: ExecutionDetailD
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !lightboxOpen) {
         onClose();
       }
     }
@@ -235,7 +275,7 @@ export function ExecutionDetailDrawer({ executionId, onClose }: ExecutionDetailD
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, lightboxOpen]);
 
   if (executionId === null) {
     return null;
@@ -271,7 +311,12 @@ export function ExecutionDetailDrawer({ executionId, onClose }: ExecutionDetailD
           <p className="text-muted-foreground mt-4 text-sm">{t("executionDetailLoading")}</p>
         )}
         {detail !== undefined && (
-          <DetailBody detail={detail} executionId={executionId} onClose={onClose} />
+          <DetailBody
+            detail={detail}
+            executionId={executionId}
+            onClose={onClose}
+            onLightboxOpenChange={setLightboxOpen}
+          />
         )}
       </aside>
     </div>
