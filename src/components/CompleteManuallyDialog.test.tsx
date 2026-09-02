@@ -67,9 +67,24 @@ function makeFakeFetch(status = 201) {
   });
 }
 
-function Harness({ route, fetchImpl }: { route: RouteOut; fetchImpl: typeof fetch }) {
+interface HarnessProps {
+  route: RouteOut;
+  fetchImpl: typeof fetch;
+  // Simulates the board refetch: the route the dialog receives once it has closed.
+  routeAfterClose?: RouteOut;
+}
+
+function Harness({ route, fetchImpl, routeAfterClose }: HarnessProps) {
   const [open, setOpen] = useState(true);
+  const [currentRoute, setCurrentRoute] = useState(route);
   vi.stubGlobal("fetch", fetchImpl);
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next && routeAfterClose !== undefined) {
+      setCurrentRoute(routeAfterClose);
+    }
+  }
 
   return (
     <AuthProvider>
@@ -81,19 +96,19 @@ function Harness({ route, fetchImpl }: { route: RouteOut; fetchImpl: typeof fetc
       >
         reabrir
       </button>
-      <CompleteManuallyDialog route={route} open={open} onOpenChange={setOpen} />
+      <CompleteManuallyDialog route={currentRoute} open={open} onOpenChange={handleOpenChange} />
     </AuthProvider>
   );
 }
 
-function renderDialog(route: RouteOut, fetchImpl: typeof fetch) {
+function renderDialog(route: RouteOut, fetchImpl: typeof fetch, routeAfterClose?: RouteOut) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   return {
     queryClient,
     ...render(
       <QueryClientProvider client={queryClient}>
-        <Harness route={route} fetchImpl={fetchImpl} />
+        <Harness route={route} fetchImpl={fetchImpl} routeAfterClose={routeAfterClose} />
       </QueryClientProvider>,
     ),
   };
@@ -156,6 +171,45 @@ describe("CompleteManuallyDialog", () => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ["routes"] });
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ["executions"] });
     });
+  });
+
+  it("resets the reason and re-picks a still-open stop after a successful completion", async () => {
+    const user = userEvent.setup();
+    // After the board refetch the completed stop (s2) is DONE; only s3 stays open.
+    const routeAfterClose: RouteOut = {
+      ...ROUTE,
+      stops: [
+        makeStop({ id: "s1", order_index: 1, status: "DONE", service_point_name: "Sala 101" }),
+        makeStop({ id: "s2", order_index: 2, status: "DONE", service_point_name: "Sala 202" }),
+        makeStop({
+          id: "s3",
+          order_index: 3,
+          status: "IN_PROGRESS",
+          service_point_name: "Sala 303",
+        }),
+      ],
+    };
+    renderDialog(ROUTE, makeFakeFetch(), routeAfterClose);
+
+    const dialog = await screen.findByRole("dialog");
+    await user.selectOptions(within(dialog).getByRole("combobox", { name: "Ponto" }), "s2");
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Motivo da conclusão" }),
+      "Sem acesso ao prédio",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Concluir ponto" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "reabrir" }));
+    const reopened = await screen.findByRole("dialog");
+
+    expect(within(reopened).getByRole("textbox", { name: "Motivo da conclusão" })).toHaveValue("");
+    const select = within(reopened).getByRole("combobox", { name: "Ponto" });
+    expect(select).toHaveValue("s3");
+    expect(within(reopened).queryByRole("option", { name: "2. Sala 202" })).not.toBeInTheDocument();
   });
 
   it("shows an alert on failure and clears it when reopened", async () => {

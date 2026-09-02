@@ -288,22 +288,15 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
       </Dialog>
 
       {canCompleteAStopManually && (
-        <>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setCompleteManuallyOpen(true);
-            }}
-          >
+        <CompleteManuallyDialog
+          route={route}
+          open={completeManuallyOpen}
+          onOpenChange={setCompleteManuallyOpen}
+        >
+          <Button variant="outline" size="sm">
             {t("routeCompleteManuallyMenuItem")}
           </Button>
-          <CompleteManuallyDialog
-            route={route}
-            open={completeManuallyOpen}
-            onOpenChange={setCompleteManuallyOpen}
-          />
-        </>
+        </CompleteManuallyDialog>
       )}
 
       {optimizeUnavailable && (

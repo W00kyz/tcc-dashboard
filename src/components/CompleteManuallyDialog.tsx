@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
 import { toStopStatus } from "@/lib/stopStatus";
@@ -30,9 +30,15 @@ interface CompleteManuallyDialogProps {
   route: RouteOut;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  children?: ReactNode;
 }
 
-export function CompleteManuallyDialog({ route, open, onOpenChange }: CompleteManuallyDialogProps) {
+export function CompleteManuallyDialog({
+  route,
+  open,
+  onOpenChange,
+  children,
+}: CompleteManuallyDialogProps) {
   const { t } = useTranslation();
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -44,41 +50,47 @@ export function CompleteManuallyDialog({ route, open, onOpenChange }: CompleteMa
   const [stopId, setStopId] = useState(firstStopId);
   const [reason, setReason] = useState("");
 
+  // After a completion + board refetch the chosen stop leaves `pendingStops`, so a stale
+  // `stopId` would no longer match any <option>. Fall back to the first still-open stop.
+  const selectedStopId = stops.some((stop) => stop.id === stopId) ? stopId : firstStopId;
+
+  // Closing the dialog (X / Esc / outside click / success) must wipe the previous attempt —
+  // otherwise a reopened dialog shows the stale error alert and the last typed reason.
+  function handleOpenChange(next: boolean) {
+    onOpenChange(next);
+    if (!next) {
+      complete.reset();
+      setStopId("");
+      setReason("");
+    }
+  }
+
   const complete = useMutation({
     mutationFn: async () => {
       const { response } = await client.POST(
         "/routes/{route_id}/stops/{stop_id}/complete-manually",
         {
-          params: { path: { route_id: route.id, stop_id: stopId } },
+          params: { path: { route_id: route.id, stop_id: selectedStopId } },
           body: { reason: reason.trim() },
         },
       );
       if (!response.ok) {
         throw new Error(
-          `POST /routes/${route.id}/stops/${stopId}/complete-manually failed with status ${String(response.status)}.`,
+          `POST /routes/${route.id}/stops/${selectedStopId}/complete-manually failed with status ${String(response.status)}.`,
         );
       }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["routes"] });
       void queryClient.invalidateQueries({ queryKey: ["executions"] });
-      onOpenChange(false);
+      // Route the success close through the same reset path a manual close takes.
+      handleOpenChange(false);
     },
   });
 
-  // Closing the dialog (X / Esc / outside click) must wipe the previous attempt — otherwise a
-  // reopened dialog shows the stale error alert and the last typed reason.
-  function handleOpenChange(next: boolean) {
-    onOpenChange(next);
-    if (!next) {
-      complete.reset();
-      setStopId(firstStopId);
-      setReason("");
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
+      {children != null && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent aria-describedby={undefined}>
         <DialogTitle>{t("routeCompleteManuallyTitle")}</DialogTitle>
         <form
@@ -93,7 +105,7 @@ export function CompleteManuallyDialog({ route, open, onOpenChange }: CompleteMa
             <select
               id="complete-manually-stop"
               className={SELECT_CLASS}
-              value={stopId}
+              value={selectedStopId}
               onChange={(event) => {
                 setStopId(event.target.value);
               }}
@@ -128,7 +140,7 @@ export function CompleteManuallyDialog({ route, open, onOpenChange }: CompleteMa
           <Button
             type="submit"
             size="sm"
-            disabled={stopId === "" || reason.trim() === "" || complete.isPending}
+            disabled={selectedStopId === "" || reason.trim() === "" || complete.isPending}
           >
             {t("routeCompleteManuallyConfirm")}
           </Button>

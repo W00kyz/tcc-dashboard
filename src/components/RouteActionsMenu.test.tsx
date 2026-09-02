@@ -331,6 +331,19 @@ describe("RouteActionsMenu", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hides 'Concluir ponto sem evidência' for a DONE route even with a non-DONE stop", () => {
+    const doneRouteWithStop: RouteOut = {
+      ...PLANNED_ROUTE,
+      id: "r4",
+      status: "DONE",
+      stops: [makeStop({ id: "s1", status: "PENDING" })],
+    };
+    renderMenu(doneRouteWithStop, makeFakeFetch());
+    expect(
+      screen.queryByRole("button", { name: "Concluir ponto sem evidência" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("hides 'Concluir ponto sem evidência' for a CANCELLED route even with a PENDING stop", () => {
     const cancelledWithStop: RouteOut = {
       ...PLANNED_ROUTE,
