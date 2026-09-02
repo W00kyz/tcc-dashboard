@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { BuildingsPage } from "@/routes/BuildingsPage";
 import { ContractorCompaniesPage } from "@/routes/ContractorCompaniesPage";
 import { EventsPage } from "@/routes/EventsPage";
+import { ExecutionHistoryPage } from "@/routes/ExecutionHistoryPage";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { FloorsPage } from "@/routes/FloorsPage";
 import { LoginPage } from "@/routes/LoginPage";
@@ -27,6 +28,7 @@ export const appRoutes: RouteObject[] = [
     element: <ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]} />,
     children: [
       { path: "/rotas", element: <RouteBoardPage /> },
+      { path: "/execucoes", element: <ExecutionHistoryPage /> },
       { path: "/rotas/nova", element: <RouteBuilderPage /> },
       { path: "/rotas/:routeId/editar", element: <RouteBuilderPage /> },
       { path: "/templates-de-rota", element: <RouteTemplatesPage /> },
