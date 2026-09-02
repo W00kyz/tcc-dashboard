@@ -1,8 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, Navigate, type RouteObject, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  type RouteObject,
+  RouterProvider,
+} from "react-router-dom";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
+import { AppNav } from "@/components/AppNav";
 import { BuildingsPage } from "@/routes/BuildingsPage";
 import { ContractorCompaniesPage } from "@/routes/ContractorCompaniesPage";
 import { EventsPage } from "@/routes/EventsPage";
@@ -15,6 +22,7 @@ import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
 import { RouteTemplatesPage } from "@/routes/RouteTemplatesPage";
 import { ServicePointsPage } from "@/routes/ServicePointsPage";
 import { ServiceTypesPage } from "@/routes/ServiceTypesPage";
+import { SettingsPage } from "@/routes/SettingsPage";
 import { UsersPage } from "@/routes/UsersPage";
 
 const queryClient = new QueryClient();
@@ -43,11 +51,27 @@ export const appRoutes: RouteObject[] = [
   },
   {
     element: <ProtectedRoute allowedRoles={["ADMIN"]} />,
-    children: [{ path: "/usuarios", element: <UsersPage /> }],
+    children: [
+      { path: "/usuarios", element: <UsersPage /> },
+      { path: "/configuracoes", element: <SettingsPage /> },
+    ],
   },
 ];
 
-const router = createBrowserRouter(appRoutes);
+// Pathless layout route: the only nav shell this dashboard has (spec §7.1). AppNav renders
+// nothing without a session, so /entrar keeps its bare full-screen layout. Kept out of the
+// exported `appRoutes` so that array still maps ProtectedRoute branches to page paths 1:1.
+const router = createBrowserRouter([
+  {
+    element: (
+      <>
+        <AppNav />
+        <Outlet />
+      </>
+    ),
+    children: appRoutes,
+  },
+]);
 
 export function App() {
   return (

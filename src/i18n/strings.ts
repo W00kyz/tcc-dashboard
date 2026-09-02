@@ -219,6 +219,20 @@ export const strings = {
   evidenceLightboxPrev: "Foto anterior",
   evidenceLightboxNext: "Próxima foto",
   evidenceLightboxClose: "Fechar",
+  navRoutes: "Rotas",
+  navRouteTemplates: "Templates de rota",
+  navExecutions: "Execuções",
+  navSettings: "Configurações",
+  navReviewQueueBadgeAria: "Ver fila de revisão",
+  settingsTitle: "Configurações",
+  settingsRadiusLabel: "Raio de tolerância (metros)",
+  settingsRadiusHint:
+    "Distância máxima entre o GPS do check-in e o ponto esperado para a validação passar (RF32).",
+  settingsRadiusRange: "Informe um valor entre 1 e 1000 metros.",
+  settingsSave: "Salvar",
+  settingsSaved: "Configurações salvas.",
+  settingsLoading: "Carregando configurações…",
+  settingsError: "Não foi possível carregar as configurações.",
 } as const;
 
 export type StringKey = keyof typeof strings;
