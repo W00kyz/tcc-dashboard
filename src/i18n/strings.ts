@@ -159,6 +159,7 @@ export const strings = {
   executionHistoryColReview: "Revisão",
   executionHistoryColSource: "Origem",
   executionHistoryColEvidence: "Evidências",
+  executionHistoryRowAria: "Ver detalhe da execução de",
   executionHistoryPaginationLabel: "Página",
   executionHistoryPaginationOf: "de",
   executionHistoryPrevPage: "Anterior",

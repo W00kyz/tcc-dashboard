@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -187,6 +187,10 @@ export function ExecutionHistoryPage() {
   } = useQuery({
     queryKey: ["executions", filters, page],
     queryFn: () => fetchExecutions(client, filters, page),
+    // Keep the previous page's rows (and the pagination controls) mounted while the next
+    // page loads — otherwise "Próxima" unmounts itself mid-click and focus is lost. The
+    // first load still has no previous data, so `isLoading` renders the spinner as before.
+    placeholderData: keepPreviousData,
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -342,9 +346,20 @@ export function ExecutionHistoryPage() {
                 return (
                   <tr
                     key={item.execution_id}
-                    className="hover:bg-muted/50 cursor-pointer border-b"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${t("executionHistoryRowAria")} ${item.field_worker_name}`}
+                    className="hover:bg-muted/50 focus-visible:bg-muted/50 cursor-pointer border-b"
                     onClick={() => {
                       setSelectedId(item.execution_id);
+                    }}
+                    onKeyDown={(event) => {
+                      // Row acts as a button: open the drawer on Enter/Space. preventDefault on
+                      // Space stops the page from scrolling; on Enter it is harmless.
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedId(item.execution_id);
+                      }
                     }}
                   >
                     <td className="py-2 pr-3">{item.field_worker_name}</td>

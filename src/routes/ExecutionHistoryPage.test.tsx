@@ -182,4 +182,15 @@ describe("ExecutionHistoryPage", () => {
     const drawer = screen.getByRole("dialog", { name: "Detalhe da execução" });
     expect(within(drawer).getByText(/e1/)).toBeInTheDocument();
   });
+
+  it("opens the detail drawer when a row is activated with the keyboard", async () => {
+    renderPage(makeFakeFetch());
+
+    await screen.findByRole("cell", { name: "João da Silva" });
+    const row = screen.getByRole("button", { name: "Ver detalhe da execução de João da Silva" });
+    fireEvent.keyDown(row, { key: "Enter" });
+
+    const drawer = screen.getByRole("dialog", { name: "Detalhe da execução" });
+    expect(within(drawer).getByText(/e1/)).toBeInTheDocument();
+  });
 });
