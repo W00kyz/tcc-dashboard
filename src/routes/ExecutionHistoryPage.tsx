@@ -430,14 +430,12 @@ export function ExecutionHistoryPage() {
         </div>
       )}
 
-      {selectedId !== null && (
-        <ExecutionDetailDrawer
-          executionId={selectedId}
-          onClose={() => {
-            setSelectedId(null);
-          }}
-        />
-      )}
+      <ExecutionDetailDrawer
+        executionId={selectedId}
+        onClose={() => {
+          setSelectedId(null);
+        }}
+      />
     </main>
   );
 }

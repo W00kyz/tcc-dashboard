@@ -44,6 +44,13 @@ const EXECUTION_B = {
   route_id: "r2",
 };
 
+const EXECUTION_A_DETAIL = {
+  ...EXECUTION_A,
+  scans: [],
+  evidence: [],
+  manual_completion: null,
+};
+
 const WORKERS = [
   {
     id: "w1",
@@ -81,6 +88,10 @@ function makeFakeFetch(total = 2, items: unknown[] = [EXECUTION_A, EXECUTION_B])
 
     if (url.includes("/buildings")) {
       return Promise.resolve(new Response(JSON.stringify(BUILDINGS), { status: 200 }));
+    }
+
+    if (/\/executions\/e1(\/|$|\?)/.test(url)) {
+      return Promise.resolve(new Response(JSON.stringify(EXECUTION_A_DETAIL), { status: 200 }));
     }
 
     return Promise.resolve(
@@ -173,14 +184,14 @@ describe("ExecutionHistoryPage", () => {
     });
   });
 
-  it("opens the detail drawer stub on a row click", async () => {
+  it("opens the detail drawer on a row click and loads the execution detail", async () => {
     renderPage(makeFakeFetch());
 
     const workerCell = await screen.findByRole("cell", { name: "João da Silva" });
     fireEvent.click(workerCell);
 
     const drawer = screen.getByRole("dialog", { name: "Detalhe da execução" });
-    expect(within(drawer).getByText(/e1/)).toBeInTheDocument();
+    expect(await within(drawer).findByText("Linha do tempo")).toBeInTheDocument();
   });
 
   it("opens the detail drawer when a row is activated with the keyboard", async () => {
@@ -191,6 +202,6 @@ describe("ExecutionHistoryPage", () => {
     fireEvent.keyDown(row, { key: "Enter" });
 
     const drawer = screen.getByRole("dialog", { name: "Detalhe da execução" });
-    expect(within(drawer).getByText(/e1/)).toBeInTheDocument();
+    expect(await within(drawer).findByText("Linha do tempo")).toBeInTheDocument();
   });
 });
