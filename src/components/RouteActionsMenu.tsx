@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
+import { CompleteManuallyDialog } from "@/components/CompleteManuallyDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { toStopStatus } from "@/lib/stopStatus";
 
 type RouteOut = components["schemas"]["RouteOut"];
 
@@ -54,8 +56,14 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
 
   const disabled = TERMINAL_STATUSES.includes(route.status);
 
+  // "Concluir ponto sem evidência" (RF53) is per-stop: offer it only while the route is live
+  // and at least one stop is still open — a DONE stop already has an execution.
+  const canCompleteAStopManually =
+    !disabled && route.stops.some((stop) => toStopStatus(stop.status) !== "DONE");
+
   const [reassignOpen, setReassignOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [completeManuallyOpen, setCompleteManuallyOpen] = useState(false);
   const [workerId, setWorkerId] = useState("");
   const [reassignReason, setReassignReason] = useState("");
   const [cancelReason, setCancelReason] = useState("");
@@ -278,6 +286,25 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {canCompleteAStopManually && (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setCompleteManuallyOpen(true);
+            }}
+          >
+            {t("routeCompleteManuallyMenuItem")}
+          </Button>
+          <CompleteManuallyDialog
+            route={route}
+            open={completeManuallyOpen}
+            onOpenChange={setCompleteManuallyOpen}
+          />
+        </>
+      )}
 
       {optimizeUnavailable && (
         <p role="alert" className="text-destructive w-full text-sm">

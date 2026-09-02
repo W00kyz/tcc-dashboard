@@ -9,6 +9,28 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { RouteActionsMenu } from "@/components/RouteActionsMenu";
 
 type RouteOut = components["schemas"]["RouteOut"];
+type RouteStopOut = components["schemas"]["RouteStopOut"];
+
+function makeStop(overrides: Partial<RouteStopOut>): RouteStopOut {
+  return {
+    id: "s1",
+    order_index: 1,
+    status: "PENDING",
+    service_point_id: "sp1",
+    service_point_name: "Sala 101",
+    floor_label: "Térreo",
+    building_name: "Bloco CG",
+    latitude: -7.2,
+    longitude: -35.9,
+    point_type: "REGULAR",
+    expected_arrival_from: null,
+    expected_arrival_to: null,
+    distance_from_prev_m: null,
+    duration_from_prev_s: null,
+    leg_geometry: null,
+    ...overrides,
+  };
+}
 
 const WORKERS = [
   {
@@ -275,6 +297,51 @@ describe("RouteActionsMenu", () => {
     });
     const body = (await (cancelCall[0] as Request).clone().json()) as Record<string, unknown>;
     expect(body).toEqual({ reason: "Rota duplicada" });
+  });
+
+  it("offers 'Concluir ponto sem evidência' when a stop is PENDING or IN_PROGRESS", () => {
+    const pendingRoute: RouteOut = {
+      ...PLANNED_ROUTE,
+      stops: [makeStop({ id: "s1", status: "PENDING" })],
+    };
+    const { unmount } = renderMenu(pendingRoute, makeFakeFetch());
+    expect(
+      screen.getByRole("button", { name: "Concluir ponto sem evidência" }),
+    ).toBeInTheDocument();
+    unmount();
+
+    const inProgressRoute: RouteOut = {
+      ...PLANNED_ROUTE,
+      stops: [makeStop({ id: "s1", status: "IN_PROGRESS" })],
+    };
+    renderMenu(inProgressRoute, makeFakeFetch());
+    expect(
+      screen.getByRole("button", { name: "Concluir ponto sem evidência" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides 'Concluir ponto sem evidência' when every stop is DONE", () => {
+    const doneRoute: RouteOut = {
+      ...PLANNED_ROUTE,
+      stops: [makeStop({ id: "s1", status: "DONE" })],
+    };
+    renderMenu(doneRoute, makeFakeFetch());
+    expect(
+      screen.queryByRole("button", { name: "Concluir ponto sem evidência" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides 'Concluir ponto sem evidência' for a CANCELLED route even with a PENDING stop", () => {
+    const cancelledWithStop: RouteOut = {
+      ...PLANNED_ROUTE,
+      id: "r3",
+      status: "CANCELLED",
+      stops: [makeStop({ id: "s1", status: "PENDING" })],
+    };
+    renderMenu(cancelledWithStop, makeFakeFetch());
+    expect(
+      screen.queryByRole("button", { name: "Concluir ponto sem evidência" }),
+    ).not.toBeInTheDocument();
   });
 
   it("disables every action for a route that is CANCELLED", () => {
