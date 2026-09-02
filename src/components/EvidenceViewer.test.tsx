@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
@@ -124,5 +124,31 @@ describe("EvidenceViewer", () => {
     expect(firstThumbnailSrc).toMatch(/^blob:/);
     expect(revokeObjectUrl).not.toHaveBeenCalledWith(firstThumbnailSrc);
     expect(screen.getAllByRole("img")[0]?.getAttribute("src")).toBe(firstThumbnailSrc);
+  });
+
+  it("shows the photo error message (no stuck spinner) when the content fetch fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(null, { status: 403 }))),
+    );
+    renderViewer();
+
+    // One error message per photo (2), and the loading text is gone — not a stuck spinner.
+    await waitFor(() => {
+      expect(screen.getAllByText("Não foi possível carregar a foto.")).toHaveLength(2);
+    });
+    expect(screen.queryByText("Carregando foto…")).not.toBeInTheDocument();
+
+    // The lightbox opened on the errored photo surfaces the same message.
+    const [firstThumbnailButton] = screen.getAllByRole("button");
+    if (firstThumbnailButton === undefined) {
+      throw new Error("expected a photo thumbnail button to render");
+    }
+    fireEvent.click(firstThumbnailButton);
+
+    const lightbox = screen.getByRole("dialog", { name: "Visualizador de evidência" });
+    expect(
+      await within(lightbox).findByText("Não foi possível carregar a foto."),
+    ).toBeInTheDocument();
   });
 });
