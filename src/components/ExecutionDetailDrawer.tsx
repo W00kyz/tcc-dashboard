@@ -27,6 +27,7 @@ const FLAG_LABEL_KEY: Record<string, StringKey> = {
   QR_SUPERSEDED: "executionFlagQrSuperseded",
   GPS_UNAVAILABLE: "executionFlagGpsUnavailable",
   ROOM_CHOSEN_MANUALLY: "executionFlagRoomChosenManually",
+  CLOCK_SKEW: "executionFlagClockSkew",
 };
 
 const SCAN_KIND_LABEL_KEY: Record<string, StringKey> = {
@@ -149,6 +150,12 @@ function DetailBody({
           {detail.geo_validation === null ? "—" : <GeoBadge value={detail.geo_validation} />}
         </p>
       </section>
+
+      {detail.clock_skew_seconds !== null && (
+        <p className="text-amber-800 text-sm font-medium">
+          {t("executionClockSkew")}: {Math.round(detail.clock_skew_seconds)} s
+        </p>
+      )}
 
       {detail.validation_flags.length > 0 && (
         <section>

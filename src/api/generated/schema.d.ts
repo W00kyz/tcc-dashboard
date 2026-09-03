@@ -938,6 +938,11 @@ export interface components {
        * Format: date-time
        */
       captured_at: string;
+      /**
+       * Idempotency Key
+       * Format: uuid
+       */
+      idempotency_key: string;
     };
     /** BuildingCreateRequest */
     BuildingCreateRequest: {
@@ -990,6 +995,10 @@ export interface components {
       idempotency_key: string;
       /** Route Stop Id */
       route_stop_id?: string | null;
+      /** Execution Id */
+      execution_id?: string | null;
+      /** Client Clock Offset Seconds */
+      client_clock_offset_seconds?: number | null;
     };
     /** CheckInResponse */
     CheckInResponse: {
@@ -1030,6 +1039,10 @@ export interface components {
       checkout_idempotency_key: string;
       /** Route Stop Id */
       route_stop_id?: string | null;
+      /** Execution Id */
+      execution_id?: string | null;
+      /** Client Clock Offset Seconds */
+      client_clock_offset_seconds?: number | null;
     };
     /** CheckOutResponse */
     CheckOutResponse: {
@@ -1171,6 +1184,11 @@ export interface components {
        * Format: date-time
        */
       captured_at: string;
+      /**
+       * Idempotency Key
+       * Format: uuid
+       */
+      idempotency_key: string;
     };
     /** ExecutionDetail */
     ExecutionDetail: {
@@ -1224,6 +1242,8 @@ export interface components {
        * Format: uuid
        */
       route_id: string;
+      /** Clock Skew Seconds */
+      clock_skew_seconds: number | null;
       /** Scans */
       scans: components["schemas"]["ExecutionScan"][];
       /** Evidence */
@@ -1310,6 +1330,8 @@ export interface components {
        * Format: uuid
        */
       route_id: string;
+      /** Clock Skew Seconds */
+      clock_skew_seconds: number | null;
     };
     /** ExecutionScan */
     ExecutionScan: {

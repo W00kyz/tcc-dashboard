@@ -26,6 +26,7 @@ const DETAIL = {
   source: "APP",
   evidence_count: 0,
   route_id: "r1",
+  clock_skew_seconds: null,
   scans: [
     {
       kind: "CHECK_IN",
@@ -145,6 +146,22 @@ describe("ExecutionDetailDrawer", () => {
     expect(screen.queryByText("NOT_VALIDATED")).not.toBeInTheDocument();
 
     expect(screen.getByText("Sistema fora do ar durante a visita")).toBeInTheDocument();
+  });
+
+  it("shows the clock-skew warning row (rounded) when clock_skew_seconds is set", async () => {
+    renderDrawer(makeFakeFetch({ clock_skew_seconds: 480, validation_flags: ["CLOCK_SKEW"] }));
+
+    expect(await screen.findByText("Desvio de relógio: 480 s")).toBeInTheDocument();
+    // The CLOCK_SKEW flag renders its pt-BR label, not the raw enum.
+    expect(screen.getByText("Desvio de relógio implausível")).toBeInTheDocument();
+    expect(screen.queryByText("CLOCK_SKEW")).not.toBeInTheDocument();
+  });
+
+  it("omits the clock-skew row when clock_skew_seconds is null", async () => {
+    renderDrawer(makeFakeFetch({ clock_skew_seconds: null }));
+
+    await screen.findByText("Linha do tempo");
+    expect(screen.queryByText(/Desvio de relógio:/)).not.toBeInTheDocument();
   });
 
   it("shows the resolve-review button only while PENDING_REVIEW and posts on click", async () => {
