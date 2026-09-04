@@ -12,6 +12,7 @@ function makeStops(): StopDraft[] {
       servicePointName: "Sala 101",
       expectedArrivalFrom: "",
       expectedArrivalTo: "",
+      serviceTypeId: "",
     },
     {
       key: "k2",
@@ -19,6 +20,7 @@ function makeStops(): StopDraft[] {
       servicePointName: "Sala 102",
       expectedArrivalFrom: "",
       expectedArrivalTo: "",
+      serviceTypeId: "",
     },
     {
       key: "k3",
@@ -26,6 +28,7 @@ function makeStops(): StopDraft[] {
       servicePointName: "Sala 103",
       expectedArrivalFrom: "",
       expectedArrivalTo: "",
+      serviceTypeId: "",
     },
   ];
 }
@@ -52,9 +55,11 @@ describe("SortableStopList", () => {
     render(
       <SortableStopList
         stops={stops}
+        serviceTypes={[]}
         onReorder={onReorder}
         onRemove={vi.fn()}
         onEditWindow={vi.fn()}
+        onEditServiceType={vi.fn()}
       />,
     );
 
@@ -74,9 +79,11 @@ describe("SortableStopList", () => {
     render(
       <SortableStopList
         stops={stops}
+        serviceTypes={[]}
         onReorder={vi.fn()}
         onRemove={vi.fn()}
         onEditWindow={onEditWindow}
+        onEditServiceType={vi.fn()}
       />,
     );
 
@@ -94,9 +101,11 @@ describe("SortableStopList", () => {
     render(
       <SortableStopList
         stops={stops}
+        serviceTypes={[]}
         onReorder={vi.fn()}
         onRemove={onRemove}
         onEditWindow={vi.fn()}
+        onEditServiceType={vi.fn()}
       />,
     );
 
@@ -108,9 +117,41 @@ describe("SortableStopList", () => {
 
   it("renders the empty-state message when there are no stops", () => {
     render(
-      <SortableStopList stops={[]} onReorder={vi.fn()} onRemove={vi.fn()} onEditWindow={vi.fn()} />,
+      <SortableStopList
+        stops={[]}
+        serviceTypes={[]}
+        onReorder={vi.fn()}
+        onRemove={vi.fn()}
+        onEditWindow={vi.fn()}
+        onEditServiceType={vi.fn()}
+      />,
     );
 
     expect(screen.getByText("Nenhum ponto adicionado.")).toBeInTheDocument();
+  });
+
+  it("reports a service-type pick through onEditServiceType with the stop key", async () => {
+    const stops = makeStops();
+    const onEditServiceType = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <SortableStopList
+        stops={stops}
+        serviceTypes={[
+          { id: "st1", name: "Limpeza" },
+          { id: "st2", name: "Jardinagem" },
+        ]}
+        onReorder={vi.fn()}
+        onRemove={vi.fn()}
+        onEditWindow={vi.fn()}
+        onEditServiceType={onEditServiceType}
+      />,
+    );
+
+    const selects = screen.getAllByRole("combobox", { name: "Tipo de serviço" });
+    await user.selectOptions(selects[0] as HTMLSelectElement, "st2");
+
+    expect(onEditServiceType).toHaveBeenCalledWith("k1", "st2");
   });
 });

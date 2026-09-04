@@ -27,24 +27,45 @@ export interface StopDraft {
   servicePointName: string;
   expectedArrivalFrom: string;
   expectedArrivalTo: string;
+  serviceTypeId: string;
+}
+
+/** One selectable option for the per-stop service-type `<select>`. */
+export interface ServiceTypeOption {
+  id: string;
+  name: string;
 }
 
 interface SortableStopListProps {
   stops: StopDraft[];
+  // Optional: only the route builder (Task 8) offers a service-type picker per stop. Route
+  // templates render this list too but have no such concept, so they pass neither and the
+  // row skips the select entirely rather than showing one that does nothing.
+  serviceTypes?: ServiceTypeOption[];
   onReorder: (next: StopDraft[]) => void;
   onRemove: (key: string) => void;
   onEditWindow: (key: string, field: "from" | "to", value: string) => void;
+  onEditServiceType?: (key: string, serviceTypeId: string) => void;
 }
 
 const TIME_INPUT_CLASS = "border-input h-8 rounded-md border bg-transparent px-2 text-sm";
+const SERVICE_TYPE_SELECT_CLASS = "border-input h-8 rounded-md border bg-transparent px-2 text-sm";
 
 interface SortableStopRowProps {
   stop: StopDraft;
+  serviceTypes?: ServiceTypeOption[];
   onRemove: (key: string) => void;
   onEditWindow: (key: string, field: "from" | "to", value: string) => void;
+  onEditServiceType?: (key: string, serviceTypeId: string) => void;
 }
 
-function SortableStopRow({ stop, onRemove, onEditWindow }: SortableStopRowProps) {
+function SortableStopRow({
+  stop,
+  serviceTypes,
+  onRemove,
+  onEditWindow,
+  onEditServiceType,
+}: SortableStopRowProps) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition } =
     useSortable({ id: stop.key });
@@ -87,6 +108,23 @@ function SortableStopRow({ stop, onRemove, onEditWindow }: SortableStopRowProps)
           onEditWindow(stop.key, "to", event.target.value);
         }}
       />
+      {onEditServiceType !== undefined && (
+        <select
+          aria-label={t("routeBuilderServiceType")}
+          className={SERVICE_TYPE_SELECT_CLASS}
+          value={stop.serviceTypeId}
+          onChange={(event) => {
+            onEditServiceType(stop.key, event.target.value);
+          }}
+        >
+          <option value="">{t("routeBuilderServiceTypeNone")}</option>
+          {(serviceTypes ?? []).map((serviceType) => (
+            <option key={serviceType.id} value={serviceType.id}>
+              {serviceType.name}
+            </option>
+          ))}
+        </select>
+      )}
       <button
         type="button"
         aria-label={t("routeBuilderRemoveStop")}
@@ -103,9 +141,11 @@ function SortableStopRow({ stop, onRemove, onEditWindow }: SortableStopRowProps)
 
 export function SortableStopList({
   stops,
+  serviceTypes,
   onReorder,
   onRemove,
   onEditWindow,
+  onEditServiceType,
 }: SortableStopListProps) {
   const { t } = useTranslation();
   const sensors = useSensors(
@@ -135,8 +175,10 @@ export function SortableStopList({
             <SortableStopRow
               key={stop.key}
               stop={stop}
+              serviceTypes={serviceTypes}
               onRemove={onRemove}
               onEditWindow={onEditWindow}
+              onEditServiceType={onEditServiceType}
             />
           ))}
         </ol>

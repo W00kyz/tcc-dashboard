@@ -18,6 +18,10 @@ const SERVICE_POINTS = [
   { id: "sp1", floor_id: "f1", name: "Sala 101" },
   { id: "sp2", floor_id: "f1", name: "Sala 102" },
 ];
+const SERVICE_TYPES = [
+  { id: "st1", name: "Limpeza", average_duration_minutes: 30 },
+  { id: "st2", name: "Jardinagem", average_duration_minutes: 45 },
+];
 const WORKERS = [
   {
     id: "w1",
@@ -96,6 +100,9 @@ function makeFakeFetch(options: FakeFetchOptions = {}) {
     }
     if (url.includes("/field-workers")) {
       return Promise.resolve(jsonResponse(WORKERS));
+    }
+    if (url.includes("/service-types")) {
+      return Promise.resolve(jsonResponse(SERVICE_TYPES));
     }
     if (method === "GET" && /\/routes\/[^/]+$/.exec(url)) {
       return Promise.resolve(jsonResponse(routeBody, routeStatus));
@@ -204,6 +211,33 @@ describe("RouteBuilderPage", () => {
     });
   });
 
+  it("posts the picked service type for a stop, and omits it when left blank", async () => {
+    const fakeFetch = makeFakeFetch();
+    const user = userEvent.setup();
+    renderBuilder("/rotas/nova?type=REGULAR", fakeFetch);
+
+    await pickBuildingFloor(user);
+    await addPoint(user, "sp1");
+    await addPoint(user, "sp2");
+
+    const serviceTypeSelects = await screen.findAllByRole("combobox", {
+      name: "Tipo de serviço",
+    });
+    await user.selectOptions(serviceTypeSelects[0] as HTMLSelectElement, "st1");
+    // The second stop is left on the blank "— nenhum —" option deliberately.
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Profissional" }), "w1");
+    fireEvent.change(screen.getByLabelText("Data"), { target: { value: "2026-09-01" } });
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+
+    const postCall = await findWriteCall(fakeFetch, "POST");
+    const body = (await (postCall[0] as Request).clone().json()) as {
+      stops: Record<string, unknown>[];
+    };
+    expect(body.stops[0]).toMatchObject({ service_point_id: "sp1", service_type_id: "st1" });
+    expect(body.stops[1]).not.toHaveProperty("service_type_id");
+  });
+
   it("combines the route date and each stop time into a UTC (Z-suffixed) instant", async () => {
     const fakeFetch = makeFakeFetch();
     const user = userEvent.setup();
@@ -253,6 +287,7 @@ describe("RouteBuilderPage", () => {
           service_point_name: "Sala 101",
           expected_arrival_from: "2026-09-01T08:00:00Z",
           expected_arrival_to: null,
+          service_type_id: "st2",
         },
         {
           id: "s2",
@@ -272,6 +307,13 @@ describe("RouteBuilderPage", () => {
     await screen.findByText("Sala 101");
     const fromInputs = screen.getAllByLabelText("Chegada prevista (início)");
     expect((fromInputs[0] as HTMLInputElement).value).toBe("08:00");
+    // The first stop's already-set service_type_id ("st2") comes back selected; the second
+    // stop, which has none, sits on the blank "— nenhum —" option.
+    const serviceTypeSelects = await screen.findAllByRole("combobox", {
+      name: "Tipo de serviço",
+    });
+    expect((serviceTypeSelects[0] as HTMLSelectElement).value).toBe("st2");
+    expect((serviceTypeSelects[1] as HTMLSelectElement).value).toBe("");
 
     await user.click(screen.getByRole("button", { name: "Salvar" }));
 
@@ -283,6 +325,7 @@ describe("RouteBuilderPage", () => {
         service_point_id: "sp1",
         expected_arrival_from: "2026-09-01T08:00:00Z",
         expected_arrival_to: null,
+        service_type_id: "st2",
       },
       { service_point_id: "sp2", expected_arrival_from: null, expected_arrival_to: null },
     ]);

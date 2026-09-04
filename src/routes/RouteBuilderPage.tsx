@@ -74,6 +74,14 @@ export function RouteBuilderPage() {
       return data ?? [];
     },
   });
+  const { data: serviceTypes } = useQuery({
+    queryKey: ["service-types"],
+    queryFn: async () => {
+      const { data } = await client.GET("/service-types");
+
+      return data ?? [];
+    },
+  });
   const { data: buildings } = useQuery({
     queryKey: ["buildings"],
     queryFn: async () => {
@@ -140,6 +148,7 @@ export function RouteBuilderPage() {
         servicePointName: stop.service_point_name,
         expectedArrivalFrom: extractTime(stop.expected_arrival_from),
         expectedArrivalTo: extractTime(stop.expected_arrival_to),
+        serviceTypeId: stop.service_type_id ?? "",
       })),
     );
   }, [route]);
@@ -157,6 +166,7 @@ export function RouteBuilderPage() {
         servicePointName: point.name,
         expectedArrivalFrom: "",
         expectedArrivalTo: "",
+        serviceTypeId: "",
       },
     ]);
     setServicePointId("");
@@ -175,12 +185,21 @@ export function RouteBuilderPage() {
     );
   }
 
+  function editServiceType(key: string, serviceTypeId: string) {
+    setStops((current) =>
+      current.map((stop) => (stop.key === key ? { ...stop, serviceTypeId } : stop)),
+    );
+  }
+
   const save = useMutation({
     mutationFn: async () => {
       const stopBodies: StopBody[] = stops.map((stop) => ({
         service_point_id: stop.servicePointId,
         expected_arrival_from: combineDateTime(routeDate, stop.expectedArrivalFrom),
         expected_arrival_to: combineDateTime(routeDate, stop.expectedArrivalTo),
+        // Omit rather than send `null` for a blank pick: existing routes with no service type
+        // never sent this key, and the backend treats "absent" and "null" the same way.
+        ...(stop.serviceTypeId === "" ? {} : { service_type_id: stop.serviceTypeId }),
       }));
 
       if (routeId !== undefined) {
@@ -411,11 +430,13 @@ export function RouteBuilderPage() {
 
         <SortableStopList
           stops={stops}
+          serviceTypes={serviceTypes ?? []}
           onReorder={setStops}
           onRemove={(key) => {
             setStops((current) => current.filter((stop) => stop.key !== key));
           }}
           onEditWindow={editWindow}
+          onEditServiceType={editServiceType}
         />
 
         <Button type="submit" disabled={submitDisabled}>

@@ -2062,6 +2062,8 @@ export interface components {
       expected_arrival_from?: string | null;
       /** Expected Arrival To */
       expected_arrival_to?: string | null;
+      /** Service Type Id */
+      service_type_id?: string | null;
     };
     /** TemplateCreateBody */
     TemplateCreateBody: {

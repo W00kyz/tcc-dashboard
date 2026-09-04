@@ -157,6 +157,9 @@ function TemplateCreateForm({ client }: { client: ApiClient }) {
         servicePointName: point.name,
         expectedArrivalFrom: "",
         expectedArrivalTo: "",
+        // Templates don't carry a per-stop service type (that's a route-builder concern,
+        // Task 8) — always blank here, and the row below never offers the picker.
+        serviceTypeId: "",
       },
     ]);
     setServicePointId("");

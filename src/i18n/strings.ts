@@ -63,6 +63,8 @@ export const strings = {
   routeBuilderPickFloor: "Andar",
   routeBuilderArrivalFrom: "Chegada prevista (início)",
   routeBuilderArrivalTo: "Chegada prevista (fim)",
+  routeBuilderServiceType: "Tipo de serviço",
+  routeBuilderServiceTypeNone: "— nenhum —",
   routeBuilderSave: "Salvar",
   routeBuilderRemoveStop: "Remover ponto",
   routeBuilderDragHandle: "Reordenar ponto",
