@@ -11,6 +11,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 
 type ExecutionDetail = components["schemas"]["ExecutionDetail"];
 type ExecutionScan = components["schemas"]["ExecutionScan"];
+type AnswerOut = components["schemas"]["AnswerOut"];
 
 interface ExecutionDetailDrawerProps {
   executionId: string | null;
@@ -79,6 +80,31 @@ function formatDateTime(iso: string): string {
 
 function formatDistance(distanceM: number | null): string {
   return distanceM === null ? "—" : `${String(Math.round(distanceM))} m`;
+}
+
+// `value` is `unknown` on the wire (AnswerOut) — the 5 form question types collapse to
+// three renderable shapes: BOOLEAN, MULTI_CHOICE (array), and everything else as text.
+function formatAnswerValue(t: Translate, value: unknown): string {
+  if (typeof value === "boolean") {
+    return value ? t("executionFormYes") : t("executionFormNo");
+  }
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
+
+  return String(value);
+}
+
+function AnswerRow({ answer }: { answer: AnswerOut }) {
+  const { t } = useTranslation();
+  const prompt = answer.prompt ?? t("executionFormAnswerRemovedQuestion");
+
+  return (
+    <li className="text-sm">
+      <span className="text-muted-foreground">{prompt}: </span>
+      {formatAnswerValue(t, answer.value)}
+    </li>
+  );
 }
 
 function ScanRow({ scan }: { scan: ExecutionScan }) {
@@ -171,6 +197,17 @@ function DetailBody({
               );
             })}
           </div>
+        </section>
+      )}
+
+      {detail.form_version_id !== null && (
+        <section>
+          <h3 className="text-sm font-semibold">{t("executionFormHeading")}</h3>
+          <ul className="mt-1 space-y-1">
+            {detail.answers.map((answer) => (
+              <AnswerRow key={answer.question_stable_key} answer={answer} />
+            ))}
+          </ul>
         </section>
       )}
 

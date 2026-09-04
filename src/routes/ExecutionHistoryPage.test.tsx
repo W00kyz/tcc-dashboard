@@ -49,6 +49,8 @@ const EXECUTION_A_DETAIL = {
   scans: [],
   evidence: [],
   manual_completion: null,
+  form_version_id: null,
+  answers: [],
 };
 
 const WORKERS = [

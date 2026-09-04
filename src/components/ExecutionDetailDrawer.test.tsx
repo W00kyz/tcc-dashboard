@@ -27,6 +27,8 @@ const DETAIL = {
   evidence_count: 0,
   route_id: "r1",
   clock_skew_seconds: null,
+  form_version_id: null,
+  answers: [],
   scans: [
     {
       kind: "CHECK_IN",
@@ -193,6 +195,44 @@ describe("ExecutionDetailDrawer", () => {
     expect(
       screen.queryByRole("button", { name: "Marcar revisão como resolvida" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders form answers with prompt-to-value formatting when form_version_id is set", async () => {
+    renderDrawer(
+      makeFakeFetch({
+        form_version_id: "fv1",
+        answers: [
+          { question_stable_key: "k1", prompt: "Área limpa?", value: true },
+          { question_stable_key: "k2", prompt: "Nível", value: ["baixo", "médio"] },
+        ],
+      }),
+    );
+
+    expect(await screen.findByText("Formulário")).toBeInTheDocument();
+    expect(screen.getByText("Área limpa?:")).toBeInTheDocument();
+    expect(screen.getByText("Sim")).toBeInTheDocument();
+    expect(screen.getByText("Nível:")).toBeInTheDocument();
+    expect(screen.getByText("baixo, médio")).toBeInTheDocument();
+  });
+
+  it("falls back to the removed-question label when an answer's prompt is null", async () => {
+    renderDrawer(
+      makeFakeFetch({
+        form_version_id: "fv1",
+        answers: [{ question_stable_key: "k1", prompt: null, value: "resposta" }],
+      }),
+    );
+
+    expect(await screen.findByText("Formulário")).toBeInTheDocument();
+    expect(screen.getByText("(pergunta removida da versão):")).toBeInTheDocument();
+    expect(screen.getByText("resposta")).toBeInTheDocument();
+  });
+
+  it("omits the form section entirely when form_version_id is null", async () => {
+    renderDrawer(makeFakeFetch({ form_version_id: null, answers: [] }));
+
+    await screen.findByText("Linha do tempo");
+    expect(screen.queryByText("Formulário")).not.toBeInTheDocument();
   });
 
   it("calls onClose when Escape is pressed", async () => {
