@@ -176,7 +176,10 @@ export function FormBuilderPage() {
     }
   }
 
-  const nextVersionNumber = formQuery.data?.draft.version_number ?? 1;
+  // The draft's own `version_number` is a transient placeholder (backend always returns 0 for
+  // a DRAFT — it's only set inside the publish transaction), so the next real version has to
+  // be computed from how many versions are already published, not read off the draft.
+  const nextVersionNumber = (formQuery.data?.published.length ?? 0) + 1;
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-6">

@@ -33,7 +33,11 @@ function draft() {
   return {
     form_version_id: "d1",
     status: "DRAFT",
-    version_number: published.length + 1,
+    // Matches the real backend (app/domain/forms/service.py): a DRAFT's version_number is
+    // always 0 — it's a placeholder the publish transaction overwrites, never something a
+    // client should read to predict the next version (see FormBuilderPage.tsx's
+    // nextVersionNumber, computed from `published.length` instead).
+    version_number: 0,
     questions: [...draftQuestions].sort((a, b) => a.order_index - b.order_index),
   };
 }
@@ -293,6 +297,39 @@ describe("FormBuilderPage", () => {
       (request) => request.method === "POST" && request.url.includes("/forms/f1/publish"),
     );
     expect(publishCalls).toHaveLength(1);
+  });
+
+  // Regression for the bug the etapa-7 Task 7 review caught: the draft's own version_number
+  // is always 0 on the real backend (a placeholder the publish transaction overwrites), so the
+  // confirm text must be computed from `published.length + 1`, not read off the draft.
+  it("shows the next version number computed from published.length, not the draft's placeholder", async () => {
+    const user = userEvent.setup();
+    seedQuestion({ stable_key: "qA", prompt: "Uma pergunta" });
+    published = [
+      {
+        form_version_id: "p1",
+        version_number: 1,
+        published_at: "2026-09-01T00:00:00Z",
+        question_count: 1,
+      },
+      {
+        form_version_id: "p2",
+        version_number: 2,
+        published_at: "2026-09-02T00:00:00Z",
+        question_count: 1,
+      },
+    ];
+    renderPage(makeFakeFetch());
+    await pickServiceType(user);
+    await screen.findByText("Uma pergunta");
+
+    await user.click(screen.getByRole("button", { name: "Publicar" }));
+
+    expect(
+      await screen.findByText(
+        "Isto cria a versão 3 do formulário e não pode ser desfeito. Continuar?",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("sends PUT /order with the reordered stable keys via the keyboard sensor", async () => {
