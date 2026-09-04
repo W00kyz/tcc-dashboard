@@ -28,6 +28,9 @@ function makeStop(overrides: Partial<RouteStopOut>): RouteStopOut {
     distance_from_prev_m: null,
     duration_from_prev_s: null,
     leg_geometry: null,
+    service_type_id: null,
+    service_type_name: null,
+    form: null,
     ...overrides,
   };
 }

@@ -16,6 +16,7 @@ import { EventsPage } from "@/routes/EventsPage";
 import { ExecutionHistoryPage } from "@/routes/ExecutionHistoryPage";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { FloorsPage } from "@/routes/FloorsPage";
+import { FormBuilderPage } from "@/routes/FormBuilderPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
 import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
@@ -53,6 +54,7 @@ export const appRoutes: RouteObject[] = [
     element: <ProtectedRoute allowedRoles={["ADMIN"]} />,
     children: [
       { path: "/usuarios", element: <UsersPage /> },
+      { path: "/formularios", element: <FormBuilderPage /> },
       { path: "/configuracoes", element: <SettingsPage /> },
     ],
   },

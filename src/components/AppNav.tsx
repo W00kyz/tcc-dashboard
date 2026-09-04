@@ -62,6 +62,11 @@ export function AppNav() {
           </span>
         )}
         {session.role === "ADMIN" && (
+          <NavLink to="/formularios" className={LINK_CLASS}>
+            {t("navForms")}
+          </NavLink>
+        )}
+        {session.role === "ADMIN" && (
           <NavLink to="/configuracoes" className={LINK_CLASS}>
             {t("navSettings")}
           </NavLink>
