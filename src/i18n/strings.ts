@@ -257,6 +257,7 @@ export const strings = {
   reassignmentsDismiss: "Descartar",
   reassignmentsReassignError: "Não foi possível reatribuir.",
   reassignmentsDismissError: "Não foi possível descartar o impedimento.",
+  reassignmentsReasonLabel: "Motivo da reatribuição (opcional)",
   reassignmentsConfirmTitle: "Confirmar reatribuição",
   reassignmentsConfirmBody: "Atribuir o trabalho a {name}? A rota atual será ajustada.",
   reassignmentsConfirmCancel: "Cancelar",

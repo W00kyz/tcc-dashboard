@@ -4,7 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
+import { isValidElement } from "react";
+
+import { appRoutes } from "@/App";
 import { AuthProvider } from "@/auth/AuthContext";
+import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { ReassignmentsPage } from "@/routes/ReassignmentsPage";
 
 const STOP_IMPEDIMENT = {
@@ -59,8 +63,15 @@ const ROUTE = {
     {
       id: "s3",
       order_index: 3,
-      status: "PENDING",
+      status: "IN_PROGRESS",
       service_point_name: "Sala 103",
+      building_name: "Bloco A",
+    },
+    {
+      id: "s4",
+      order_index: 4,
+      status: "PENDING",
+      service_point_name: "Sala 104",
       building_name: "Bloco A",
     },
   ],
@@ -138,12 +149,14 @@ describe("ReassignmentsPage", () => {
     expect(within(remainderCard).getByText("Restante da rota")).toBeInTheDocument();
   });
 
-  it("names the affected stop for a STOP impediment and counts the rest for ROUTE_REMAINDER", async () => {
+  it("names the affected stop for a STOP impediment and counts only PENDING stops for ROUTE_REMAINDER", async () => {
     renderPage(makeFakeFetch());
 
     const card = await screen.findByTestId("impediment-card-imp1");
     await within(card).findByText(/Sala 102 · Bloco A/);
 
+    // The route has 2 PENDING stops (s2, s4), 1 DONE (s1) and 1 IN_PROGRESS (s3). Only the
+    // PENDING pair is reassigned, so the tally is "2", not "3".
     const remainderCard = screen.getByTestId("impediment-card-imp2");
     await within(remainderCard).findByText("2 pontos restantes na rota");
   });
@@ -160,29 +173,63 @@ describe("ReassignmentsPage", () => {
     expect(within(card).getByText(/1\.5 km/)).toBeInTheDocument();
   });
 
-  it("reassigns to a candidate after confirming the dialog", async () => {
+  async function openReassignDialog(fakeFetch: ReturnType<typeof makeFakeFetch>) {
     const user = userEvent.setup();
-    const fakeFetch = makeFakeFetch();
     renderPage(fakeFetch);
 
     const card = await screen.findByTestId("impediment-card-imp1");
     await user.click(within(card).getByRole("button", { name: "Ver candidatos" }));
 
-    const rows = await within(card).findByText("Maria Souza");
+    const candidate = await within(card).findByText("Maria Souza");
     await user.click(
-      within(rows.closest("li") as HTMLElement).getByRole("button", { name: "Reatribuir" }),
+      within(candidate.closest("li") as HTMLElement).getByRole("button", { name: "Reatribuir" }),
     );
 
-    const dialog = await screen.findByRole("dialog");
+    return { user, dialog: await screen.findByRole("dialog") };
+  }
+
+  async function reassignRequestBody(fakeFetch: ReturnType<typeof makeFakeFetch>) {
+    const call = fakeFetch.mock.calls.find(
+      ([input, init]) =>
+        requestUrl(input).includes("/impediments/imp1/reassign") &&
+        requestMethod(input, init) === "POST",
+    );
+    if (call === undefined) {
+      throw new Error("expected a POST to /impediments/imp1/reassign");
+    }
+
+    return (await (call[0] as Request).clone().json()) as Record<string, unknown>;
+  }
+
+  it("sends the manager-typed reason with the chosen candidate", async () => {
+    const fakeFetch = makeFakeFetch();
+    const { user, dialog } = await openReassignDialog(fakeFetch);
+
+    await user.type(
+      within(dialog).getByLabelText("Motivo da reatribuição (opcional)"),
+      "Profissional mais próximo do bloco",
+    );
     await user.click(within(dialog).getByRole("button", { name: "Reatribuir" }));
 
-    await waitFor(() => {
-      const hit = fakeFetch.mock.calls.some(
-        ([input, init]) =>
-          requestUrl(input).includes("/impediments/imp1/reassign") &&
-          requestMethod(input, init) === "POST",
-      );
-      expect(hit).toBe(true);
+    await waitFor(async () => {
+      expect(await reassignRequestBody(fakeFetch)).toEqual({
+        field_worker_id: "w2",
+        reason: "Profissional mais próximo do bloco",
+      });
+    });
+  });
+
+  it("falls back to the pt-BR default reason when the field is left blank", async () => {
+    const fakeFetch = makeFakeFetch();
+    const { user, dialog } = await openReassignDialog(fakeFetch);
+
+    await user.click(within(dialog).getByRole("button", { name: "Reatribuir" }));
+
+    await waitFor(async () => {
+      expect(await reassignRequestBody(fakeFetch)).toEqual({
+        field_worker_id: "w2",
+        reason: "Reatribuição manual pela fila de reatribuições",
+      });
     });
   });
 
@@ -203,5 +250,17 @@ describe("ReassignmentsPage", () => {
       expect(hit).toBe(true);
     });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("registers /reatribuicoes under the MANAGER/ADMIN ProtectedRoute branch", () => {
+    const managerBranch = appRoutes.find((branch) =>
+      branch.children?.some((child) => child.path === "/rotas"),
+    );
+    const branchElement = managerBranch?.element;
+
+    expect(isValidElement(branchElement) && branchElement.type).toBe(ProtectedRoute);
+    expect(managerBranch?.children?.map((child) => child.path)).toEqual(
+      expect.arrayContaining(["/reatribuicoes"]),
+    );
   });
 });

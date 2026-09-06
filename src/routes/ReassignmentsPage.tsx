@@ -7,6 +7,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
 
@@ -17,9 +18,10 @@ type ImpedimentReason = components["schemas"]["ImpedimentReason"];
 
 const IMPEDIMENTS_QUERY_KEY = ["impediments", "PENDING"] as const;
 
-// Free-text audit note the backend stores on the assignment row; it is not shown to the
-// worker, so it stays an English constant rather than an i18n string.
-const REASSIGN_REASON = "manual reassignment from the dashboard reassignment queue";
+// Fallback audit reason (RF21) when the manager confirms without typing one. Stored on
+// StopAssignment.transfer_reason and shown back in a pt-BR history drawer (Task 8), so it
+// is pt-BR text — a literal here, not an i18n key, because it is persisted data.
+const DEFAULT_TRANSFER_REASON = "Reatribuição manual pela fila de reatribuições";
 
 const REASON_LABEL_KEY: Record<ImpedimentReason, StringKey> = {
   ACCESS_BLOCKED: "reassignmentReasonAccessBlocked",
@@ -28,10 +30,11 @@ const REASON_LABEL_KEY: Record<ImpedimentReason, StringKey> = {
   OTHER: "reassignmentReasonOther",
 };
 
-// A route stop counts as still pending for the "N pontos restantes" tally unless the
-// worker already closed it (DONE) or skipped it.
-function isStopOpen(status: string): boolean {
-  return status !== "DONE" && status !== "SKIPPED";
+// ROUTE_REMAINDER reassignment moves exactly the PENDING stops (backend `_affected_stops`),
+// so the "N pontos restantes" tally must count PENDING only — an IN_PROGRESS stop stays with
+// the current worker and must not be included.
+function isStopPending(status: string): boolean {
+  return status === "PENDING";
 }
 
 function formatDateTime(iso: string): string {
@@ -94,7 +97,7 @@ function AffectedTarget({ impediment }: { impediment: Impediment }) {
   });
 
   if (impediment.scope === "ROUTE_REMAINDER") {
-    const remaining = route?.stops.filter((stop) => isStopOpen(stop.status)).length;
+    const remaining = route?.stops.filter((stop) => isStopPending(stop.status)).length;
     if (remaining === undefined) {
       return null;
     }
@@ -125,17 +128,23 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
 
   const [confirming, setConfirming] = useState<Candidate | null>(null);
+  const [reasonText, setReasonText] = useState("");
 
   const candidatesQuery = useQuery({
     queryKey: ["impediment-candidates", impedimentId],
     queryFn: () => fetchCandidates(client, impedimentId),
   });
 
+  function openConfirm(candidate: Candidate) {
+    setReasonText("");
+    setConfirming(candidate);
+  }
+
   const reassign = useMutation({
-    mutationFn: async (fieldWorkerId: string) => {
+    mutationFn: async ({ fieldWorkerId, reason }: { fieldWorkerId: string; reason: string }) => {
       const { response } = await client.POST("/impediments/{impediment_id}/reassign", {
         params: { path: { impediment_id: impedimentId } },
-        body: { field_worker_id: fieldWorkerId, reason: REASSIGN_REASON },
+        body: { field_worker_id: fieldWorkerId, reason },
       });
       if (!response.ok) {
         throw new Error(
@@ -184,7 +193,7 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
               size="sm"
               variant="outline"
               onClick={() => {
-                setConfirming(candidate);
+                openConfirm(candidate);
               }}
             >
               {t("reassignmentsReassign")}
@@ -211,6 +220,17 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
           <p className="text-muted-foreground text-sm">
             {t("reassignmentsConfirmBody").replace("{name}", confirming?.full_name ?? "")}
           </p>
+          <div className="space-y-1">
+            <Label htmlFor="reassign-reason">{t("reassignmentsReasonLabel")}</Label>
+            <textarea
+              id="reassign-reason"
+              className="border-input min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+              value={reasonText}
+              onChange={(event) => {
+                setReasonText(event.target.value);
+              }}
+            />
+          </div>
           <div className="flex justify-end gap-2">
             <Button
               size="sm"
@@ -226,7 +246,10 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
               disabled={reassign.isPending}
               onClick={() => {
                 if (confirming) {
-                  reassign.mutate(confirming.field_worker_id);
+                  reassign.mutate({
+                    fieldWorkerId: confirming.field_worker_id,
+                    reason: reasonText.trim() || DEFAULT_TRANSFER_REASON,
+                  });
                 }
               }}
             >
