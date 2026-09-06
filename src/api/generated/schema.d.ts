@@ -1437,6 +1437,31 @@ export interface components {
        */
       idempotency_key: string;
     };
+    /**
+     * ExecutionAssignmentOut
+     * @description One row of the stop's append-only assignment chain (RF21), surfaced on the execution
+     *     detail so the manager panel (Task 8) can show who was originally designated and why the
+     *     stop moved. Named distinctly from `app.api.route_view.AssignmentOut`: FastAPI dedupes
+     *     OpenAPI component schemas by class name, so two different classes sharing one name would
+     *     silently clobber each other in the contract (Task 5 hit this).
+     */
+    ExecutionAssignmentOut: {
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Full Name */
+      full_name: string;
+      /** Sequence */
+      sequence: number;
+      /** Assigned By Name */
+      assigned_by_name: string;
+      /** Transfer Reason */
+      transfer_reason: string | null;
+      /** Outcome */
+      outcome: string | null;
+    };
     /** ExecutionDetail */
     ExecutionDetail: {
       /**
@@ -1500,6 +1525,10 @@ export interface components {
       form_version_id: string | null;
       /** Answers */
       answers: components["schemas"]["AnswerOut"][];
+      /** Reassigned */
+      reassigned: boolean;
+      /** Assignment History */
+      assignment_history: components["schemas"]["ExecutionAssignmentOut"][] | null;
     };
     /** ExecutionEvidence */
     ExecutionEvidence: {

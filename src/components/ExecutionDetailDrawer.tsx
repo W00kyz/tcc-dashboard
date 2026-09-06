@@ -12,6 +12,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 type ExecutionDetail = components["schemas"]["ExecutionDetail"];
 type ExecutionScan = components["schemas"]["ExecutionScan"];
 type AnswerOut = components["schemas"]["AnswerOut"];
+type ExecutionAssignment = components["schemas"]["ExecutionAssignmentOut"];
 
 interface ExecutionDetailDrawerProps {
   executionId: string | null;
@@ -34,6 +35,14 @@ const FLAG_LABEL_KEY: Record<string, StringKey> = {
 const SCAN_KIND_LABEL_KEY: Record<string, StringKey> = {
   CHECK_IN: "executionScanCheckIn",
   CHECK_OUT: "executionScanCheckOut",
+};
+
+// `outcome` is a bare `string` in the schema; an unknown value falls back to its raw text.
+const ASSIGNMENT_OUTCOME_LABEL_KEY: Record<string, StringKey> = {
+  EXECUTED: "executionReassignmentOutcomeExecuted",
+  REASSIGNED: "executionReassignmentOutcomeReassigned",
+  IMPEDED: "executionReassignmentOutcomeImpeded",
+  CANCELLED: "executionReassignmentOutcomeCancelled",
 };
 
 // Same green/amber/grey vocabulary and label keys as ExecutionHistoryPage's GEO_BADGE.
@@ -103,6 +112,40 @@ function AnswerRow({ answer }: { answer: AnswerOut }) {
     <li className="text-sm">
       <span className="text-muted-foreground">{prompt}: </span>
       {formatAnswerValue(t, answer.value)}
+    </li>
+  );
+}
+
+function AssignmentRow({ assignment }: { assignment: ExecutionAssignment }) {
+  const { t } = useTranslation();
+  const roleKey: StringKey =
+    assignment.sequence === 1
+      ? "executionReassignmentOriginal"
+      : "executionReassignmentTransferred";
+  const outcomeKey = assignment.outcome
+    ? ASSIGNMENT_OUTCOME_LABEL_KEY[assignment.outcome]
+    : undefined;
+
+  return (
+    <li className="text-sm">
+      <span className="text-muted-foreground">{t(roleKey)}: </span>
+      {assignment.full_name}
+      <span className="text-muted-foreground">
+        {" "}
+        ({t("executionReassignmentAssignedBy")} {assignment.assigned_by_name})
+      </span>
+      {assignment.sequence > 1 && (
+        <span className="text-muted-foreground">
+          {" — "}
+          {t("executionReassignmentReason")}:{" "}
+          {assignment.transfer_reason ?? t("executionReassignmentNoReason")}
+        </span>
+      )}
+      {assignment.outcome && (
+        <span className={`${BADGE_CLASS} ml-2 bg-muted text-muted-foreground`}>
+          {outcomeKey ? t(outcomeKey) : assignment.outcome}
+        </span>
+      )}
     </li>
   );
 }
@@ -206,6 +249,17 @@ function DetailBody({
           <ul className="mt-1 space-y-1">
             {detail.answers.map((answer) => (
               <AnswerRow key={answer.question_stable_key} answer={answer} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {detail.reassigned && detail.assignment_history !== null && (
+        <section>
+          <h3 className="text-sm font-semibold">{t("executionReassignmentHeading")}</h3>
+          <ul className="mt-1 space-y-1">
+            {detail.assignment_history.map((assignment) => (
+              <AssignmentRow key={assignment.sequence} assignment={assignment} />
             ))}
           </ul>
         </section>

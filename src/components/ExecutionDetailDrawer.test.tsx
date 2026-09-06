@@ -29,6 +29,8 @@ const DETAIL = {
   clock_skew_seconds: null,
   form_version_id: null,
   answers: [],
+  reassigned: false,
+  assignment_history: null,
   scans: [
     {
       kind: "CHECK_IN",
@@ -233,6 +235,47 @@ describe("ExecutionDetailDrawer", () => {
 
     await screen.findByText("Linha do tempo");
     expect(screen.queryByText("Formulário")).not.toBeInTheDocument();
+  });
+
+  it("renders the reassignment chain when the stop was reassigned", async () => {
+    renderDrawer(
+      makeFakeFetch({
+        reassigned: true,
+        assignment_history: [
+          {
+            field_worker_id: "w1",
+            full_name: "João da Silva",
+            sequence: 1,
+            assigned_by_name: "Larissa",
+            transfer_reason: null,
+            outcome: "REASSIGNED",
+          },
+          {
+            field_worker_id: "w2",
+            full_name: "Maria Souza",
+            sequence: 2,
+            assigned_by_name: "Larissa",
+            transfer_reason: "cobertura de ferias",
+            outcome: null,
+          },
+        ],
+      }),
+    );
+
+    expect(await screen.findByText("Histórico de responsáveis")).toBeInTheDocument();
+    expect(screen.getByText("Designado originalmente:")).toBeInTheDocument();
+    expect(screen.getByText(/João da Silva/)).toBeInTheDocument();
+    expect(screen.getByText("Reatribuído para:")).toBeInTheDocument();
+    expect(screen.getByText(/Maria Souza/)).toBeInTheDocument();
+    expect(screen.getByText(/cobertura de ferias/)).toBeInTheDocument();
+    expect(screen.getByText("Reatribuído")).toBeInTheDocument();
+  });
+
+  it("omits the reassignment section when the stop was not reassigned", async () => {
+    renderDrawer(makeFakeFetch({ reassigned: false, assignment_history: null }));
+
+    await screen.findByText("Linha do tempo");
+    expect(screen.queryByText("Histórico de responsáveis")).not.toBeInTheDocument();
   });
 
   it("calls onClose when Escape is pressed", async () => {

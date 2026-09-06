@@ -51,6 +51,8 @@ const EXECUTION_A_DETAIL = {
   manual_completion: null,
   form_version_id: null,
   answers: [],
+  reassigned: false,
+  assignment_history: null,
 };
 
 const WORKERS = [
