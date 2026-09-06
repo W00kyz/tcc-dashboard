@@ -61,6 +61,11 @@ export function AppNav() {
             )}
           </span>
         )}
+        {canManage && (
+          <NavLink to="/reatribuicoes" className={LINK_CLASS}>
+            {t("navReassignments")}
+          </NavLink>
+        )}
         {session.role === "ADMIN" && (
           <NavLink to="/formularios" className={LINK_CLASS}>
             {t("navForms")}

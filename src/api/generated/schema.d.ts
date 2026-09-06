@@ -999,6 +999,110 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/routes/{route_id}/impediments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Report Impediment
+     * @description RF16-RF17 — the field worker signals they cannot execute this stop (scope=STOP) or the
+     *     rest of the route (scope=ROUTE_REMAINDER). The report is the record; no audit-trail entry
+     *     is appended here (nothing on the assignment chain moved yet).
+     */
+    post: operations["report_impediment_routes__route_id__impediments_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/impediments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Impediments
+     * @description The manager's queue. Only the PENDING queue is served — the impediment domain keeps no
+     *     other list — so any other `?status=` value is a client error, not an empty list.
+     */
+    get: operations["list_impediments_impediments_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/impediments/{impediment_id}/candidates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Candidates */
+    get: operations["list_candidates_impediments__impediment_id__candidates_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/impediments/{impediment_id}/reassign": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reassign
+     * @description RF18-RF21 — move the impediment's affected stop(s) onto `field_worker_id`'s route for
+     *     the same date and mark the impediment RESOLVED. `reassign_impediment` delegates the move
+     *     to `reassign_stops`, which appends its own stop-assignment rows; this endpoint adds one
+     *     audit-trail entry naming the manager's decision.
+     */
+    post: operations["reassign_impediments__impediment_id__reassign_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/impediments/{impediment_id}/dismiss": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Dismiss
+     * @description Close the impediment with no reassignment (RF17) — a duplicate report, or one the
+     *     manager resolved off-system.
+     */
+    post: operations["dismiss_impediments__impediment_id__dismiss_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1028,6 +1132,29 @@ export interface components {
       prompt: string | null;
       /** Value */
       value: unknown;
+    };
+    /**
+     * AssignmentOut
+     * @description One row of a stop's append-only `stop_assignments` chain (spec §3.4, RF21). Shipped
+     *     in `assignment_history` only when the stop was reassigned at least once; the manager
+     *     panel (Task 8) renders it, the mobile app ignores the field.
+     */
+    AssignmentOut: {
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Full Name */
+      full_name: string;
+      /** Sequence */
+      sequence: number;
+      /** Assigned By Name */
+      assigned_by_name: string;
+      /** Transfer Reason */
+      transfer_reason: string | null;
+      /** Outcome */
+      outcome: string | null;
     };
     /** Body_upload_photo_executions__execution_id__evidence_photo_post */
     Body_upload_photo_executions__execution_id__evidence_photo_post: {
@@ -1653,6 +1780,75 @@ export interface components {
       /** Status */
       status: string;
     };
+    /** ImpedimentOut */
+    ImpedimentOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Route Id
+       * Format: uuid
+       */
+      route_id: string;
+      /** Route Stop Id */
+      route_stop_id: string | null;
+      scope: components["schemas"]["ImpedimentScope"];
+      reason: components["schemas"]["ImpedimentReason"];
+      /** Note */
+      note: string | null;
+      status: components["schemas"]["ImpedimentStatus"];
+      /**
+       * Reported At
+       * Format: date-time
+       */
+      reported_at: string;
+      /**
+       * Received At
+       * Format: date-time
+       */
+      received_at: string;
+    };
+    /**
+     * ImpedimentReason
+     * @enum {string}
+     */
+    ImpedimentReason: "ACCESS_BLOCKED" | "SITE_REFUSAL" | "HEALTH_ISSUE" | "OTHER";
+    /** ImpedimentReassignBody */
+    ImpedimentReassignBody: {
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Reason */
+      reason: string;
+    };
+    /** ImpedimentReportBody */
+    ImpedimentReportBody: {
+      /** Route Stop Id */
+      route_stop_id?: string | null;
+      scope: components["schemas"]["ImpedimentScope"];
+      reason: components["schemas"]["ImpedimentReason"];
+      /** Note */
+      note?: string | null;
+      /**
+       * Reported At
+       * Format: date-time
+       */
+      reported_at: string;
+    };
+    /**
+     * ImpedimentScope
+     * @enum {string}
+     */
+    ImpedimentScope: "STOP" | "ROUTE_REMAINDER";
+    /**
+     * ImpedimentStatus
+     * @enum {string}
+     */
+    ImpedimentStatus: "PENDING" | "RESOLVED";
     /** IssueQrCodeRequest */
     IssueQrCodeRequest: {
       /** Reason */
@@ -1816,6 +2012,20 @@ export interface components {
       /** Reason */
       reason: string;
     };
+    /** ReassignCandidateOut */
+    ReassignCandidateOut: {
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Full Name */
+      full_name: string;
+      /** Distance M */
+      distance_m: number;
+      /** Pending Stop Count */
+      pending_stop_count: number;
+    };
     /** RefreshRequest */
     RefreshRequest: {
       /** Refresh Token */
@@ -1934,6 +2144,10 @@ export interface components {
       /** Service Type Name */
       service_type_name: string | null;
       form: components["schemas"]["EmbeddedForm"] | null;
+      /** Reassigned */
+      reassigned: boolean;
+      /** Assignment History */
+      assignment_history: components["schemas"]["AssignmentOut"][] | null;
     };
     /** RouteUpdateBody */
     RouteUpdateBody: {
@@ -4405,6 +4619,169 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["FormVersionResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  report_impediment_routes__route_id__impediments_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        route_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImpedimentReportBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImpedimentOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_impediments_impediments_get: {
+    parameters: {
+      query?: {
+        status?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImpedimentOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_candidates_impediments__impediment_id__candidates_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        impediment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReassignCandidateOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  reassign_impediments__impediment_id__reassign_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        impediment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImpedimentReassignBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImpedimentOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  dismiss_impediments__impediment_id__dismiss_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        impediment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImpedimentOut"];
         };
       };
       /** @description Validation Error */

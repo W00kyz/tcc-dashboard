@@ -18,6 +18,7 @@ import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { FloorsPage } from "@/routes/FloorsPage";
 import { FormBuilderPage } from "@/routes/FormBuilderPage";
 import { LoginPage } from "@/routes/LoginPage";
+import { ReassignmentsPage } from "@/routes/ReassignmentsPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
 import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
 import { RouteTemplatesPage } from "@/routes/RouteTemplatesPage";
@@ -37,6 +38,7 @@ export const appRoutes: RouteObject[] = [
     element: <ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]} />,
     children: [
       { path: "/rotas", element: <RouteBoardPage /> },
+      { path: "/reatribuicoes", element: <ReassignmentsPage /> },
       { path: "/execucoes", element: <ExecutionHistoryPage /> },
       { path: "/rotas/nova", element: <RouteBuilderPage /> },
       { path: "/rotas/:routeId/editar", element: <RouteBuilderPage /> },

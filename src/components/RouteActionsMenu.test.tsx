@@ -31,6 +31,8 @@ function makeStop(overrides: Partial<RouteStopOut>): RouteStopOut {
     service_type_id: null,
     service_type_name: null,
     form: null,
+    reassigned: false,
+    assignment_history: null,
     ...overrides,
   };
 }
