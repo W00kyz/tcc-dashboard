@@ -149,16 +149,16 @@ describe("ReassignmentsPage", () => {
     expect(within(remainderCard).getByText("Restante da rota")).toBeInTheDocument();
   });
 
-  it("names the affected stop for a STOP impediment and counts only PENDING stops for ROUTE_REMAINDER", async () => {
+  it("names the affected stop for a STOP impediment and counts every open stop for ROUTE_REMAINDER", async () => {
     renderPage(makeFakeFetch());
 
     const card = await screen.findByTestId("impediment-card-imp1");
     await within(card).findByText(/Sala 102 · Bloco A/);
 
-    // The route has 2 PENDING stops (s2, s4), 1 DONE (s1) and 1 IN_PROGRESS (s3). Only the
-    // PENDING pair is reassigned, so the tally is "2", not "3".
+    // The route has 2 PENDING stops (s2, s4), 1 IN_PROGRESS (s3) and 1 DONE (s1). The backend
+    // `_affected_stops` reassigns PENDING + IN_PROGRESS, so the tally is "3", not "2".
     const remainderCard = screen.getByTestId("impediment-card-imp2");
-    await within(remainderCard).findByText("2 pontos restantes na rota");
+    await within(remainderCard).findByText("3 pontos restantes na rota");
   });
 
   it("expands an impediment to show ranked candidates with distance and load", async () => {

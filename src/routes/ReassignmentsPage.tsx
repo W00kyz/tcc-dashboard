@@ -30,11 +30,11 @@ const REASON_LABEL_KEY: Record<ImpedimentReason, StringKey> = {
   OTHER: "reassignmentReasonOther",
 };
 
-// ROUTE_REMAINDER reassignment moves exactly the PENDING stops (backend `_affected_stops`),
-// so the "N pontos restantes" tally must count PENDING only — an IN_PROGRESS stop stays with
-// the current worker and must not be included.
-function isStopPending(status: string): boolean {
-  return status === "PENDING";
+// ROUTE_REMAINDER reassignment moves every still-open stop (backend `_affected_stops`:
+// status in PENDING, IN_PROGRESS), so the "N pontos restantes" tally must count both — a
+// worker who checked in and then hit a wall still has that stop reassigned.
+function isStopOpen(status: string): boolean {
+  return status === "PENDING" || status === "IN_PROGRESS";
 }
 
 function formatDateTime(iso: string): string {
@@ -97,7 +97,7 @@ function AffectedTarget({ impediment }: { impediment: Impediment }) {
   });
 
   if (impediment.scope === "ROUTE_REMAINDER") {
-    const remaining = route?.stops.filter((stop) => isStopPending(stop.status)).length;
+    const remaining = route?.stops.filter((stop) => isStopOpen(stop.status)).length;
     if (remaining === undefined) {
       return null;
     }
