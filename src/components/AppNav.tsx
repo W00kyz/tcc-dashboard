@@ -20,6 +20,18 @@ export function AppNav() {
 
   const canManage = session?.role === "MANAGER" || session?.role === "ADMIN";
 
+  const { data: unreadNotificationCount } = useQuery({
+    queryKey: ["notifications", "unread-count"],
+    queryFn: async () => {
+      const { data } = await client.GET("/notifications/me/unread-count");
+
+      return data?.count ?? 0;
+    },
+    // SSE stand-in: poll so the badge tracks new notifications without a manual refresh.
+    refetchInterval: 30_000,
+    enabled: session !== null,
+  });
+
   const { data: pendingReviewCount } = useQuery({
     queryKey: ["executions", "review-count"],
     queryFn: async () => {
@@ -71,6 +83,20 @@ export function AppNav() {
             {t("navForms")}
           </NavLink>
         )}
+        <span className="flex items-center gap-1.5">
+          <NavLink to="/notificacoes" className={LINK_CLASS}>
+            {t("navNotifications")}
+          </NavLink>
+          {unreadNotificationCount !== undefined && unreadNotificationCount > 0 && (
+            <NavLink
+              to="/notificacoes"
+              aria-label={t("navNotificationsBadgeAria")}
+              className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+            >
+              {unreadNotificationCount}
+            </NavLink>
+          )}
+        </span>
         {session.role === "ADMIN" && (
           <NavLink to="/configuracoes" className={LINK_CLASS}>
             {t("navSettings")}

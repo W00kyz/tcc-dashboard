@@ -18,6 +18,7 @@ import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { FloorsPage } from "@/routes/FloorsPage";
 import { FormBuilderPage } from "@/routes/FormBuilderPage";
 import { LoginPage } from "@/routes/LoginPage";
+import { NotificationsPage } from "@/routes/NotificationsPage";
 import { ReassignmentsPage } from "@/routes/ReassignmentsPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
 import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
@@ -39,6 +40,7 @@ export const appRoutes: RouteObject[] = [
     children: [
       { path: "/rotas", element: <RouteBoardPage /> },
       { path: "/reatribuicoes", element: <ReassignmentsPage /> },
+      { path: "/notificacoes", element: <NotificationsPage /> },
       { path: "/execucoes", element: <ExecutionHistoryPage /> },
       { path: "/rotas/nova", element: <RouteBuilderPage /> },
       { path: "/rotas/:routeId/editar", element: <RouteBuilderPage /> },
