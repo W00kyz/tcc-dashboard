@@ -1,10 +1,34 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { BoardSnapshot } from "@/api/monitoringStream";
 import { AuthProvider } from "@/auth/AuthContext";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
+
+// The SSE hook is exercised on its own in monitoringStream.test.ts; here we drive the page
+// with a hand-set stream state so the board's delay flags / alert panel / fallback branch
+// can be asserted without a live connection.
+let boardStreamState: { snapshot: BoardSnapshot | null; fallback: boolean } = {
+  snapshot: null,
+  fallback: false,
+};
+
+vi.mock("@/api/monitoringStream", () => ({
+  useBoardStream: () => boardStreamState,
+}));
+
+afterEach(() => {
+  boardStreamState = { snapshot: null, fallback: false };
+});
+
+const EMPTY_SNAPSHOT: BoardSnapshot = {
+  generated_at: "2026-08-31T12:00:00Z",
+  routes: [],
+  open_alerts: [],
+  worker_positions: [],
+};
 
 const OCCASIONAL_ROUTE = {
   id: "r1",
@@ -62,8 +86,15 @@ function requestUrl(input: RequestInfo | URL): string {
 
 function makeFakeFetch() {
   return vi.fn((input: RequestInfo | URL) => {
-    if (requestUrl(input).includes("/field-workers")) {
+    const url = requestUrl(input);
+    if (url.includes("/field-workers")) {
       return Promise.resolve(new Response(JSON.stringify(WORKERS), { status: 200 }));
+    }
+    if (url.includes("/monitoring/board")) {
+      return Promise.resolve(new Response(JSON.stringify(EMPTY_SNAPSHOT), { status: 200 }));
+    }
+    if (url.includes("/alerts/")) {
+      return Promise.resolve(new Response(JSON.stringify({ id: "a1" }), { status: 200 }));
     }
 
     return Promise.resolve(
@@ -189,6 +220,75 @@ describe("RouteBoardPage", () => {
       expect(routeListQueries(fakeFetch).some((url) => url.includes("status=CANCELLED"))).toBe(
         true,
       );
+    });
+  });
+
+  it("marks a delayed route and lists its open alert in the panel", async () => {
+    boardStreamState = {
+      fallback: false,
+      snapshot: {
+        generated_at: "2026-08-31T12:00:00Z",
+        routes: [
+          {
+            route_id: "r1",
+            field_worker_id: "w1",
+            field_worker_name: "João da Silva",
+            route_date: "2026-08-31",
+            status: "IN_PROGRESS",
+            is_delayed: true,
+            open_alert_count: 2,
+            stop_total: 2,
+            stop_done: 0,
+          },
+        ],
+        open_alerts: [
+          {
+            id: "a1",
+            kind: "LATE_STOP",
+            severity: "WARNING",
+            description: "Ponto atrasado na rota de João",
+            route_id: "r1",
+            route_stop_id: "s1",
+            field_worker_id: "w1",
+            status: "OPEN",
+            created_at: "2026-08-31T11:00:00Z",
+          },
+        ],
+        worker_positions: [],
+      },
+    };
+    const fakeFetch = makeFakeFetch();
+    renderPage(fakeFetch);
+
+    const occasionalCard = await screen.findByTestId("route-card-r1");
+    expect(within(occasionalCard).getByText("Atrasada")).toBeInTheDocument();
+    expect(within(occasionalCard).getByTestId("route-alert-count-r1")).toHaveTextContent("2");
+
+    const alert = screen.getByTestId("alert-a1");
+    expect(within(alert).getByText("Ponto atrasado na rota de João")).toBeInTheDocument();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Reconhecer" }));
+
+    await waitFor(() => {
+      const hit = fakeFetch.mock.calls.some(([input]) =>
+        requestUrl(input).includes("/alerts/a1/acknowledge"),
+      );
+      expect(hit).toBe(true);
+    });
+  });
+
+  it("polls GET /monitoring/board when the stream has fallen back to polling", async () => {
+    boardStreamState = { snapshot: null, fallback: true };
+    const fakeFetch = makeFakeFetch();
+    renderPage(fakeFetch);
+
+    await screen.findByTestId("route-card-r1");
+
+    await waitFor(() => {
+      const hit = fakeFetch.mock.calls.some(([input]) =>
+        requestUrl(input).includes("/monitoring/board"),
+      );
+      expect(hit).toBe(true);
     });
   });
 

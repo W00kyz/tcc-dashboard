@@ -1,10 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
+import type { BoardSnapshot } from "@/api/monitoringStream";
+import { useBoardStream } from "@/api/monitoringStream";
 import { useAuth } from "@/auth/AuthContext";
 import { RouteActionsMenu } from "@/components/RouteActionsMenu";
 import { RouteStopStrip } from "@/components/RouteStopStrip";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
@@ -74,6 +78,30 @@ function paramsFromFilters(filters: RouteFilters): URLSearchParams {
   return params;
 }
 
+type BoardAlert = BoardSnapshot["open_alerts"][number];
+
+const ALERT_SEVERITY_LABEL_KEY: Record<string, StringKey> = {
+  INFO: "alertSeverityInfo",
+  WARNING: "alertSeverityWarning",
+  CRITICAL: "alertSeverityCritical",
+};
+
+// Spec §5 / Ruling 4: INFO grey, WARNING amber, CRITICAL red — as a left border accent.
+const ALERT_SEVERITY_INFO_CLASS = "border-l-muted-foreground bg-muted/40";
+const ALERT_SEVERITY_CLASS: Record<string, string> = {
+  INFO: ALERT_SEVERITY_INFO_CLASS,
+  WARNING: "border-l-amber-500 bg-amber-50",
+  CRITICAL: "border-l-red-600 bg-red-50",
+};
+
+function alertSeverityLabelKey(severity: string): StringKey {
+  return ALERT_SEVERITY_LABEL_KEY[severity] ?? "alertSeverityInfo";
+}
+
+function alertSeverityClass(severity: string): string {
+  return ALERT_SEVERITY_CLASS[severity] ?? ALERT_SEVERITY_INFO_CLASS;
+}
+
 // `RouteOut.status` is a bare string in the OpenAPI contract; fold any unknown value
 // back to PLANNED so the pill never renders undefined.
 function toRouteStatus(value: string): RouteStatus {
@@ -109,9 +137,81 @@ const FILTER_SELECT_CLASS = "border-input h-9 w-full rounded-md border bg-transp
 export function RouteBoardPage() {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const queryClient = useQueryClient();
   // Mirrors the other pages' convention: fall back to an empty token instead of asserting a
   // non-null session, so the page renders (and its requests fail cleanly) before hydration.
-  const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
+  const token = session?.accessToken ?? "";
+  const client = createApiClient(apiBaseUrl, token);
+
+  // Ruling 4: the board is a live SSE feed. `useBoardStream` carries the delay flags and the
+  // open-alert list; after 3 consecutive stream failures it flips `fallback` and the board
+  // query below takes over polling `GET /monitoring/board`.
+  const { snapshot: streamSnapshot, fallback } = useBoardStream(
+    token,
+    `${apiBaseUrl}/monitoring/stream`,
+  );
+  const hasSnapshot = streamSnapshot !== null;
+
+  const boardFallbackQuery = useQuery({
+    queryKey: ["monitoring-board"],
+    queryFn: async (): Promise<BoardSnapshot> => {
+      const { data, response } = await client.GET("/monitoring/board");
+      if (!response.ok || data === undefined) {
+        throw new Error(`GET /monitoring/board failed with status ${String(response.status)}.`);
+      }
+
+      return data;
+    },
+    // Only hit the endpoint when the stream can't serve the snapshot: once at first paint
+    // before the first frame lands, then on a 10s poll if the stream has given up.
+    enabled: fallback || !hasSnapshot,
+    refetchInterval: fallback ? 10_000 : false,
+  });
+
+  const snapshot: BoardSnapshot | null = streamSnapshot ?? boardFallbackQuery.data ?? null;
+  const boardRouteById = new Map((snapshot?.routes ?? []).map((route) => [route.route_id, route]));
+  const openAlerts: BoardAlert[] = snapshot?.open_alerts ?? [];
+
+  // The stream is now the realtime channel the old `refetchInterval` stood in for: when the
+  // snapshot's route membership changes (a route created/cancelled elsewhere), refresh the
+  // filtered list so a new card shows up without a manual reload.
+  const snapshotRouteKey = (snapshot?.routes ?? [])
+    .map((route) => route.route_id)
+    .sort((a, b) => a.localeCompare(b))
+    .join(",");
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ["routes"] });
+  }, [snapshotRouteKey, queryClient]);
+
+  const acknowledgeAlert = useMutation({
+    mutationFn: async (alertId: string) => {
+      const { response } = await client.POST("/alerts/{alert_id}/acknowledge", {
+        params: { path: { alert_id: alertId } },
+      });
+      if (!response.ok) {
+        throw new Error(`POST /alerts/${alertId}/acknowledge failed (${String(response.status)}).`);
+      }
+    },
+    // The stream pushes a fresh snapshot after the mutation; the invalidate only matters in
+    // fallback mode, where the board query is the source.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["monitoring-board"] });
+    },
+  });
+
+  const resolveAlert = useMutation({
+    mutationFn: async (alertId: string) => {
+      const { response } = await client.POST("/alerts/{alert_id}/resolve", {
+        params: { path: { alert_id: alertId } },
+      });
+      if (!response.ok) {
+        throw new Error(`POST /alerts/${alertId}/resolve failed (${String(response.status)}).`);
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["monitoring-board"] });
+    },
+  });
 
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = filtersFromParams(searchParams);
@@ -136,9 +236,8 @@ export function RouteBoardPage() {
   } = useQuery({
     queryKey: ["routes", filters],
     queryFn: () => fetchRoutes(client, filters),
-    // Stands in for SSE (Stage 9) with a simple poll — enough for the walking skeleton's
-    // "the panel shows it", not a claim of true real-time delivery.
-    refetchInterval: 10_000,
+    // No `refetchInterval` any more — the board stream (Ruling 4) drives realtime updates and
+    // invalidates this query when the snapshot's route set changes.
   });
 
   return (
@@ -226,6 +325,55 @@ export function RouteBoardPage() {
         </div>
       </div>
 
+      <section className="space-y-2" aria-labelledby="open-alerts-heading">
+        <h2 id="open-alerts-heading" className="text-lg font-semibold">
+          {t("monitoringOpenAlertsTitle")}
+        </h2>
+        {openAlerts.length === 0 ? (
+          <p className="text-muted-foreground text-sm">{t("monitoringNoOpenAlerts")}</p>
+        ) : (
+          <ul className="space-y-2">
+            {openAlerts.map((alert) => (
+              <li
+                key={alert.id}
+                data-testid={`alert-${alert.id}`}
+                className={`space-y-1 rounded border-l-4 p-3 text-sm ${alertSeverityClass(alert.severity)}`}
+              >
+                <p className="font-medium">{t(alertSeverityLabelKey(alert.severity))}</p>
+                <p>{alert.description}</p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={acknowledgeAlert.isPending}
+                    onClick={() => {
+                      acknowledgeAlert.mutate(alert.id);
+                    }}
+                  >
+                    {t("monitoringAlertAcknowledge")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={resolveAlert.isPending}
+                    onClick={() => {
+                      resolveAlert.mutate(alert.id);
+                    }}
+                  >
+                    {t("monitoringAlertResolve")}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {(acknowledgeAlert.isError || resolveAlert.isError) && (
+          <p role="alert" className="text-destructive text-sm">
+            {t("monitoringAlertActionError")}
+          </p>
+        )}
+      </section>
+
       {isLoading && <p className="text-muted-foreground">{t("routeBoardLoading")}</p>}
       {error && <p className="text-destructive">{t("routeBoardError")}</p>}
       {!isLoading && !error && routes?.length === 0 && (
@@ -234,15 +382,35 @@ export function RouteBoardPage() {
 
       {routes?.map((route) => {
         const status = toRouteStatus(route.status);
+        const boardRoute = boardRouteById.get(route.id);
+        const isDelayed = boardRoute?.is_delayed ?? false;
+        const openAlertCount = boardRoute?.open_alert_count ?? 0;
 
         return (
-          <Card key={route.id} data-testid={`route-card-${route.id}`}>
+          <Card
+            key={route.id}
+            data-testid={`route-card-${route.id}`}
+            className={isDelayed ? "border-amber-500" : undefined}
+          >
             <CardHeader>
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className={`text-base ${status === "CANCELLED" ? "line-through" : ""}`}>
                   {route.field_worker_name}
                 </CardTitle>
                 <div className="flex items-center gap-2">
+                  {isDelayed && (
+                    <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 uppercase">
+                      {t("routeBoardDelayed")}
+                    </span>
+                  )}
+                  {openAlertCount > 0 && (
+                    <span
+                      className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800"
+                      data-testid={`route-alert-count-${route.id}`}
+                    >
+                      {t("routeBoardOpenAlertCount").replace("{n}", String(openAlertCount))}
+                    </span>
+                  )}
                   {route.route_type === "OCCASIONAL" && (
                     <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 uppercase">
                       {t("routeBadgeOccasional")}
