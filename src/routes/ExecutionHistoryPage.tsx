@@ -21,6 +21,7 @@ interface ExecutionFilters {
   dateTo: string;
   fieldWorkerId: string;
   servicePointId: string;
+  serviceTypeId: string;
   buildingId: string;
   reviewStatus: "" | ReviewStatus;
   geoValidation: "" | GeoValidation;
@@ -82,6 +83,7 @@ function filtersFromParams(params: URLSearchParams): ExecutionFilters {
     dateTo: params.get("date_to") ?? "",
     fieldWorkerId: params.get("field_worker_id") ?? "",
     servicePointId: params.get("service_point_id") ?? "",
+    serviceTypeId: params.get("service_type_id") ?? "",
     buildingId: params.get("building_id") ?? "",
     reviewStatus: (params.get("review_status") as ExecutionFilters["reviewStatus"] | null) ?? "",
     geoValidation: (params.get("geo_validation") as ExecutionFilters["geoValidation"] | null) ?? "",
@@ -99,6 +101,7 @@ function paramsFromFilters(filters: ExecutionFilters): URLSearchParams {
     ["date_to", filters.dateTo],
     ["field_worker_id", filters.fieldWorkerId],
     ["service_point_id", filters.servicePointId],
+    ["service_type_id", filters.serviceTypeId],
     ["building_id", filters.buildingId],
     ["review_status", filters.reviewStatus],
     ["geo_validation", filters.geoValidation],
@@ -122,6 +125,7 @@ async function fetchExecutions(client: ApiClient, filters: ExecutionFilters, pag
         date_to: filters.dateTo || undefined,
         field_worker_id: filters.fieldWorkerId || undefined,
         service_point_id: filters.servicePointId || undefined,
+        service_type_id: filters.serviceTypeId || undefined,
         building_id: filters.buildingId || undefined,
         review_status: filters.reviewStatus || undefined,
         geo_validation: filters.geoValidation || undefined,
@@ -166,6 +170,15 @@ export function ExecutionHistoryPage() {
     queryKey: ["field-workers"],
     queryFn: async () => {
       const { data } = await client.GET("/field-workers");
+
+      return data ?? [];
+    },
+  });
+
+  const { data: serviceTypes } = useQuery({
+    queryKey: ["service-types"],
+    queryFn: async () => {
+      const { data } = await client.GET("/service-types");
 
       return data ?? [];
     },
@@ -242,6 +255,24 @@ export function ExecutionHistoryPage() {
             {workers?.map((worker) => (
               <option key={worker.id} value={worker.id}>
                 {worker.full_name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="execution-filter-service-type">{t("executionsFilterServiceType")}</Label>
+          <select
+            id="execution-filter-service-type"
+            className={FILTER_CONTROL_CLASS}
+            value={filters.serviceTypeId}
+            onChange={(event) => {
+              updateFilters({ serviceTypeId: event.target.value });
+            }}
+          >
+            <option value="">{t("executionsFilterAll")}</option>
+            {serviceTypes?.map((serviceType) => (
+              <option key={serviceType.id} value={serviceType.id}>
+                {serviceType.name}
               </option>
             ))}
           </select>

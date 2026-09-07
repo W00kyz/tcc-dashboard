@@ -21,6 +21,7 @@ import { FormBuilderPage } from "@/routes/FormBuilderPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { NotificationsPage } from "@/routes/NotificationsPage";
 import { ReassignmentsPage } from "@/routes/ReassignmentsPage";
+import { ReportsPage } from "@/routes/ReportsPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
 import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
 import { RouteTemplatesPage } from "@/routes/RouteTemplatesPage";
@@ -44,6 +45,7 @@ export const appRoutes: RouteObject[] = [
       { path: "/reatribuicoes", element: <ReassignmentsPage /> },
       { path: "/notificacoes", element: <NotificationsPage /> },
       { path: "/execucoes", element: <ExecutionHistoryPage /> },
+      { path: "/relatorios", element: <ReportsPage /> },
       { path: "/rotas/nova", element: <RouteBuilderPage /> },
       { path: "/rotas/:routeId/editar", element: <RouteBuilderPage /> },
       { path: "/templates-de-rota", element: <RouteTemplatesPage /> },

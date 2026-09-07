@@ -74,6 +74,11 @@ const WORKERS = [
 
 const BUILDINGS = [{ id: "b1", name: "Bloco CG", campus_area: "Central" }];
 
+const SERVICE_TYPES = [
+  { id: "st1", name: "Limpeza", average_duration_minutes: 30 },
+  { id: "st2", name: "Jardinagem", average_duration_minutes: 45 },
+];
+
 function requestUrl(input: RequestInfo | URL): string {
   if (typeof input === "string") {
     return input;
@@ -92,6 +97,10 @@ function makeFakeFetch(total = 2, items: unknown[] = [EXECUTION_A, EXECUTION_B])
 
     if (url.includes("/buildings")) {
       return Promise.resolve(new Response(JSON.stringify(BUILDINGS), { status: 200 }));
+    }
+
+    if (url.includes("/service-types")) {
+      return Promise.resolve(new Response(JSON.stringify(SERVICE_TYPES), { status: 200 }));
     }
 
     if (/\/executions\/e1(\/|$|\?)/.test(url)) {
@@ -156,6 +165,21 @@ describe("ExecutionHistoryPage", () => {
 
     await waitFor(() => {
       expect(executionQueries(fakeFetch).some((url) => url.includes("field_worker_id=w1"))).toBe(
+        true,
+      );
+    });
+  });
+
+  it("pushes the chosen service type into the /executions query string and the URL", async () => {
+    const fakeFetch = makeFakeFetch();
+    renderPage(fakeFetch);
+
+    await screen.findByRole("cell", { name: "João da Silva" });
+
+    fireEvent.change(screen.getByLabelText("Tipo de serviço"), { target: { value: "st1" } });
+
+    await waitFor(() => {
+      expect(executionQueries(fakeFetch).some((url) => url.includes("service_type_id=st1"))).toBe(
         true,
       );
     });

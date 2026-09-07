@@ -78,6 +78,11 @@ describe("AppNav", () => {
     expect(screen.getByRole("link", { name: "Regras de alerta" })).toBeInTheDocument();
   });
 
+  it("shows the reports link for a manager", () => {
+    renderNav("MANAGER", makeFakeFetch(0));
+    expect(screen.getByRole("link", { name: "Relatórios" })).toBeInTheDocument();
+  });
+
   it("hides the alert-rules link from a field worker", () => {
     renderNav("FIELD_WORKER", makeFakeFetch(0));
     expect(screen.queryByRole("link", { name: "Regras de alerta" })).not.toBeInTheDocument();
