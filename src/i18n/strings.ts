@@ -32,6 +32,7 @@ export const strings = {
   monitoringAlertAcknowledge: "Reconhecer",
   monitoringAlertResolve: "Resolver",
   monitoringAlertActionError: "Não foi possível atualizar o alerta. Tente novamente.",
+  monitoringAlertStatusAcknowledged: "Reconhecido",
   alertSeverityInfo: "Informação",
   alertSeverityWarning: "Atenção",
   alertSeverityCritical: "Crítico",
@@ -261,6 +262,8 @@ export const strings = {
   notificationsError: "Não foi possível carregar as notificações.",
   notificationsEmpty: "Nenhuma notificação.",
   notificationsMarkAllRead: "Marcar todas como lidas",
+  notificationsMarkReadError:
+    "Não foi possível marcar as notificações como lidas. Tente novamente.",
   notificationsUnreadOnly: "Só não lidas",
   notificationsPaginationLabel: "Página",
   notificationsPaginationOf: "de",

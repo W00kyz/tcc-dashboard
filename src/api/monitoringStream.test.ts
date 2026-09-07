@@ -1,7 +1,13 @@
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { BoardSnapshot } from "@/api/monitoringStream";
-import { subscribeToBoard } from "@/api/monitoringStream";
+import {
+  FALLBACK_RETRY_SECONDS,
+  MAX_STREAM_FAILURES,
+  subscribeToBoard,
+  useBoardStream,
+} from "@/api/monitoringStream";
 
 const SNAPSHOT: BoardSnapshot = {
   generated_at: "2026-09-07T12:00:00Z",
@@ -140,5 +146,48 @@ describe("subscribeToBoard", () => {
 
     expect(onBoard).toHaveBeenCalledOnce();
     expect(onError).not.toHaveBeenCalled();
+  });
+});
+
+describe("useBoardStream", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("clears `fallback` once the stream reconnects after dropping to polling", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    // First MAX_STREAM_FAILURES connects fail (drops to fallback); later ones stream a frame.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        calls += 1;
+        if (calls <= MAX_STREAM_FAILURES) {
+          return Promise.resolve(new Response("nope", { status: 503 }));
+        }
+
+        return Promise.resolve(
+          fakeStreamResponse([`event: board\ndata: ${JSON.stringify(SNAPSHOT)}\n\n`]),
+        );
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useBoardStream("tok", "https://api.test/monitoring/stream"),
+    );
+
+    // Backoff timers for the first failures (2s, 4s) then the fallback latches.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(result.current.fallback).toBe(true);
+
+    // The fallback retry timer fires, the stream connects and delivers a frame.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FALLBACK_RETRY_SECONDS * 1000 + 100);
+    });
+    expect(result.current.fallback).toBe(false);
+    expect(result.current.snapshot).toEqual(SNAPSHOT);
   });
 });

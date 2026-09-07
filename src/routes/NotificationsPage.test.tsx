@@ -127,6 +127,34 @@ describe("NotificationsPage", () => {
     });
   });
 
+  it("shows an error banner when marking all as read fails", async () => {
+    const fetchImpl = vi.fn((input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url.includes("/notifications/me/read-all")) {
+        return Promise.resolve(new Response("boom", { status: 500 }));
+      }
+      if (url.includes("/notifications/me")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ items: [UNREAD], total: 1, page: 1, page_size: 20 }), {
+            status: 200,
+          }),
+        );
+      }
+
+      return Promise.resolve(new Response("{}", { status: 200 }));
+    });
+    const user = userEvent.setup();
+    renderPage(fetchImpl);
+
+    await user.click(await screen.findByRole("button", { name: "Marcar todas como lidas" }));
+
+    expect(
+      await screen.findByText(
+        "Não foi possível marcar as notificações como lidas. Tente novamente.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("re-queries with unread_only when the toggle is checked", async () => {
     const fetchImpl = makeFakeFetch();
     const user = userEvent.setup();

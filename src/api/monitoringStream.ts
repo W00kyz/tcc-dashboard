@@ -33,6 +33,9 @@ interface SubscribeToBoardArgs {
 export const MAX_STREAM_FAILURES = 3;
 /** Reconnect backoff is `min(2 ** failures, MAX_BACKOFF_SECONDS)` seconds. */
 export const MAX_BACKOFF_SECONDS = 30;
+/** While in fallback mode, retry the stream on this fixed interval (seconds) so a recovered
+ * connection can take over from polling without a full remount. */
+export const FALLBACK_RETRY_SECONDS = 30;
 
 /** Parse one `\n\n`-delimited SSE frame and, when it carries a `data:` payload,
  * hand the decoded snapshot to `onBoard`. Comment frames (`: keep-alive`) and
@@ -125,6 +128,7 @@ export function useBoardStream(token: string, streamUrl: string): BoardStreamSta
 
     const controller = new AbortController();
     let failures = 0;
+    let inFallback = false;
     let stopped = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -138,12 +142,23 @@ export function useBoardStream(token: string, streamUrl: string): BoardStreamSta
         signal: controller.signal,
         onBoard: (next) => {
           failures = 0;
+          // A frame arrived — if we had dropped to polling, the stream is healthy again.
+          if (inFallback) {
+            inFallback = false;
+            setFallback(false);
+          }
           setSnapshot(next);
         },
         onError: () => {
           failures += 1;
           if (failures >= MAX_STREAM_FAILURES) {
-            setFallback(true);
+            // Give up on the stream and let the caller poll, but keep probing: a recovered
+            // connection clears `fallback` again (in `onBoard`) without a remount.
+            if (!inFallback) {
+              inFallback = true;
+              setFallback(true);
+            }
+            retryTimer = setTimeout(connect, FALLBACK_RETRY_SECONDS * 1000);
 
             return;
           }

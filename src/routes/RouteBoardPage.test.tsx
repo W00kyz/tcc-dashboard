@@ -277,6 +277,91 @@ describe("RouteBoardPage", () => {
     });
   });
 
+  it("shows the polled board (not the stale stream frame) once in fallback mode", async () => {
+    const staleSnapshot: BoardSnapshot = {
+      generated_at: "2026-08-31T11:00:00Z",
+      routes: [],
+      open_alerts: [
+        {
+          id: "stale",
+          kind: "LATE_STOP",
+          severity: "WARNING",
+          description: "Alerta antigo do stream morto",
+          route_id: "r1",
+          route_stop_id: "s1",
+          field_worker_id: "w1",
+          status: "OPEN",
+          created_at: "2026-08-31T10:00:00Z",
+        },
+      ],
+      worker_positions: [],
+    };
+    const freshSnapshot: BoardSnapshot = {
+      generated_at: "2026-08-31T12:00:00Z",
+      routes: [],
+      open_alerts: [
+        {
+          id: "fresh",
+          kind: "LATE_STOP",
+          severity: "WARNING",
+          description: "Alerta novo do poll",
+          route_id: "r1",
+          route_stop_id: "s1",
+          field_worker_id: "w1",
+          status: "OPEN",
+          created_at: "2026-08-31T11:59:00Z",
+        },
+      ],
+      worker_positions: [],
+    };
+    boardStreamState = { snapshot: staleSnapshot, fallback: true };
+    const fakeFetch = vi.fn((input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url.includes("/field-workers")) {
+        return Promise.resolve(new Response(JSON.stringify(WORKERS), { status: 200 }));
+      }
+      if (url.includes("/monitoring/board")) {
+        return Promise.resolve(new Response(JSON.stringify(freshSnapshot), { status: 200 }));
+      }
+
+      return Promise.resolve(new Response(JSON.stringify([OCCASIONAL_ROUTE]), { status: 200 }));
+    });
+    renderPage(fakeFetch);
+
+    expect(await screen.findByText("Alerta novo do poll")).toBeInTheDocument();
+    expect(screen.queryByText("Alerta antigo do stream morto")).not.toBeInTheDocument();
+  });
+
+  it("renders an acknowledged alert without a working acknowledge button", async () => {
+    boardStreamState = {
+      fallback: false,
+      snapshot: {
+        generated_at: "2026-08-31T12:00:00Z",
+        routes: [],
+        open_alerts: [
+          {
+            id: "ack1",
+            kind: "LATE_STOP",
+            severity: "WARNING",
+            description: "Alerta já reconhecido",
+            route_id: "r1",
+            route_stop_id: "s1",
+            field_worker_id: "w1",
+            status: "ACKNOWLEDGED",
+            created_at: "2026-08-31T11:00:00Z",
+          },
+        ],
+        worker_positions: [],
+      },
+    };
+    renderPage(makeFakeFetch());
+
+    const alert = await screen.findByTestId("alert-ack1");
+    expect(within(alert).getByText("Reconhecido")).toBeInTheDocument();
+    expect(within(alert).queryByRole("button", { name: "Reconhecer" })).not.toBeInTheDocument();
+    expect(within(alert).getByRole("button", { name: "Resolver" })).toBeInTheDocument();
+  });
+
   it("polls GET /monitoring/board when the stream has fallen back to polling", async () => {
     boardStreamState = { snapshot: null, fallback: true };
     const fakeFetch = makeFakeFetch();
@@ -289,6 +374,60 @@ describe("RouteBoardPage", () => {
         requestUrl(input).includes("/monitoring/board"),
       );
       expect(hit).toBe(true);
+    });
+  });
+
+  it("refetches the route list when a route's in-place status changes in the snapshot", async () => {
+    const boardRoute = {
+      route_id: "r1",
+      field_worker_id: "w1",
+      field_worker_name: "João da Silva",
+      route_date: "2026-08-31",
+      status: "PLANNED",
+      is_delayed: false,
+      open_alert_count: 0,
+      stop_total: 2,
+      stop_done: 0,
+    };
+    const snapshotWith = (patch: Partial<typeof boardRoute>): BoardSnapshot => ({
+      generated_at: "2026-08-31T12:00:00Z",
+      routes: [{ ...boardRoute, ...patch }],
+      open_alerts: [],
+      worker_positions: [],
+    });
+    boardStreamState = { fallback: false, snapshot: snapshotWith({}) };
+
+    const fakeFetch = makeFakeFetch();
+    vi.stubGlobal("fetch", fakeFetch);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = (nonce: number) => (
+      <MemoryRouter initialEntries={["/rotas"]}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <div data-nonce={nonce}>
+              <RouteBoardPage />
+            </div>
+          </AuthProvider>
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
+    const { rerender } = render(tree(0));
+
+    await screen.findByTestId("route-card-r1");
+    await waitFor(() => {
+      expect(routeListQueries(fakeFetch).length).toBeGreaterThan(0);
+    });
+    const before = routeListQueries(fakeFetch).length;
+
+    // Same route id set, but the route moved PLANNED -> IN_PROGRESS and a stop completed.
+    boardStreamState = {
+      fallback: false,
+      snapshot: snapshotWith({ status: "IN_PROGRESS", stop_done: 1 }),
+    };
+    rerender(tree(1));
+
+    await waitFor(() => {
+      expect(routeListQueries(fakeFetch).length).toBeGreaterThan(before);
     });
   });
 

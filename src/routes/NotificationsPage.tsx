@@ -136,6 +136,12 @@ export function NotificationsPage() {
         {t("notificationsUnreadOnly")}
       </label>
 
+      {(markRead.isError || markAllRead.isError) && (
+        <p role="alert" className="text-destructive text-sm">
+          {t("notificationsMarkReadError")}
+        </p>
+      )}
+
       {isLoading && <p className="text-muted-foreground">{t("notificationsLoading")}</p>}
       {error && (
         <p role="alert" className="text-destructive">

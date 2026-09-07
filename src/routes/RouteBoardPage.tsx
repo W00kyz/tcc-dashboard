@@ -169,15 +169,20 @@ export function RouteBoardPage() {
     refetchInterval: fallback ? 10_000 : false,
   });
 
-  const snapshot: BoardSnapshot | null = streamSnapshot ?? boardFallbackQuery.data ?? null;
+  // In fallback mode the stream is dead but `streamSnapshot` still holds its last (now stale)
+  // frame; prefer the polled query so acknowledge/resolve and route changes keep showing up.
+  const snapshot: BoardSnapshot | null = fallback
+    ? (boardFallbackQuery.data ?? streamSnapshot ?? null)
+    : (streamSnapshot ?? boardFallbackQuery.data ?? null);
   const boardRouteById = new Map((snapshot?.routes ?? []).map((route) => [route.route_id, route]));
   const openAlerts: BoardAlert[] = snapshot?.open_alerts ?? [];
 
   // The stream is now the realtime channel the old `refetchInterval` stood in for: when the
-  // snapshot's route membership changes (a route created/cancelled elsewhere), refresh the
-  // filtered list so a new card shows up without a manual reload.
+  // snapshot changes a route's membership OR its in-place state (a PLANNED→IN_PROGRESS
+  // transition, a stop completing), refresh the filtered list so the card's status pill and
+  // stop strip don't go stale.
   const snapshotRouteKey = (snapshot?.routes ?? [])
-    .map((route) => route.route_id)
+    .map((route) => `${route.route_id}:${route.status}:${String(route.stop_done)}`)
     .sort((a, b) => a.localeCompare(b))
     .join(",");
   useEffect(() => {
@@ -340,19 +345,28 @@ export function RouteBoardPage() {
                 data-testid={`alert-${alert.id}`}
                 className={`space-y-1 rounded border-l-4 p-3 text-sm ${alertSeverityClass(alert.severity)}`}
               >
-                <p className="font-medium">{t(alertSeverityLabelKey(alert.severity))}</p>
+                <p className="font-medium">
+                  {t(alertSeverityLabelKey(alert.severity))}
+                  {alert.status === "ACKNOWLEDGED" && (
+                    <span className="text-muted-foreground ml-2 text-xs font-normal">
+                      {t("monitoringAlertStatusAcknowledged")}
+                    </span>
+                  )}
+                </p>
                 <p>{alert.description}</p>
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={acknowledgeAlert.isPending}
-                    onClick={() => {
-                      acknowledgeAlert.mutate(alert.id);
-                    }}
-                  >
-                    {t("monitoringAlertAcknowledge")}
-                  </Button>
+                  {alert.status !== "ACKNOWLEDGED" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={acknowledgeAlert.isPending}
+                      onClick={() => {
+                        acknowledgeAlert.mutate(alert.id);
+                      }}
+                    >
+                      {t("monitoringAlertAcknowledge")}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
