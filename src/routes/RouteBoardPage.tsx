@@ -8,6 +8,7 @@ import { useBoardStream } from "@/api/monitoringStream";
 import { useAuth } from "@/auth/AuthContext";
 import { RouteActionsMenu } from "@/components/RouteActionsMenu";
 import { RouteStopStrip } from "@/components/RouteStopStrip";
+import { WorkerPositionsList } from "@/components/WorkerPositionsList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -438,6 +439,8 @@ export function RouteBoardPage() {
           </Card>
         );
       })}
+
+      <WorkerPositionsList positions={snapshot?.worker_positions ?? []} />
     </main>
   );
 }

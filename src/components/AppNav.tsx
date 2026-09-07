@@ -78,6 +78,11 @@ export function AppNav() {
             {t("navReassignments")}
           </NavLink>
         )}
+        {canManage && (
+          <NavLink to="/regras-de-alerta" className={LINK_CLASS}>
+            {t("navAlertRules")}
+          </NavLink>
+        )}
         {session.role === "ADMIN" && (
           <NavLink to="/formularios" className={LINK_CLASS}>
             {t("navForms")}

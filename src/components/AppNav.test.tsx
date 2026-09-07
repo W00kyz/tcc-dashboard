@@ -73,6 +73,16 @@ describe("AppNav", () => {
     expect(screen.getByRole("link", { name: "Configurações" })).toBeInTheDocument();
   });
 
+  it("shows the alert-rules link for a manager but not for a field worker", () => {
+    renderNav("MANAGER", makeFakeFetch(0));
+    expect(screen.getByRole("link", { name: "Regras de alerta" })).toBeInTheDocument();
+  });
+
+  it("hides the alert-rules link from a field worker", () => {
+    renderNav("FIELD_WORKER", makeFakeFetch(0));
+    expect(screen.queryByRole("link", { name: "Regras de alerta" })).not.toBeInTheDocument();
+  });
+
   it("renders the review-queue badge linking to the pending filter when the queue is not empty", async () => {
     renderNav("MANAGER", makeFakeFetch(4));
 

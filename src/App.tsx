@@ -10,6 +10,7 @@ import {
 import { AuthProvider } from "@/auth/AuthContext";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { AppNav } from "@/components/AppNav";
+import { AlertRulesPage } from "@/routes/AlertRulesPage";
 import { BuildingsPage } from "@/routes/BuildingsPage";
 import { ContractorCompaniesPage } from "@/routes/ContractorCompaniesPage";
 import { EventsPage } from "@/routes/EventsPage";
@@ -39,6 +40,7 @@ export const appRoutes: RouteObject[] = [
     element: <ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]} />,
     children: [
       { path: "/rotas", element: <RouteBoardPage /> },
+      { path: "/regras-de-alerta", element: <AlertRulesPage /> },
       { path: "/reatribuicoes", element: <ReassignmentsPage /> },
       { path: "/notificacoes", element: <NotificationsPage /> },
       { path: "/execucoes", element: <ExecutionHistoryPage /> },
