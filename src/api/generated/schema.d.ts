@@ -1334,6 +1334,67 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/reports/compliance": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Compliance Report
+     * @description RF45 — the route-compliance read model as JSON: the granularity buckets with the 13
+     *     indicators plus `completion_rate`, a totals row, and the resolved `filters_applied`.
+     */
+    get: operations["get_compliance_report_reports_compliance_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/reports/compliance.pdf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Compliance Report Pdf
+     * @description RF46 — the same report rendered as a printable landscape-A4 PDF attachment.
+     */
+    get: operations["get_compliance_report_pdf_reports_compliance_pdf_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/reports/compliance.xlsx": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Compliance Report Xlsx
+     * @description RF46 — the same report as an XLSX workbook attachment.
+     */
+    get: operations["get_compliance_report_xlsx_reports_compliance_xlsx_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1690,6 +1751,111 @@ export interface components {
     CompleteManuallyBody: {
       /** Reason */
       reason: string;
+    };
+    /**
+     * ComplianceReportOut
+     * @description Mirror of `ComplianceReport`. The domain builder already returns frozen, JSON-serialisable
+     *     dataclasses; this thin `...Out` layer (built via `model_validate`, `from_attributes=True`)
+     *     keeps the API schema explicit and decoupled from the dataclass without restating the query
+     *     or re-deriving anything.
+     */
+    ComplianceReportOut: {
+      granularity: components["schemas"]["ReportGranularity"];
+      /**
+       * Date From
+       * Format: date
+       */
+      date_from: string;
+      /**
+       * Date To
+       * Format: date
+       */
+      date_to: string;
+      filters_applied: components["schemas"]["FilterAppliedOut"];
+      /** Periods */
+      periods: components["schemas"]["ComplianceRowOut"][];
+      totals: components["schemas"]["ComplianceTotalsOut"];
+      /**
+       * Generated At
+       * Format: date-time
+       */
+      generated_at: string;
+    };
+    /**
+     * ComplianceRowOut
+     * @description Mirror of `ComplianceRow` — one granularity bucket with the 13 absolute indicators plus
+     *     the derived `completion_rate`.
+     */
+    ComplianceRowOut: {
+      /** Period Label */
+      period_label: string;
+      /**
+       * Period Start
+       * Format: date
+       */
+      period_start: string;
+      /** Routes Total */
+      routes_total: number;
+      /** Routes Started */
+      routes_started: number;
+      /** Routes Completed */
+      routes_completed: number;
+      /** Routes Cancelled */
+      routes_cancelled: number;
+      /** Stops Total */
+      stops_total: number;
+      /** Stops Done */
+      stops_done: number;
+      /** Stops Pending */
+      stops_pending: number;
+      /** Stops Reassigned */
+      stops_reassigned: number;
+      /** Executions Total */
+      executions_total: number;
+      /** Executions With Evidence */
+      executions_with_evidence: number;
+      /** Executions Flagged */
+      executions_flagged: number;
+      /** Impediments Total */
+      impediments_total: number;
+      /** Alerts Total */
+      alerts_total: number;
+      /** Completion Rate */
+      completion_rate: number;
+    };
+    /**
+     * ComplianceTotalsOut
+     * @description Mirror of `ComplianceTotals` — the same shape as a row without the period identity.
+     */
+    ComplianceTotalsOut: {
+      /** Routes Total */
+      routes_total: number;
+      /** Routes Started */
+      routes_started: number;
+      /** Routes Completed */
+      routes_completed: number;
+      /** Routes Cancelled */
+      routes_cancelled: number;
+      /** Stops Total */
+      stops_total: number;
+      /** Stops Done */
+      stops_done: number;
+      /** Stops Pending */
+      stops_pending: number;
+      /** Stops Reassigned */
+      stops_reassigned: number;
+      /** Executions Total */
+      executions_total: number;
+      /** Executions With Evidence */
+      executions_with_evidence: number;
+      /** Executions Flagged */
+      executions_flagged: number;
+      /** Impediments Total */
+      impediments_total: number;
+      /** Alerts Total */
+      alerts_total: number;
+      /** Completion Rate */
+      completion_rate: number;
     };
     /** ContractorCompanyCreateRequest */
     ContractorCompanyCreateRequest: {
@@ -2066,6 +2232,21 @@ export interface components {
       service_type_ids: string[];
       /** User Id */
       user_id?: string | null;
+    };
+    /**
+     * FilterAppliedOut
+     * @description Mirror of `app.domain.reports.compliance.FilterApplied` — the human-readable echo of the
+     *     filters that were applied, with UUIDs already resolved to names by the builder.
+     */
+    FilterAppliedOut: {
+      /** Field Worker Name */
+      field_worker_name: string | null;
+      /** Service Type Name */
+      service_type_name: string | null;
+      /** Building Name */
+      building_name: string | null;
+      /** Route Status */
+      route_status: string | null;
     };
     /** FloorCreateRequest */
     FloorCreateRequest: {
@@ -2493,6 +2674,11 @@ export interface components {
       /** Stable Keys */
       stable_keys: string[];
     };
+    /**
+     * ReportGranularity
+     * @enum {string}
+     */
+    ReportGranularity: "DAILY" | "WEEKLY" | "MONTHLY";
     /** ResolveReviewRequest */
     ResolveReviewRequest: {
       /** Note */
@@ -3872,6 +4058,7 @@ export interface operations {
         date_to?: string | null;
         field_worker_id?: string | null;
         service_point_id?: string | null;
+        service_type_id?: string | null;
         building_id?: string | null;
         review_status?: string | null;
         geo_validation?: string | null;
@@ -5642,6 +5829,117 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["WorkerPositionOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_compliance_report_reports_compliance_get: {
+    parameters: {
+      query: {
+        granularity: components["schemas"]["ReportGranularity"];
+        date_from: string;
+        date_to: string;
+        field_worker_id?: string | null;
+        service_type_id?: string | null;
+        building_id?: string | null;
+        route_status?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ComplianceReportOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_compliance_report_pdf_reports_compliance_pdf_get: {
+    parameters: {
+      query: {
+        granularity: components["schemas"]["ReportGranularity"];
+        date_from: string;
+        date_to: string;
+        field_worker_id?: string | null;
+        service_type_id?: string | null;
+        building_id?: string | null;
+        route_status?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_compliance_report_xlsx_reports_compliance_xlsx_get: {
+    parameters: {
+      query: {
+        granularity: components["schemas"]["ReportGranularity"];
+        date_from: string;
+        date_to: string;
+        field_worker_id?: string | null;
+        service_type_id?: string | null;
+        building_id?: string | null;
+        route_status?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */
