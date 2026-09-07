@@ -232,27 +232,33 @@ export function ReportsPage() {
   async function downloadReport(format: "pdf" | "xlsx") {
     setExportError(null);
     const qs = buildExportQuery(filters);
-    const res = await fetch(`${apiBaseUrl}/reports/compliance.${format}?${qs.toString()}`, {
-      headers: { Authorization: `Bearer ${session?.accessToken ?? ""}` },
-    });
-    if (!res.ok) {
+    // A transport-level `fetch` rejection (offline, DNS failure) never reaches the `!res.ok`
+    // branch — without this catch the `void` call site swallows it and the user sees nothing.
+    try {
+      const res = await fetch(`${apiBaseUrl}/reports/compliance.${format}?${qs.toString()}`, {
+        headers: { Authorization: `Bearer ${session?.accessToken ?? ""}` },
+      });
+      if (!res.ok) {
+        setExportError(t("reportsExportError"));
+
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `relatorio-conformidade-${filters.dateFrom}-${filters.dateTo}.${format}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      // Bound the blob-URL leak; the download has already started synchronously on click.
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 60_000);
+    } catch {
       setExportError(t("reportsExportError"));
-
-      return;
     }
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `relatorio-conformidade-${filters.dateFrom}-${filters.dateTo}.${format}`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    // Bound the blob-URL leak; the download has already started synchronously on click.
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 60_000);
   }
 
   return (

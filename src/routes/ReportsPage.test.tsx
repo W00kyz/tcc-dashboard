@@ -203,6 +203,23 @@ describe("ReportsPage", () => {
     expect(await screen.findByText("Não foi possível exportar o relatório.")).toBeInTheDocument();
   });
 
+  it("shows an export error when the download fetch rejects at the transport level", async () => {
+    const rejectingFetch = vi.fn((input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url.includes("/reports/compliance.pdf") || url.includes("/reports/compliance.xlsx")) {
+        return Promise.reject(new TypeError("Failed to fetch"));
+      }
+
+      return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+    }) as unknown as typeof fetch;
+    renderPage(rejectingFetch);
+
+    setRange();
+    fireEvent.click(screen.getByRole("button", { name: "Exportar PDF" }));
+
+    expect(await screen.findByText("Não foi possível exportar o relatório.")).toBeInTheDocument();
+  });
+
   it("registers /relatorios under the MANAGER/ADMIN ProtectedRoute branch", () => {
     const managerBranch = appRoutes.find((branch) =>
       branch.children?.some((child) => child.path === "/rotas"),
