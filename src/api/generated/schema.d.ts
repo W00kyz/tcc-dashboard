@@ -1103,6 +1103,237 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/monitoring/board": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Board
+     * @description RF41 — the coloured route board: every open route with its derived `is_delayed` flag and
+     *     OPEN alert count, the board's alert list, and the latest GPS fix per worker.
+     */
+    get: operations["get_board_monitoring_board_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/monitoring/stream": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Stream Board
+     * @description RF41 real-time — the same `BoardSnapshot` as `GET /monitoring/board`, pushed as
+     *     Server-Sent Events whenever its meaningful content changes (spec §2 Ruling 4, §4).
+     */
+    get: operations["stream_board_monitoring_stream_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/alerts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Alerts
+     * @description RF41 — the dashboard's alert list, optionally filtered by `status` and/or `route_id`.
+     */
+    get: operations["get_alerts_alerts_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/alerts/{alert_id}/acknowledge": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Acknowledge
+     * @description Cenário 5 step 7 — a manager takes an OPEN alert. Idempotent on an already
+     *     ACKNOWLEDGED alert; a RESOLVED alert answers 409.
+     */
+    post: operations["acknowledge_alerts__alert_id__acknowledge_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/alerts/{alert_id}/resolve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Resolve
+     * @description Cenário 5 step 8 — a manager closes an alert from OPEN or ACKNOWLEDGED (idempotent
+     *     on an already RESOLVED alert).
+     */
+    post: operations["resolve_alerts__alert_id__resolve_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/alert-rules": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Alert Rules */
+    get: operations["get_alert_rules_alert_rules_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/alert-rules/{rule_kind}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Patch Alert Rule
+     * @description Toggle a rule on/off or override its threshold (RF50). An unknown `rule_kind` answers
+     *     404 (the path is a free string, not the path enum, so the check is ours to make).
+     */
+    patch: operations["patch_alert_rule_alert_rules__rule_kind__patch"];
+    trace?: never;
+  };
+  "/notifications/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List My Notifications */
+    get: operations["list_my_notifications_notifications_me_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notifications/me/unread-count": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** My Unread Count */
+    get: operations["my_unread_count_notifications_me_unread_count_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notifications/me/read-all": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark All My Notifications Read */
+    post: operations["mark_all_my_notifications_read_notifications_me_read_all_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notifications/{notification_id}/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mark Notification Read
+     * @description Mark one notification read. 404 when it does not exist, 403 when it is not the
+     *     caller's — a user can only touch their own centre.
+     */
+    post: operations["mark_notification_read_notifications__notification_id__read_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/worker-positions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create Worker Position */
+    post: operations["create_worker_position_worker_positions_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1117,6 +1348,69 @@ export interface components {
        */
       token_type: string;
     };
+    /**
+     * AlertKind
+     * @enum {string}
+     */
+    AlertKind: "LATE_START" | "WORKER_ABSENT" | "LATE_STOP" | "NO_EVIDENCE";
+    /** AlertOut */
+    AlertOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      kind: components["schemas"]["AlertKind"];
+      /** Severity */
+      severity: string;
+      /** Description */
+      description: string;
+      /**
+       * Route Id
+       * Format: uuid
+       */
+      route_id: string;
+      /** Route Stop Id */
+      route_stop_id: string | null;
+      /** Field Worker Id */
+      field_worker_id: string | null;
+      status: components["schemas"]["AlertStatus"];
+      /** Acknowledged By */
+      acknowledged_by: string | null;
+      /** Acknowledged At */
+      acknowledged_at: string | null;
+      /** Resolved By */
+      resolved_by: string | null;
+      /** Resolved At */
+      resolved_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /** AlertRuleOut */
+    AlertRuleOut: {
+      rule_kind: components["schemas"]["AlertKind"];
+      /** Enabled */
+      enabled: boolean;
+      /** Threshold Minutes */
+      threshold_minutes: number | null;
+      /** Updated At */
+      updated_at: string | null;
+    };
+    /** AlertRulePatch */
+    AlertRulePatch: {
+      /** Enabled */
+      enabled?: boolean | null;
+      /** Threshold Minutes */
+      threshold_minutes?: number | null;
+    };
+    /**
+     * AlertStatus
+     * @enum {string}
+     */
+    AlertStatus: "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
     /** AnswerInBody */
     AnswerInBody: {
       /** Stable Key */
@@ -1155,6 +1449,99 @@ export interface components {
       transfer_reason: string | null;
       /** Outcome */
       outcome: string | null;
+    };
+    /** BoardAlert */
+    BoardAlert: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      kind: components["schemas"]["AlertKind"];
+      /** Severity */
+      severity: string;
+      /** Description */
+      description: string;
+      /**
+       * Route Id
+       * Format: uuid
+       */
+      route_id: string;
+      /** Route Stop Id */
+      route_stop_id: string | null;
+      /** Field Worker Id */
+      field_worker_id: string | null;
+      status: components["schemas"]["AlertStatus"];
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /** BoardPosition */
+    BoardPosition: {
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Field Worker Name */
+      field_worker_name: string;
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+      /**
+       * Reported At
+       * Format: date-time
+       */
+      reported_at: string;
+      /** Age Seconds */
+      age_seconds: number;
+    };
+    /** BoardRoute */
+    BoardRoute: {
+      /**
+       * Route Id
+       * Format: uuid
+       */
+      route_id: string;
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Field Worker Name */
+      field_worker_name: string;
+      /**
+       * Route Date
+       * Format: date
+       */
+      route_date: string;
+      /** Status */
+      status: string;
+      /** Is Delayed */
+      is_delayed: boolean;
+      /** Open Alert Count */
+      open_alert_count: number;
+      /** Stop Total */
+      stop_total: number;
+      /** Stop Done */
+      stop_done: number;
+    };
+    /** BoardSnapshot */
+    BoardSnapshot: {
+      /**
+       * Generated At
+       * Format: date-time
+       */
+      generated_at: string;
+      /** Routes */
+      routes: components["schemas"]["BoardRoute"][];
+      /** Open Alerts */
+      open_alerts: components["schemas"]["BoardAlert"][];
+      /** Worker Positions */
+      worker_positions: components["schemas"]["BoardPosition"][];
     };
     /** Body_upload_photo_executions__execution_id__evidence_photo_post */
     Body_upload_photo_executions__execution_id__evidence_photo_post: {
@@ -1925,6 +2312,11 @@ export interface components {
        */
       completed_at: string;
     };
+    /** MarkAllReadOut */
+    MarkAllReadOut: {
+      /** Marked */
+      marked: number;
+    };
     /** MaterializeBody */
     MaterializeBody: {
       /**
@@ -1934,6 +2326,31 @@ export interface components {
       route_date: string;
       /** Field Worker Id */
       field_worker_id?: string | null;
+    };
+    /** NotificationOut */
+    NotificationOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Kind */
+      kind: string;
+      /** Title */
+      title: string;
+      /** Body */
+      body: string;
+      /** Data */
+      data: {
+        [key: string]: unknown;
+      };
+      /** Read At */
+      read_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
     };
     /** OccasionalRouteBody */
     OccasionalRouteBody: {
@@ -1953,6 +2370,17 @@ export interface components {
     PagedExecutions: {
       /** Items */
       items: components["schemas"]["ExecutionListItem"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number;
+      /** Page Size */
+      page_size: number;
+    };
+    /** PagedNotifications */
+    PagedNotifications: {
+      /** Items */
+      items: components["schemas"]["NotificationOut"][];
       /** Total */
       total: number;
       /** Page */
@@ -2274,13 +2702,37 @@ export interface components {
     SettingsOut: {
       /** Check Radius Meters */
       check_radius_meters: number;
+      /** Alert Scan Interval Seconds */
+      alert_scan_interval_seconds: number;
+      /** Late Start Tolerance Min */
+      late_start_tolerance_min: number;
+      /** Absence Tolerance Min */
+      absence_tolerance_min: number;
+      /** Late Stop Tolerance Min */
+      late_stop_tolerance_min: number;
+      /** No Evidence Grace Min */
+      no_evidence_grace_min: number;
+      /** Position Report Interval Seconds */
+      position_report_interval_seconds: number;
       /** Updated At */
       updated_at: string | null;
     };
     /** SettingsUpdate */
     SettingsUpdate: {
       /** Check Radius Meters */
-      check_radius_meters: number;
+      check_radius_meters?: number | null;
+      /** Alert Scan Interval Seconds */
+      alert_scan_interval_seconds?: number | null;
+      /** Late Start Tolerance Min */
+      late_start_tolerance_min?: number | null;
+      /** Absence Tolerance Min */
+      absence_tolerance_min?: number | null;
+      /** Late Stop Tolerance Min */
+      late_stop_tolerance_min?: number | null;
+      /** No Evidence Grace Min */
+      no_evidence_grace_min?: number | null;
+      /** Position Report Interval Seconds */
+      position_report_interval_seconds?: number | null;
     };
     /** StartRouteRequest */
     StartRouteRequest: {
@@ -2407,6 +2859,11 @@ export interface components {
        */
       token_type: string;
     };
+    /** UnreadCountOut */
+    UnreadCountOut: {
+      /** Count */
+      count: number;
+    };
     /** UserCreateRequest */
     UserCreateRequest: {
       /** Name */
@@ -2461,6 +2918,54 @@ export interface components {
       input?: unknown;
       /** Context */
       ctx?: Record<string, never>;
+    };
+    /** WorkerPositionBody */
+    WorkerPositionBody: {
+      /**
+       * Route Id
+       * Format: uuid
+       */
+      route_id: string;
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+      /**
+       * Reported At
+       * Format: date-time
+       */
+      reported_at: string;
+      /** Accuracy M */
+      accuracy_m?: number | null;
+    };
+    /** WorkerPositionOut */
+    WorkerPositionOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Route Id
+       * Format: uuid
+       */
+      route_id: string;
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+      /**
+       * Reported At
+       * Format: date-time
+       */
+      reported_at: string;
+      /**
+       * Received At
+       * Format: date-time
+       */
+      received_at: string;
+      /** Accuracy M */
+      accuracy_m: number | null;
     };
   };
   responses: never;
@@ -4811,6 +5316,332 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ImpedimentOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_board_monitoring_board_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardSnapshot"];
+        };
+      };
+    };
+  };
+  stream_board_monitoring_stream_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  get_alerts_alerts_get: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["AlertStatus"] | null;
+        route_id?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  acknowledge_alerts__alert_id__acknowledge_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        alert_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  resolve_alerts__alert_id__resolve_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        alert_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_alert_rules_alert_rules_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertRuleOut"][];
+        };
+      };
+    };
+  };
+  patch_alert_rule_alert_rules__rule_kind__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        rule_kind: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AlertRulePatch"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertRuleOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_my_notifications_notifications_me_get: {
+    parameters: {
+      query?: {
+        unread_only?: boolean;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedNotifications"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  my_unread_count_notifications_me_unread_count_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnreadCountOut"];
+        };
+      };
+    };
+  };
+  mark_all_my_notifications_read_notifications_me_read_all_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MarkAllReadOut"];
+        };
+      };
+    };
+  };
+  mark_notification_read_notifications__notification_id__read_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        notification_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_worker_position_worker_positions_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkerPositionBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WorkerPositionOut"];
         };
       };
       /** @description Validation Error */
