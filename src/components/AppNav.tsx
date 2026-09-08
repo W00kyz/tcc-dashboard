@@ -57,6 +57,9 @@ export function AppNav() {
         <NavLink to="/templates-de-rota" className={LINK_CLASS}>
           {t("navRouteTemplates")}
         </NavLink>
+        <NavLink to="/meus-dados" className={LINK_CLASS}>
+          {t("navMyData")}
+        </NavLink>
         {canManage && (
           <span className="flex items-center gap-1.5">
             <NavLink to="/execucoes" className={LINK_CLASS}>

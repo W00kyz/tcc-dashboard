@@ -20,6 +20,7 @@ import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { FloorsPage } from "@/routes/FloorsPage";
 import { FormBuilderPage } from "@/routes/FormBuilderPage";
 import { LoginPage } from "@/routes/LoginPage";
+import { MyDataPage } from "@/routes/MyDataPage";
 import { NotificationsPage } from "@/routes/NotificationsPage";
 import { ReassignmentsPage } from "@/routes/ReassignmentsPage";
 import { ReportsPage } from "@/routes/ReportsPage";
@@ -62,6 +63,15 @@ export const appRoutes: RouteObject[] = [
       { path: "/eventos", element: <EventsPage /> },
       { path: "/pontos-de-servico", element: <ServicePointsPage /> },
     ],
+  },
+  {
+    // "Meus dados" (RNF10): any authenticated user may see their own personal-data export.
+    element: (
+      <ConsentGate>
+        <ProtectedRoute allowedRoles={["FIELD_WORKER", "MANAGER", "ADMIN"]} />
+      </ConsentGate>
+    ),
+    children: [{ path: "/meus-dados", element: <MyDataPage /> }],
   },
   {
     element: (
