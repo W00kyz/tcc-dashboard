@@ -2286,6 +2286,25 @@ export interface components {
       /** User Id */
       user_id?: string | null;
     };
+    /** FieldWorkerOut */
+    FieldWorkerOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Contractor Company Id
+       * Format: uuid
+       */
+      contractor_company_id: string;
+      /** Service Type Ids */
+      service_type_ids: string[];
+      /** User Id */
+      user_id: string | null;
+    };
     /** FieldWorkerUpdateRequest */
     FieldWorkerUpdateRequest: {
       /** Full Name */
@@ -2575,6 +2594,23 @@ export interface components {
       /** Field Worker Id */
       field_worker_id?: string | null;
     };
+    /** MyFieldWorkerOut */
+    MyFieldWorkerOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Contractor Company Id
+       * Format: uuid
+       */
+      contractor_company_id: string;
+      /** Service Type Ids */
+      service_type_ids: string[];
+    };
     /** NoticeOut */
     NoticeOut: {
       /** Version */
@@ -2670,7 +2706,7 @@ export interface components {
     /** PersonalDataOut */
     PersonalDataOut: {
       profile: components["schemas"]["ProfileOut"];
-      field_worker: components["schemas"]["app__api__me__FieldWorkerOut"] | null;
+      field_worker: components["schemas"]["MyFieldWorkerOut"] | null;
       /** Consent History */
       consent_history: components["schemas"]["ConsentEntryOut"][];
       /** Auth Events */
@@ -3280,42 +3316,6 @@ export interface components {
       received_at: string;
       /** Accuracy M */
       accuracy_m: number | null;
-    };
-    /** FieldWorkerOut */
-    app__api__field_workers__FieldWorkerOut: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Full Name */
-      full_name: string;
-      /**
-       * Contractor Company Id
-       * Format: uuid
-       */
-      contractor_company_id: string;
-      /** Service Type Ids */
-      service_type_ids: string[];
-      /** User Id */
-      user_id: string | null;
-    };
-    /** FieldWorkerOut */
-    app__api__me__FieldWorkerOut: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Full Name */
-      full_name: string;
-      /**
-       * Contractor Company Id
-       * Format: uuid
-       */
-      contractor_company_id: string;
-      /** Service Type Ids */
-      service_type_ids: string[];
     };
   };
   responses: never;
@@ -4704,7 +4704,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["app__api__field_workers__FieldWorkerOut"][];
+          "application/json": components["schemas"]["FieldWorkerOut"][];
         };
       };
     };
@@ -4728,7 +4728,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["app__api__field_workers__FieldWorkerOut"];
+          "application/json": components["schemas"]["FieldWorkerOut"];
         };
       };
       /** @description Validation Error */
@@ -4783,7 +4783,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["app__api__field_workers__FieldWorkerOut"];
+          "application/json": components["schemas"]["FieldWorkerOut"];
         };
       };
       /** @description Validation Error */
