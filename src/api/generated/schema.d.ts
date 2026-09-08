@@ -72,6 +72,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/auth/consent": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Accept Consent */
+    post: operations["accept_consent_auth_consent_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/consent-status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Consent Status */
+    get: operations["consent_status_auth_consent_status_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/auth/password-reset/request": {
     parameters: {
       query?: never;
@@ -1103,6 +1137,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/me/personal-data": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get My Personal Data */
+    get: operations["get_my_personal_data_me_personal_data_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/monitoring/board": {
     parameters: {
       query?: never;
@@ -1511,6 +1562,18 @@ export interface components {
       /** Outcome */
       outcome: string | null;
     };
+    /** AuthEventOut */
+    AuthEventOut: {
+      /** Event */
+      event: string;
+      /** Ip Address */
+      ip_address: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
     /** BoardAlert */
     BoardAlert: {
       /**
@@ -1857,6 +1920,22 @@ export interface components {
       /** Completion Rate */
       completion_rate: number;
     };
+    /** ConsentEntryOut */
+    ConsentEntryOut: {
+      /** Notice Version */
+      notice_version: number;
+      /**
+       * Accepted At
+       * Format: date-time
+       */
+      accepted_at: string;
+    };
+    /** ConsentStatusOut */
+    ConsentStatusOut: {
+      /** Consent Required */
+      consent_required: boolean;
+      notice?: components["schemas"]["NoticeOut"] | null;
+    };
     /** ContractorCompanyCreateRequest */
     ContractorCompanyCreateRequest: {
       /** Name */
@@ -1989,6 +2068,13 @@ export interface components {
        * Format: uuid
        */
       idempotency_key: string;
+    };
+    /** EvidenceSummaryOut */
+    EvidenceSummaryOut: {
+      /** Total Items */
+      total_items: number;
+      /** Total Bytes */
+      total_bytes: number;
     };
     /**
      * ExecutionAssignmentOut
@@ -2199,25 +2285,6 @@ export interface components {
       service_type_ids: string[];
       /** User Id */
       user_id?: string | null;
-    };
-    /** FieldWorkerOut */
-    FieldWorkerOut: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Full Name */
-      full_name: string;
-      /**
-       * Contractor Company Id
-       * Format: uuid
-       */
-      contractor_company_id: string;
-      /** Service Type Ids */
-      service_type_ids: string[];
-      /** User Id */
-      user_id: string | null;
     };
     /** FieldWorkerUpdateRequest */
     FieldWorkerUpdateRequest: {
@@ -2508,6 +2575,15 @@ export interface components {
       /** Field Worker Id */
       field_worker_id?: string | null;
     };
+    /** NoticeOut */
+    NoticeOut: {
+      /** Version */
+      version: number;
+      /** Title */
+      title: string;
+      /** Body Markdown */
+      body_markdown: string;
+    };
     /** NotificationOut */
     NotificationOut: {
       /**
@@ -2532,6 +2608,13 @@ export interface components {
        * Format: date-time
        */
       created_at: string;
+    };
+    /** NotificationsSummaryOut */
+    NotificationsSummaryOut: {
+      /** Total */
+      total: number;
+      /** Unread */
+      unread: number;
     };
     /** OccasionalRouteBody */
     OccasionalRouteBody: {
@@ -2584,11 +2667,45 @@ export interface components {
        */
       email: string;
     };
+    /** PersonalDataOut */
+    PersonalDataOut: {
+      profile: components["schemas"]["ProfileOut"];
+      field_worker: components["schemas"]["app__api__me__FieldWorkerOut"] | null;
+      /** Consent History */
+      consent_history: components["schemas"]["ConsentEntryOut"][];
+      /** Auth Events */
+      auth_events: components["schemas"]["AuthEventOut"][];
+      executions_summary: components["schemas"]["TimeSpanOut"];
+      evidence_summary: components["schemas"]["EvidenceSummaryOut"];
+      positions_summary: components["schemas"]["TimeSpanOut"];
+      notifications_summary: components["schemas"]["NotificationsSummaryOut"];
+    };
     /**
      * PointType
      * @enum {string}
      */
     PointType: "REGULAR" | "OCCASIONAL";
+    /** ProfileOut */
+    ProfileOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Email */
+      email: string;
+      /** Name */
+      name: string;
+      /** Role */
+      role: string;
+      /** Is Active */
+      is_active: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
     /** PublishedVersionResponse */
     PublishedVersionResponse: {
       /**
@@ -3033,6 +3150,15 @@ export interface components {
       /** Stops */
       stops?: components["schemas"]["TemplateStopBody"][] | null;
     };
+    /** TimeSpanOut */
+    TimeSpanOut: {
+      /** Total */
+      total: number;
+      /** First At */
+      first_at: string | null;
+      /** Last At */
+      last_at: string | null;
+    };
     /** TokenResponse */
     TokenResponse: {
       /** Access Token */
@@ -3044,6 +3170,8 @@ export interface components {
        * @default bearer
        */
       token_type: string;
+      /** Consent Required */
+      consent_required: boolean;
     };
     /** UnreadCountOut */
     UnreadCountOut: {
@@ -3152,6 +3280,42 @@ export interface components {
       received_at: string;
       /** Accuracy M */
       accuracy_m: number | null;
+    };
+    /** FieldWorkerOut */
+    app__api__field_workers__FieldWorkerOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Contractor Company Id
+       * Format: uuid
+       */
+      contractor_company_id: string;
+      /** Service Type Ids */
+      service_type_ids: string[];
+      /** User Id */
+      user_id: string | null;
+    };
+    /** FieldWorkerOut */
+    app__api__me__FieldWorkerOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Full Name */
+      full_name: string;
+      /**
+       * Contractor Company Id
+       * Format: uuid
+       */
+      contractor_company_id: string;
+      /** Service Type Ids */
+      service_type_ids: string[];
     };
   };
   responses: never;
@@ -3263,6 +3427,46 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  accept_consent_auth_consent_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConsentStatusOut"];
+        };
+      };
+    };
+  };
+  consent_status_auth_consent_status_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConsentStatusOut"];
+        };
       };
     };
   };
@@ -4500,7 +4704,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["FieldWorkerOut"][];
+          "application/json": components["schemas"]["app__api__field_workers__FieldWorkerOut"][];
         };
       };
     };
@@ -4524,7 +4728,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["FieldWorkerOut"];
+          "application/json": components["schemas"]["app__api__field_workers__FieldWorkerOut"];
         };
       };
       /** @description Validation Error */
@@ -4579,7 +4783,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["FieldWorkerOut"];
+          "application/json": components["schemas"]["app__api__field_workers__FieldWorkerOut"];
         };
       };
       /** @description Validation Error */
@@ -5512,6 +5716,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_my_personal_data_me_personal_data_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PersonalDataOut"];
         };
       };
     };
