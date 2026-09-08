@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 
 import { AuthProvider } from "@/auth/AuthContext";
+import { ConsentGate } from "@/auth/ConsentGate";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { AppNav } from "@/components/AppNav";
 import { AlertRulesPage } from "@/routes/AlertRulesPage";
@@ -38,7 +39,11 @@ export const appRoutes: RouteObject[] = [
   { path: "/", element: <Navigate to="/entrar" replace /> },
   { path: "/entrar", element: <LoginPage /> },
   {
-    element: <ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]} />,
+    element: (
+      <ConsentGate>
+        <ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]} />
+      </ConsentGate>
+    ),
     children: [
       { path: "/rotas", element: <RouteBoardPage /> },
       { path: "/regras-de-alerta", element: <AlertRulesPage /> },
@@ -59,7 +64,11 @@ export const appRoutes: RouteObject[] = [
     ],
   },
   {
-    element: <ProtectedRoute allowedRoles={["ADMIN"]} />,
+    element: (
+      <ConsentGate>
+        <ProtectedRoute allowedRoles={["ADMIN"]} />
+      </ConsentGate>
+    ),
     children: [
       { path: "/usuarios", element: <UsersPage /> },
       { path: "/formularios", element: <FormBuilderPage /> },

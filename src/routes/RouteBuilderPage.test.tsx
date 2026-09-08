@@ -1,4 +1,4 @@
-import { isValidElement } from "react";
+import { isValidElement, type ReactNode } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { appRoutes } from "@/App";
 import { AuthProvider } from "@/auth/AuthContext";
+import { ConsentGate } from "@/auth/ConsentGate";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
 import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
@@ -358,7 +359,11 @@ describe("RouteBuilderPage", () => {
     );
 
     const branchElement = managerBranch?.element;
-    expect(isValidElement(branchElement) && branchElement.type).toBe(ProtectedRoute);
+    expect(isValidElement(branchElement) && branchElement.type).toBe(ConsentGate);
+    const guarded = isValidElement<{ children?: ReactNode }>(branchElement)
+      ? branchElement.props.children
+      : null;
+    expect(isValidElement(guarded) && guarded.type).toBe(ProtectedRoute);
     expect(managerBranch?.children?.map((child) => child.path)).toEqual(
       expect.arrayContaining(["/rotas/nova", "/rotas/:routeId/editar"]),
     );

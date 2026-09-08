@@ -57,6 +57,7 @@ export function LoginPage() {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
         role: decodeJwtRole(data.access_token),
+        consentRequired: data.consent_required,
       });
       // useNavigate()'s return type includes Promise<void> for data routers; the login
       // page has nothing useful to do once the redirect is kicked off.

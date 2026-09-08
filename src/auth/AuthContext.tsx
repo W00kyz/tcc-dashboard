@@ -4,6 +4,9 @@ export interface Session {
   accessToken: string;
   refreshToken: string;
   role: "FIELD_WORKER" | "MANAGER" | "ADMIN";
+  // Set from the login response's `consent_required`. Drives <ConsentGate>. The gate
+  // re-checks against the API on mount, so a stale value only affects the first paint.
+  consentRequired: boolean;
 }
 
 interface AuthContextValue {
@@ -18,8 +21,17 @@ const STORAGE_KEY = "route-monitor.session";
 
 function readStoredSession(): Session | null {
   const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
 
-  return raw ? (JSON.parse(raw) as Session) : null;
+  // Sessions stored before Etapa 11 have no `consentRequired`; a returning user with a
+  // valid token consented under the older flow, so treat the missing field as `false`.
+  const parsed = JSON.parse(raw) as Omit<Session, "consentRequired"> & {
+    consentRequired?: boolean;
+  };
+
+  return { ...parsed, consentRequired: parsed.consentRequired ?? false };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

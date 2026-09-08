@@ -2,12 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { isValidElement } from "react";
+import { isValidElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { appRoutes } from "@/App";
 import { AlertRulesPage } from "@/routes/AlertRulesPage";
 import { AuthProvider } from "@/auth/AuthContext";
+import { ConsentGate } from "@/auth/ConsentGate";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 
 const SESSION = { accessToken: "token", refreshToken: "refresh", role: "MANAGER" };
@@ -134,7 +135,11 @@ describe("AlertRulesPage", () => {
     );
 
     const branchElement = managerBranch?.element;
-    expect(isValidElement(branchElement) && branchElement.type).toBe(ProtectedRoute);
+    expect(isValidElement(branchElement) && branchElement.type).toBe(ConsentGate);
+    const guarded = isValidElement<{ children?: ReactNode }>(branchElement)
+      ? branchElement.props.children
+      : null;
+    expect(isValidElement(guarded) && guarded.type).toBe(ProtectedRoute);
     expect(managerBranch?.children?.map((child) => child.path)).toContain("/regras-de-alerta");
   });
 });
