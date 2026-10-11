@@ -1,4 +1,5 @@
 import type { components } from "@/api/generated/schema";
+import { WorkerPositionsMap } from "@/components/WorkerPositionsMap";
 import { useTranslation } from "@/i18n/useTranslation";
 
 type BoardPosition = components["schemas"]["BoardPosition"];
@@ -6,8 +7,8 @@ type BoardPosition = components["schemas"]["BoardPosition"];
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 
-// RF42 ships as a table (spec §7.5 excludes the map from the deliverable): the fix age comes
-// straight from the snapshot's `age_seconds`, so no clock seam is needed here.
+// RF42: a map of the latest fixes plus this table with the exact coordinates and fix age. The
+// age comes straight from the snapshot's `age_seconds`, so no clock seam is needed here.
 export function formatAge(seconds: number, t: ReturnType<typeof useTranslation>["t"]): string {
   if (seconds < SECONDS_PER_MINUTE) {
     return t("workerPositionsAgeNow");
@@ -38,6 +39,7 @@ export function WorkerPositionsList({ positions }: WorkerPositionsListProps) {
       <h2 id="worker-positions-heading" className="text-lg font-semibold">
         {t("workerPositionsTitle")}
       </h2>
+      <WorkerPositionsMap positions={positions} />
       {positions.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t("workerPositionsEmpty")}</p>
       ) : (

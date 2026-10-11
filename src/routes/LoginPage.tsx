@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
@@ -53,15 +53,17 @@ export function LoginPage() {
   const mutation = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
+      const role = decodeJwtRole(data.access_token);
       setSession({
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
-        role: decodeJwtRole(data.access_token),
+        role,
         consentRequired: data.consent_required,
       });
       // useNavigate()'s return type includes Promise<void> for data routers; the login
-      // page has nothing useful to do once the redirect is kicked off.
-      void navigate("/rotas", { replace: true });
+      // page has nothing useful to do once the redirect is kicked off. A field worker's only
+      // page on the panel is "Meus dados" (RNF10) — /rotas would bounce them back here.
+      void navigate(role === "FIELD_WORKER" ? "/meus-dados" : "/rotas", { replace: true });
     },
   });
 
@@ -119,6 +121,9 @@ export function LoginPage() {
               <Button type="submit" className="w-full" disabled={mutation.isPending}>
                 {mutation.isPending ? t("loginSubmitPending") : t("loginSubmit")}
               </Button>
+              <Link className="block text-center text-sm underline" to="/esqueci-senha">
+                {t("loginForgotPassword")}
+              </Link>
             </form>
           </Form>
         </CardContent>

@@ -129,6 +129,58 @@ describe("AppNav", () => {
     expect(screen.queryByRole("link", { name: /notificações não lidas/i })).not.toBeInTheDocument();
   });
 
+  it("links every registry page for a manager, including the form builder (RF36)", () => {
+    renderNav("MANAGER", makeFakeFetch(0));
+
+    for (const name of [
+      "Pontos de serviço",
+      "Prédios",
+      "Eventos",
+      "Profissionais",
+      "Empresas",
+      "Tipos de serviço",
+      "Formulários",
+    ]) {
+      expect(screen.getByRole("link", { name })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("link", { name: "Usuários" })).not.toBeInTheDocument();
+  });
+
+  it("links the users page for an admin", () => {
+    renderNav("ADMIN", makeFakeFetch(0));
+
+    expect(screen.getByRole("link", { name: "Usuários" })).toHaveAttribute("href", "/usuarios");
+  });
+
+  it("shows a field worker only their data page and the logout button", () => {
+    renderNav("FIELD_WORKER", makeFakeFetch(0));
+
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(["Meus dados"]);
+    expect(screen.getByRole("button", { name: "Sair" })).toBeInTheDocument();
+  });
+
+  it("logs out: calls /auth/logout and drops the stored session", async () => {
+    const fakeFetch = makeFakeFetch(0);
+    renderNav("MANAGER", fakeFetch);
+    const { default: userEvent } = await import("@testing-library/user-event");
+
+    await userEvent.click(screen.getByRole("button", { name: "Sair" }));
+
+    await waitFor(() => {
+      expect(localStorage.getItem("route-monitor.session")).toBeNull();
+    });
+    const urls = fakeFetch.mock.calls.map(([input]) => requestUrl(input));
+    expect(urls.some((url) => url.endsWith("/auth/logout"))).toBe(true);
+  });
+
+  it("registers /formularios under the MANAGER/ADMIN ProtectedRoute", () => {
+    const managerBranch = appRoutes.find((branch) =>
+      branch.children?.some((child) => child.path === "/rotas"),
+    );
+
+    expect(managerBranch?.children?.map((child) => child.path)).toContain("/formularios");
+  });
+
   it("registers /notificacoes under the MANAGER/ADMIN ProtectedRoute", () => {
     const managerBranch = appRoutes.find((branch) =>
       branch.children?.some((child) => child.path === "/rotas"),

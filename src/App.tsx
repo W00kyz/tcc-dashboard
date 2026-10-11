@@ -18,12 +18,14 @@ import { EventsPage } from "@/routes/EventsPage";
 import { ExecutionHistoryPage } from "@/routes/ExecutionHistoryPage";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { FloorsPage } from "@/routes/FloorsPage";
+import { ForgotPasswordPage } from "@/routes/ForgotPasswordPage";
 import { FormBuilderPage } from "@/routes/FormBuilderPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { MyDataPage } from "@/routes/MyDataPage";
 import { NotificationsPage } from "@/routes/NotificationsPage";
 import { ReassignmentsPage } from "@/routes/ReassignmentsPage";
 import { ReportsPage } from "@/routes/ReportsPage";
+import { ResetPasswordPage } from "@/routes/ResetPasswordPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
 import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
 import { RouteTemplatesPage } from "@/routes/RouteTemplatesPage";
@@ -39,6 +41,9 @@ const queryClient = new QueryClient();
 export const appRoutes: RouteObject[] = [
   { path: "/", element: <Navigate to="/entrar" replace /> },
   { path: "/entrar", element: <LoginPage /> },
+  // Public: reached from the e-mailed links (RF03 recovery, RF05 invite).
+  { path: "/esqueci-senha", element: <ForgotPasswordPage /> },
+  { path: "/redefinir-senha", element: <ResetPasswordPage /> },
   {
     element: (
       <ConsentGate>
@@ -62,6 +67,8 @@ export const appRoutes: RouteObject[] = [
       { path: "/predios/:buildingId/andares", element: <FloorsPage /> },
       { path: "/eventos", element: <EventsPage /> },
       { path: "/pontos-de-servico", element: <ServicePointsPage /> },
+      // RF36: managers maintain the execution forms (the API already allows MANAGER).
+      { path: "/formularios", element: <FormBuilderPage /> },
     ],
   },
   {
@@ -81,7 +88,6 @@ export const appRoutes: RouteObject[] = [
     ),
     children: [
       { path: "/usuarios", element: <UsersPage /> },
-      { path: "/formularios", element: <FormBuilderPage /> },
       { path: "/configuracoes", element: <SettingsPage /> },
     ],
   },

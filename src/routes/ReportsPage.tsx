@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { authAwareFetch } from "@/api/authFetch";
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
@@ -235,9 +236,12 @@ export function ReportsPage() {
     // A transport-level `fetch` rejection (offline, DNS failure) never reaches the `!res.ok`
     // branch — without this catch the `void` call site swallows it and the user sees nothing.
     try {
-      const res = await fetch(`${apiBaseUrl}/reports/compliance.${format}?${qs.toString()}`, {
-        headers: { Authorization: `Bearer ${session?.accessToken ?? ""}` },
-      });
+      const res = await authAwareFetch(
+        `${apiBaseUrl}/reports/compliance.${format}?${qs.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${session?.accessToken ?? ""}` },
+        },
+      );
       if (!res.ok) {
         setExportError(t("reportsExportError"));
 

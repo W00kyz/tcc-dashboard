@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
+import { authAwareFetch } from "@/api/authFetch";
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -132,7 +133,7 @@ export function FloorsPage() {
 
   async function downloadPdf(floorId: string) {
     setPdfDownloadError(null);
-    const response = await fetch(`${apiBaseUrl}/floors/${floorId}/qr-codes/active/pdf`, {
+    const response = await authAwareFetch(`${apiBaseUrl}/floors/${floorId}/qr-codes/active/pdf`, {
       headers: { Authorization: `Bearer ${session?.accessToken ?? ""}` },
     });
     // A 404 ("no active QR for this floor") is the common case, not an edge case — every

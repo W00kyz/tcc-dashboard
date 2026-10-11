@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { authAwareFetch } from "@/api/authFetch";
 import { apiBaseUrl } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
@@ -28,7 +29,7 @@ function usePhotoResource(contentUrl: string, token: string): PhotoResource {
     // Evidence bytes are immutable; skip the refetch-on-focus churn that would swap the Blob.
     staleTime: Infinity,
     queryFn: async (): Promise<Blob> => {
-      const response = await fetch(`${apiBaseUrl}${contentUrl}`, {
+      const response = await authAwareFetch(`${apiBaseUrl}${contentUrl}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {

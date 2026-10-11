@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
@@ -109,6 +109,48 @@ describe("NotificationsPage", () => {
         ),
       ).toBe(true);
     });
+  });
+
+  it("opens an impediment notification on the reassignment queue (RF17)", async () => {
+    const impediment = {
+      ...UNREAD,
+      id: "n3",
+      kind: "IMPEDIMENT_REPORTED",
+      title: "Impossibilidade sinalizada",
+      data: { impediment_id: "i1", route_id: "r1" },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ items: [impediment], total: 1, page: 1, page_size: 20 }), {
+            status: 200,
+          }),
+        ),
+      ),
+    );
+    localStorage.setItem(
+      "route-monitor.session",
+      JSON.stringify({ accessToken: "t", refreshToken: "r", role: "MANAGER" }),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/notificacoes"]}>
+        <QueryClientProvider client={new QueryClient()}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/notificacoes" element={<NotificationsPage />} />
+              <Route path="/reatribuicoes" element={<p>fila de reatribuição</p>} />
+            </Routes>
+          </AuthProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Impossibilidade")).toBeInTheDocument();
+    await user.click(screen.getByTestId("notification-n3"));
+
+    expect(await screen.findByText("fila de reatribuição")).toBeInTheDocument();
   });
 
   it("marks all notifications read", async () => {

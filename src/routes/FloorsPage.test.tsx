@@ -200,13 +200,15 @@ describe("FloorsPage", () => {
     await waitFor(() => {
       expect(fakeFetch).toHaveBeenCalledTimes(2);
     });
-    // Unlike the openapi-fetch-backed calls above, downloadPdf calls the raw injected fetch
-    // directly with a (url, init) pair rather than a Request object.
+    // downloadPdf goes through authAwareFetch, which hands fetch a Request carrying the
+    // newest access token once a session is signed in.
     const pdfCall = fakeFetch.mock.calls[1];
     if (pdfCall === undefined) {
       throw new Error("expected a second fetch call for the PDF download request");
     }
-    expect(pdfCall[0] as string).toContain("/floors/f1/qr-codes/active/pdf");
+    const pdfTarget = pdfCall[0] as Request | string;
+    const pdfUrl = typeof pdfTarget === "string" ? pdfTarget : pdfTarget.url;
+    expect(pdfUrl).toContain("/floors/f1/qr-codes/active/pdf");
     expect(createObjectUrlSpy).toHaveBeenCalled();
     expect(openSpy).toHaveBeenCalledWith("blob:mock-url", "_blank");
   });
