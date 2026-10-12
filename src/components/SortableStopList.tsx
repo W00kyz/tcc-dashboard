@@ -17,6 +17,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { useTranslation } from "@/i18n/useTranslation";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { GripVertical, Trash2 } from "lucide-react";
+import { EmptyState } from "@/components/layout/StateMessages";
+import { RouteStopStrip } from "@/components/RouteStopStrip";
 
 /** One planned stop on the route builder screen, before it is turned into a `StopBody`.
  * `key` is a client-only id (crypto.randomUUID) so dnd-kit and React have a stable
@@ -48,11 +52,12 @@ interface SortableStopListProps {
   onEditServiceType?: (key: string, serviceTypeId: string) => void;
 }
 
-const TIME_INPUT_CLASS = "border-input h-8 rounded-md border bg-transparent px-2 text-sm";
-const SERVICE_TYPE_SELECT_CLASS = "border-input h-8 rounded-md border bg-transparent px-2 text-sm";
+const TIME_INPUT_CLASS =
+  "border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-[6.5rem] rounded-md border px-2 text-sm outline-none focus-visible:ring-[3px]";
 
 interface SortableStopRowProps {
   stop: StopDraft;
+  position: number;
   serviceTypes?: ServiceTypeOption[];
   onRemove: (key: string) => void;
   onEditWindow: (key: string, field: "from" | "to", value: string) => void;
@@ -61,6 +66,7 @@ interface SortableStopRowProps {
 
 function SortableStopRow({
   stop,
+  position,
   serviceTypes,
   onRemove,
   onEditWindow,
@@ -73,7 +79,7 @@ function SortableStopRow({
   return (
     <li
       ref={setNodeRef}
-      className="flex items-center gap-2 py-2"
+      className="bg-card relative flex flex-wrap items-center gap-2 py-2.5 sm:flex-nowrap"
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       {/* The handle is the drag activator for both sensors: PointerSensor for mouse/touch,
@@ -83,13 +89,20 @@ function SortableStopRow({
         type="button"
         ref={setActivatorNodeRef}
         aria-label={t("routeBuilderDragHandle")}
-        className="cursor-grab px-2 text-muted-foreground"
+        className="text-muted-foreground hover:text-foreground hover:bg-accent flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md active:cursor-grabbing"
         {...attributes}
         {...listeners}
       >
-        ⠿
+        <GripVertical aria-hidden="true" className="size-4" />
       </button>
-      <span className="flex-1 font-medium">{stop.servicePointName}</span>
+      {/* The stop's place on the route, in the board's disc grammar. */}
+      <span
+        aria-hidden="true"
+        className="border-primary bg-card text-primary flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-[0.6875rem] font-bold"
+      >
+        {position}
+      </span>
+      <span className="text-foreground min-w-0 flex-1 font-semibold">{stop.servicePointName}</span>
       <input
         type="time"
         aria-label={t("routeBuilderArrivalFrom")}
@@ -109,31 +122,32 @@ function SortableStopRow({
         }}
       />
       {onEditServiceType !== undefined && (
-        <select
+        <NativeSelect
+          size="sm"
+          wrapperClassName="w-44 shrink-0"
           aria-label={t("routeBuilderServiceType")}
-          className={SERVICE_TYPE_SELECT_CLASS}
           value={stop.serviceTypeId}
           onChange={(event) => {
             onEditServiceType(stop.key, event.target.value);
           }}
         >
-          <option value="">{t("routeBuilderServiceTypeNone")}</option>
+          <NativeSelectOption value="">{t("routeBuilderServiceTypeNone")}</NativeSelectOption>
           {(serviceTypes ?? []).map((serviceType) => (
-            <option key={serviceType.id} value={serviceType.id}>
+            <NativeSelectOption key={serviceType.id} value={serviceType.id}>
               {serviceType.name}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       )}
       <button
         type="button"
         aria-label={t("routeBuilderRemoveStop")}
-        className="px-2 text-destructive"
+        className="text-muted-foreground hover:bg-status-late-soft hover:text-status-late flex size-8 shrink-0 items-center justify-center rounded-md"
         onClick={() => {
           onRemove(stop.key);
         }}
       >
-        ×
+        <Trash2 aria-hidden="true" className="size-4" />
       </button>
     </li>
   );
@@ -164,25 +178,40 @@ export function SortableStopList({
   }
 
   if (stops.length === 0) {
-    return <p className="text-muted-foreground">{t("routeBuilderEmpty")}</p>;
+    return <EmptyState>{t("routeBuilderEmpty")}</EmptyState>;
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={stops.map((stop) => stop.key)} strategy={verticalListSortingStrategy}>
-        <ol className="divide-border divide-y">
-          {stops.map((stop) => (
-            <SortableStopRow
-              key={stop.key}
-              stop={stop}
-              serviceTypes={serviceTypes}
-              onRemove={onRemove}
-              onEditWindow={onEditWindow}
-              onEditServiceType={onEditServiceType}
-            />
-          ))}
-        </ol>
-      </SortableContext>
-    </DndContext>
+    <div className="space-y-3">
+      {/* The planned route drawn in the board's wayfinding line, redrawn as stops are
+       * added or reordered below. */}
+      <RouteStopStrip
+        stops={stops.map((stop, index) => ({
+          id: stop.key,
+          orderIndex: index + 1,
+          status: "PENDING" as const,
+        }))}
+      />
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext
+          items={stops.map((stop) => stop.key)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ol className="divide-y">
+            {stops.map((stop, index) => (
+              <SortableStopRow
+                key={stop.key}
+                stop={stop}
+                position={index + 1}
+                serviceTypes={serviceTypes}
+                onRemove={onRemove}
+                onEditWindow={onEditWindow}
+                onEditServiceType={onEditServiceType}
+              />
+            ))}
+          </ol>
+        </SortableContext>
+      </DndContext>
+    </div>
   );
 }

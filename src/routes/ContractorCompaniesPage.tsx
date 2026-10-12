@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
 
 interface ContractorCompanyRow {
   id: string;
@@ -47,45 +49,55 @@ export function ContractorCompaniesPage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("contractorCompaniesPageTitle")}</h1>
-      <form
-        className="space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate();
-        }}
-      >
-        <div>
-          <Label htmlFor="company-name">{t("contractorCompaniesFieldName")}</Label>
-          <Input
-            id="company-name"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
+    <Page>
+      <PageHeader title={t("contractorCompaniesPageTitle")} />
+      <RegistryLayout
+        list={
+          <RegistryList
+            items={companies}
+            getKey={(company) => company.id}
+            renderItem={(company) => (
+              <>
+                <span className="text-foreground min-w-0 flex-1 font-semibold">{company.name}</span>
+                <span className="text-muted-foreground text-sm">{company.cnpj}</span>
+              </>
+            )}
           />
-        </div>
-        <div>
-          <Label htmlFor="company-cnpj">{t("contractorCompaniesFieldCnpj")}</Label>
-          <Input
-            id="company-cnpj"
-            value={cnpj}
-            onChange={(event) => {
-              setCnpj(event.target.value);
+        }
+        form={
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
             }}
-          />
-        </div>
-        <Button type="submit">{t("contractorCompaniesSubmitCreate")}</Button>
-      </form>
-      <ul className="divide-border divide-y">
-        {companies?.map((company) => (
-          <li key={company.id} className="py-2">
-            <span className="font-medium">{company.name}</span>{" "}
-            <span className="text-muted-foreground">{company.cnpj}</span>
-          </li>
-        ))}
-      </ul>
-    </main>
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="company-name">{t("contractorCompaniesFieldName")}</Label>
+              <Input
+                id="company-name"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="company-cnpj">{t("contractorCompaniesFieldCnpj")}</Label>
+              <Input
+                id="company-cnpj"
+                value={cnpj}
+                onChange={(event) => {
+                  setCnpj(event.target.value);
+                }}
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              {t("contractorCompaniesSubmitCreate")}
+            </Button>
+          </form>
+        }
+      />
+    </Page>
   );
 }

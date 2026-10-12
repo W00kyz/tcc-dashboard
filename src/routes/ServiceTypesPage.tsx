@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
+import { Badge } from "@/components/ui/badge";
 
 interface ServiceTypeRow {
   id: string;
@@ -46,46 +49,56 @@ export function ServiceTypesPage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("serviceTypesPageTitle")}</h1>
-      <form
-        className="space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate();
-        }}
-      >
-        <div>
-          <Label htmlFor="service-type-name">{t("serviceTypesFieldName")}</Label>
-          <Input
-            id="service-type-name"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
+    <Page>
+      <PageHeader title={t("serviceTypesPageTitle")} />
+      <RegistryLayout
+        list={
+          <RegistryList
+            items={serviceTypes}
+            getKey={(item) => item.id}
+            renderItem={(item) => (
+              <>
+                <span className="text-foreground min-w-0 flex-1 font-semibold">{item.name}</span>
+                <Badge variant="pending">{item.average_duration_minutes} min</Badge>
+              </>
+            )}
           />
-        </div>
-        <div>
-          <Label htmlFor="service-type-duration">{t("serviceTypesFieldDuration")}</Label>
-          <Input
-            id="service-type-duration"
-            type="number"
-            value={duration}
-            onChange={(event) => {
-              setDuration(Number(event.target.value));
+        }
+        form={
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
             }}
-          />
-        </div>
-        <Button type="submit">{t("serviceTypesSubmitCreate")}</Button>
-      </form>
-      <ul className="divide-border divide-y">
-        {serviceTypes?.map((item) => (
-          <li key={item.id} className="py-2">
-            <span className="font-medium">{item.name}</span>{" "}
-            <span className="text-muted-foreground">{item.average_duration_minutes} min</span>
-          </li>
-        ))}
-      </ul>
-    </main>
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="service-type-name">{t("serviceTypesFieldName")}</Label>
+              <Input
+                id="service-type-name"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="service-type-duration">{t("serviceTypesFieldDuration")}</Label>
+              <Input
+                id="service-type-duration"
+                type="number"
+                value={duration}
+                onChange={(event) => {
+                  setDuration(Number(event.target.value));
+                }}
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              {t("serviceTypesSubmitCreate")}
+            </Button>
+          </form>
+        }
+      />
+    </Page>
   );
 }

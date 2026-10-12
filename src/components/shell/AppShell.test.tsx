@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,7 +10,7 @@ import { appRoutes } from "@/App";
 import { AuthProvider } from "@/auth/AuthContext";
 import { ConsentGate } from "@/auth/ConsentGate";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
-import { AppNav } from "@/components/AppNav";
+import { AppShell } from "@/components/shell/AppShell";
 
 function requestUrl(input: RequestInfo | URL): string {
   if (typeof input === "string") {
@@ -35,7 +36,7 @@ function makeFakeFetch(total = 0, unreadCount = 0) {
   });
 }
 
-function renderNav(role: string, fetchImpl: typeof fetch) {
+function renderNav(role: string, fetchImpl: typeof fetch, path = "/") {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   vi.stubGlobal("fetch", fetchImpl);
   localStorage.setItem(
@@ -44,17 +45,22 @@ function renderNav(role: string, fetchImpl: typeof fetch) {
   );
 
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <AppNav />
+          <AppShell />
         </AuthProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   );
 }
 
-describe("AppNav", () => {
+// Folded modules are opened the way a user would: by their heading button.
+async function openModule(name: string) {
+  await userEvent.click(screen.getByRole("button", { name }));
+}
+
+describe("AppShell navigation", () => {
   afterEach(() => {
     localStorage.clear();
     vi.unstubAllGlobals();
@@ -68,14 +74,16 @@ describe("AppNav", () => {
     expect(screen.queryByRole("link", { name: "Configurações" })).not.toBeInTheDocument();
   });
 
-  it("shows the settings link for an admin", () => {
+  it("shows the settings link for an admin", async () => {
     renderNav("ADMIN", makeFakeFetch(0));
+    await openModule("Administração");
 
     expect(screen.getByRole("link", { name: "Configurações" })).toBeInTheDocument();
   });
 
-  it("shows the alert-rules link for a manager but not for a field worker", () => {
+  it("shows the alert-rules link for a manager but not for a field worker", async () => {
     renderNav("MANAGER", makeFakeFetch(0));
+    await openModule("Planejamento");
     expect(screen.getByRole("link", { name: "Regras de alerta" })).toBeInTheDocument();
   });
 
@@ -106,31 +114,28 @@ describe("AppNav", () => {
     expect(screen.queryByRole("link", { name: /fila de revisão/i })).not.toBeInTheDocument();
   });
 
-  it("shows the notifications link for a manager", () => {
-    renderNav("MANAGER", makeFakeFetch(0, 0));
-
-    expect(screen.getByRole("link", { name: "Notificações" })).toBeInTheDocument();
-  });
-
-  it("renders the unread-notifications badge with the count when there are unread notifications", async () => {
+  it("keeps notifications out of the sidebar and puts the inbox in the header bell", async () => {
     renderNav("MANAGER", makeFakeFetch(0, 3));
 
-    const badge = await screen.findByRole("link", { name: /notificações não lidas/i });
-    expect(badge).toHaveTextContent("3");
-    expect(badge).toHaveAttribute("href", "/notificacoes");
+    const sidebar = screen.getByRole("navigation", { name: "Navegação principal" });
+    expect(within(sidebar).queryByRole("link", { name: /Notificações/ })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Notificações: 3 não lidas" }),
+    ).toBeInTheDocument();
   });
 
-  it("renders no unread-notifications badge when the count is zero", async () => {
-    renderNav("MANAGER", makeFakeFetch(0, 0));
+  it("still names the notifications page in the breadcrumb", () => {
+    renderNav("MANAGER", makeFakeFetch(0, 0), "/notificacoes");
 
-    await waitFor(() => {
-      expect(screen.getByRole("link", { name: "Notificações" })).toBeInTheDocument();
-    });
-    expect(screen.queryByRole("link", { name: /notificações não lidas/i })).not.toBeInTheDocument();
+    const breadcrumb = screen.getByRole("navigation", { name: "Você está em" });
+    expect(breadcrumb).toHaveTextContent("Conta");
+    expect(within(breadcrumb).getByText("Notificações")).toHaveAttribute("aria-current", "page");
   });
 
-  it("links every registry page for a manager, including the form builder (RF36)", () => {
+  it("links every registry page for a manager, and the form builder under planning (RF36)", async () => {
     renderNav("MANAGER", makeFakeFetch(0));
+    await openModule("Cadastros");
+    await openModule("Planejamento");
 
     for (const name of [
       "Pontos de serviço",
@@ -143,11 +148,40 @@ describe("AppNav", () => {
     ]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
+    expect(screen.queryByRole("button", { name: "Administração" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Usuários" })).not.toBeInTheDocument();
   });
 
-  it("links the users page for an admin", () => {
+  it("folds secondary modules away until opened", async () => {
+    renderNav("MANAGER", makeFakeFetch(0));
+
+    expect(screen.getByRole("link", { name: "Quadro de rotas" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Prédios" })).not.toBeInTheDocument();
+
+    await openModule("Cadastros");
+
+    expect(screen.getByRole("link", { name: "Prédios" })).toHaveAttribute("href", "/predios");
+  });
+
+  it("opens the module of the current page and walks the breadcrumb down to it", () => {
+    renderNav("MANAGER", makeFakeFetch(0), "/predios/b1/andares");
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Você está em" });
+    expect(breadcrumb).toHaveTextContent("Cadastros");
+    expect(within(breadcrumb).getByRole("link", { name: "Prédios" })).toHaveAttribute(
+      "href",
+      "/predios",
+    );
+    expect(within(breadcrumb).getByText("Andares")).toHaveAttribute("aria-current", "page");
+    const sidebarLink = screen
+      .getAllByRole("link", { name: "Prédios" })
+      .find((link) => !breadcrumb.contains(link));
+    expect(sidebarLink).toHaveAttribute("aria-current", "page");
+  });
+
+  it("links the users page for an admin", async () => {
     renderNav("ADMIN", makeFakeFetch(0));
+    await openModule("Administração");
 
     expect(screen.getByRole("link", { name: "Usuários" })).toHaveAttribute("href", "/usuarios");
   });
@@ -162,8 +196,6 @@ describe("AppNav", () => {
   it("logs out: calls /auth/logout and drops the stored session", async () => {
     const fakeFetch = makeFakeFetch(0);
     renderNav("MANAGER", fakeFetch);
-    const { default: userEvent } = await import("@testing-library/user-event");
-
     await userEvent.click(screen.getByRole("button", { name: "Sair" }));
 
     await waitFor(() => {

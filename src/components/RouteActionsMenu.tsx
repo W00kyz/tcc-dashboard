@@ -7,6 +7,7 @@ import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import { CompleteManuallyDialog } from "@/components/CompleteManuallyDialog";
 import { Button } from "@/components/ui/button";
+import { Ban, Ellipsis, Pencil, Repeat, Route, SquareCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +15,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
+import { ErrorMessage } from "@/components/layout/StateMessages";
+import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { cn } from "@/lib/utils";
 import { toStopStatus } from "@/lib/stopStatus";
 
 type RouteOut = components["schemas"]["RouteOut"];
@@ -26,10 +39,6 @@ const TERMINAL_STATUSES: readonly string[] = ["CANCELLED", "DONE"];
 
 // The backend caps `reason` at 300 chars (ReassignBody / CancelBody); anything longer 422s.
 const REASON_MAX_LENGTH = 300;
-
-const SELECT_CLASS = "border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm";
-const TEXTAREA_CLASS =
-  "border-input min-h-20 w-full rounded-md border bg-transparent px-3 py-2 text-sm";
 
 // openapi-fetch never rejects on a non-2xx and the optimize endpoint only declares 200/422
 // in the contract. Carry the HTTP status so the component can single out the 503 the routing
@@ -46,9 +55,11 @@ class RouteOptimizeError extends Error {
 
 interface RouteActionsMenuProps {
   route: RouteOut;
+  // Table rows: icon-only buttons that keep the same accessible names as the full labels.
+  compact?: boolean;
 }
 
-export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
+export function RouteActionsMenu({ route, compact = false }: RouteActionsMenuProps) {
   const { t } = useTranslation();
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -158,33 +169,41 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
   const optimizeUnavailable =
     optimize.error instanceof RouteOptimizeError && optimize.error.status === 503;
 
+  const buttonSize = compact ? "icon-sm" : "sm";
+  // Icon-only buttons keep the visible label as their accessible name and as a hover title.
+  const labelIfCompact = (key: StringKey) =>
+    compact ? { "aria-label": t(key), "title": t(key) } : {};
+
   return (
-    <div data-testid="route-actions" className="flex flex-wrap items-center gap-2">
+    <div
+      role="group"
+      aria-label={t("routeActionsGroupLabel")}
+      className={cn("flex items-center gap-1", compact ? "flex-nowrap" : "flex-wrap")}
+    >
       {disabled ? (
-        <Button variant="outline" size="sm" disabled>
-          {t("routeActionEdit")}
+        <Button variant="ghost" size={buttonSize} disabled {...labelIfCompact("routeActionEdit")}>
+          <Pencil aria-hidden="true" />
+          {!compact && t("routeActionEdit")}
         </Button>
       ) : (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/rotas/${route.id}/editar`}>{t("routeActionEdit")}</Link>
+        <Button variant="ghost" size={buttonSize} asChild>
+          <Link to={`/rotas/${route.id}/editar`} {...labelIfCompact("routeActionEdit")}>
+            <Pencil aria-hidden="true" />
+            {!compact && t("routeActionEdit")}
+          </Link>
         </Button>
       )}
 
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={disabled || optimize.isPending}
-        onClick={() => {
-          optimize.mutate();
-        }}
-      >
-        {t("routeActionOptimize")}
-      </Button>
-
       <Dialog open={reassignOpen} onOpenChange={handleReassignOpenChange}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" disabled={disabled}>
-            {t("routeActionReassign")}
+          <Button
+            variant="ghost"
+            size={buttonSize}
+            disabled={disabled}
+            {...labelIfCompact("routeActionReassign")}
+          >
+            <Repeat aria-hidden="true" />
+            {!compact && t("routeActionReassign")}
           </Button>
         </DialogTrigger>
         <DialogContent aria-describedby={undefined}>
@@ -196,29 +215,27 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
               reassign.mutate();
             }}
           >
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="reassign-worker">{t("routeBuilderWorker")}</Label>
-              <select
+              <NativeSelect
                 id="reassign-worker"
-                className={SELECT_CLASS}
                 value={workerId}
                 onChange={(event) => {
                   setWorkerId(event.target.value);
                 }}
               >
-                <option value="" />
+                <NativeSelectOption value="" />
                 {workers.data?.map((worker) => (
-                  <option key={worker.id} value={worker.id}>
+                  <NativeSelectOption key={worker.id} value={worker.id}>
                     {worker.full_name}
-                  </option>
+                  </NativeSelectOption>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="reassign-reason">{t("routeActionReassignReason")}</Label>
-              <textarea
+              <Textarea
                 id="reassign-reason"
-                className={TEXTAREA_CLASS}
                 maxLength={REASON_MAX_LENGTH}
                 value={reassignReason}
                 onChange={(event) => {
@@ -226,14 +243,9 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
                 }}
               />
             </div>
-            {reassign.isError && (
-              <p role="alert" className="text-destructive text-sm">
-                {t("routeActionError")}
-              </p>
-            )}
+            {reassign.isError && <ErrorMessage>{t("routeActionError")}</ErrorMessage>}
             <Button
               type="submit"
-              size="sm"
               disabled={workerId === "" || reassignReason.trim() === "" || reassign.isPending}
             >
               {t("routeActionReassignSubmit")}
@@ -243,11 +255,6 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
       </Dialog>
 
       <Dialog open={cancelOpen} onOpenChange={handleCancelOpenChange}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" disabled={disabled}>
-            {t("routeActionCancel")}
-          </Button>
-        </DialogTrigger>
         <DialogContent>
           <DialogTitle>{t("routeActionCancelTitle")}</DialogTitle>
           <DialogDescription>{t("routeActionCancelConfirmQuestion")}</DialogDescription>
@@ -258,11 +265,10 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
               cancel.mutate();
             }}
           >
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="cancel-reason">{t("routeActionCancelReason")}</Label>
-              <textarea
+              <Textarea
                 id="cancel-reason"
-                className={TEXTAREA_CLASS}
                 maxLength={REASON_MAX_LENGTH}
                 value={cancelReason}
                 onChange={(event) => {
@@ -270,14 +276,9 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
                 }}
               />
             </div>
-            {cancel.isError && (
-              <p role="alert" className="text-destructive text-sm">
-                {t("routeActionError")}
-              </p>
-            )}
+            {cancel.isError && <ErrorMessage>{t("routeActionError")}</ErrorMessage>}
             <Button
               type="submit"
-              size="sm"
               variant="destructive"
               disabled={cancelReason.trim() === "" || cancel.isPending}
             >
@@ -292,17 +293,58 @@ export function RouteActionsMenu({ route }: RouteActionsMenuProps) {
           route={route}
           open={completeManuallyOpen}
           onOpenChange={setCompleteManuallyOpen}
-        >
-          <Button variant="outline" size="sm">
-            {t("routeCompleteManuallyMenuItem")}
-          </Button>
-        </CompleteManuallyDialog>
+        />
       )}
 
+      {/* The rarer actions live behind one overflow trigger so the route line, not a row of
+       * five buttons, carries the card. */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size={buttonSize}
+            className={compact ? undefined : "ml-auto"}
+            aria-label={t("routeActionsMore")}
+            disabled={disabled}
+          >
+            <Ellipsis aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            disabled={optimize.isPending}
+            onSelect={() => {
+              optimize.mutate();
+            }}
+          >
+            <Route aria-hidden="true" />
+            {t("routeActionOptimize")}
+          </DropdownMenuItem>
+          {canCompleteAStopManually && (
+            <DropdownMenuItem
+              onSelect={() => {
+                setCompleteManuallyOpen(true);
+              }}
+            >
+              <SquareCheck aria-hidden="true" />
+              {t("routeCompleteManuallyMenuItem")}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => {
+              setCancelOpen(true);
+            }}
+          >
+            <Ban aria-hidden="true" />
+            {t("routeActionCancel")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
       {optimizeUnavailable && (
-        <p role="alert" className="text-destructive w-full text-sm">
-          {t("routeActionOptimizeUnavailable")}
-        </p>
+        <ErrorMessage className="w-full">{t("routeActionOptimizeUnavailable")}</ErrorMessage>
       )}
     </div>
   );

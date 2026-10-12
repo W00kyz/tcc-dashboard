@@ -5,11 +5,15 @@ import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { Textarea } from "@/components/ui/textarea";
+import { Users } from "lucide-react";
+import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
+import { Badge } from "@/components/ui/badge";
 
 type ApiClient = ReturnType<typeof createApiClient>;
 type Impediment = components["schemas"]["ImpedimentOut"];
@@ -159,14 +163,10 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
   });
 
   if (candidatesQuery.isLoading) {
-    return <p className="text-muted-foreground text-sm">{t("reassignmentsCandidatesLoading")}</p>;
+    return <LoadingMessage>{t("reassignmentsCandidatesLoading")}</LoadingMessage>;
   }
   if (candidatesQuery.isError) {
-    return (
-      <p role="alert" className="text-destructive text-sm">
-        {t("reassignmentsCandidatesError")}
-      </p>
-    );
+    return <ErrorMessage>{t("reassignmentsCandidatesError")}</ErrorMessage>;
   }
   if (!candidatesQuery.data || candidatesQuery.data.length === 0) {
     return <p className="text-muted-foreground text-sm">{t("reassignmentsCandidatesEmpty")}</p>;
@@ -174,15 +174,15 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
 
   return (
     <>
-      <ul className="divide-border divide-y">
+      <ul className="divide-y rounded-md border">
         {candidatesQuery.data.map((candidate) => (
           <li
             key={candidate.field_worker_id}
-            className="flex items-center justify-between gap-2 py-2 text-sm"
+            className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm"
           >
-            <span>
-              <span className="font-medium">{candidate.full_name}</span>
-              <span className="text-muted-foreground">
+            <span className="min-w-0">
+              <span className="text-foreground block font-semibold">{candidate.full_name}</span>
+              <span className="text-muted-foreground text-xs">
                 {` · ${t("reassignmentsCandidateDistance")} ${formatDistance(candidate.distance_m)}`}
                 {` · ${t("reassignmentsCandidateLoad")} ${String(candidate.pending_stop_count)} ${t(
                   "reassignmentsCandidateLoadSuffix",
@@ -201,11 +201,7 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
           </li>
         ))}
       </ul>
-      {reassign.isError && (
-        <p role="alert" className="text-destructive text-sm">
-          {t("reassignmentsReassignError")}
-        </p>
-      )}
+      {reassign.isError && <ErrorMessage>{t("reassignmentsReassignError")}</ErrorMessage>}
 
       <Dialog
         open={confirming !== null}
@@ -220,11 +216,10 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
           <p className="text-muted-foreground text-sm">
             {t("reassignmentsConfirmBody").replace("{name}", confirming?.full_name ?? "")}
           </p>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="reassign-reason">{t("reassignmentsReasonLabel")}</Label>
-            <textarea
+            <Textarea
               id="reassign-reason"
-              className="border-input min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-sm"
               value={reasonText}
               onChange={(event) => {
                 setReasonText(event.target.value);
@@ -233,7 +228,6 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
           </div>
           <div className="flex justify-end gap-2">
             <Button
-              size="sm"
               variant="outline"
               onClick={() => {
                 setConfirming(null);
@@ -242,7 +236,6 @@ function CandidateList({ impedimentId }: { impedimentId: string }) {
               {t("reassignmentsConfirmCancel")}
             </Button>
             <Button
-              size="sm"
               disabled={reassign.isPending}
               onClick={() => {
                 if (confirming) {
@@ -290,59 +283,56 @@ function ImpedimentCard({ impediment }: { impediment: Impediment }) {
     impediment.scope === "ROUTE_REMAINDER"
       ? "reassignmentsScopeRemainder"
       : "reassignmentsScopeStop";
+  const titleId = `impediment-${impediment.id}-title`;
 
   return (
-    <Card data-testid={`impediment-card-${impediment.id}`}>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{t(REASON_LABEL_KEY[impediment.reason])}</CardTitle>
-          <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-medium">
+    <article aria-labelledby={titleId} className="bg-card rounded-md border">
+      <div className="space-y-3 p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h2 id={titleId} className="text-primary text-base leading-tight font-bold">
+            {t(REASON_LABEL_KEY[impediment.reason])}
+          </h2>
+          <Badge variant={impediment.scope === "ROUTE_REMAINDER" ? "late" : "progress"}>
             {t(scopeKey)}
-          </span>
+          </Badge>
         </div>
-        <p className="text-muted-foreground font-mono text-xs">
+        <p className="text-muted-foreground text-xs">
           {`${t("reassignmentsReportedAtPrefix")} ${formatDateTime(impediment.reported_at)}`}
         </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
         <AffectedTarget impediment={impediment} />
         {impediment.note && (
-          <p className="text-sm">
+          <p className="bg-muted/60 rounded-md px-3 py-2 text-sm">
             <span className="text-muted-foreground">{t("reassignmentsNotePrefix")} </span>
             {impediment.note}
           </p>
         )}
-
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setExpanded((value) => !value);
-            }}
-          >
-            {expanded ? t("reassignmentsHideCandidates") : t("reassignmentsShowCandidates")}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={dismiss.isPending}
-            onClick={() => {
-              dismiss.mutate();
-            }}
-          >
-            {t("reassignmentsDismiss")}
-          </Button>
-        </div>
-        {dismiss.isError && (
-          <p role="alert" className="text-destructive text-sm">
-            {t("reassignmentsDismissError")}
-          </p>
-        )}
-
+        {dismiss.isError && <ErrorMessage>{t("reassignmentsDismissError")}</ErrorMessage>}
         {expanded && <CandidateList impedimentId={impediment.id} />}
-      </CardContent>
-    </Card>
+      </div>
+      <div className="bg-muted/40 flex flex-wrap gap-2 border-t px-4 py-2.5">
+        <Button
+          size="sm"
+          variant={expanded ? "secondary" : "default"}
+          aria-expanded={expanded}
+          onClick={() => {
+            setExpanded((value) => !value);
+          }}
+        >
+          <Users aria-hidden="true" />
+          {expanded ? t("reassignmentsHideCandidates") : t("reassignmentsShowCandidates")}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={dismiss.isPending}
+          onClick={() => {
+            dismiss.mutate();
+          }}
+        >
+          {t("reassignmentsDismiss")}
+        </Button>
+      </div>
+    </article>
   );
 }
 
@@ -364,18 +354,20 @@ export function ReassignmentsPage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-6">
-      <h1 className="text-xl font-semibold">{t("reassignmentsTitle")}</h1>
+    <Page width="wide">
+      <PageHeader title={t("reassignmentsTitle")} />
 
-      {isLoading && <p className="text-muted-foreground">{t("reassignmentsLoading")}</p>}
-      {error && <p className="text-destructive">{t("reassignmentsError")}</p>}
+      {isLoading && <LoadingMessage>{t("reassignmentsLoading")}</LoadingMessage>}
+      {error && <ErrorMessage>{t("reassignmentsError")}</ErrorMessage>}
       {!isLoading && !error && impediments?.length === 0 && (
-        <p className="text-muted-foreground">{t("reassignmentsEmpty")}</p>
+        <EmptyState>{t("reassignmentsEmpty")}</EmptyState>
       )}
 
-      {impediments?.map((impediment) => (
-        <ImpedimentCard key={impediment.id} impediment={impediment} />
-      ))}
-    </main>
+      <div className="grid items-start gap-4 xl:grid-cols-2">
+        {impediments?.map((impediment) => (
+          <ImpedimentCard key={impediment.id} impediment={impediment} />
+        ))}
+      </div>
+    </Page>
   );
 }

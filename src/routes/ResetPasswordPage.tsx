@@ -5,8 +5,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
+import { AuthLayout } from "@/components/layout/AuthLayout";
+import { ErrorMessage, SuccessMessage } from "@/components/layout/StateMessages";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -59,75 +60,70 @@ export function ResetPasswordPage() {
   });
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">{t("resetPasswordTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {token === "" && (
-            <p role="alert" className="text-sm text-destructive">
-              {t("resetPasswordMissingToken")}
-            </p>
-          )}
-          {mutation.isSuccess && (
-            <p role="status" className="text-sm">
-              {t("resetPasswordDone")}
-            </p>
-          )}
-          {token !== "" && !mutation.isSuccess && (
-            <Form {...form}>
-              <form
-                className="space-y-4"
-                noValidate
-                onSubmit={(event) => {
-                  void form.handleSubmit((values) => {
-                    mutation.mutate(values);
-                  })(event);
-                }}
-              >
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("resetPasswordNewLabel")}</FormLabel>
-                      <FormControl>
-                        <Input type="password" autoComplete="new-password" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="confirmation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("resetPasswordConfirmLabel")}</FormLabel>
-                      <FormControl>
-                        <Input type="password" autoComplete="new-password" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {mutation.isError && (
-                  <p role="alert" className="text-sm text-destructive">
-                    {t("resetPasswordInvalidLink")}
-                  </p>
-                )}
-                <Button type="submit" className="w-full" disabled={mutation.isPending}>
-                  {mutation.isPending ? t("resetPasswordSubmitPending") : t("resetPasswordSubmit")}
-                </Button>
-              </form>
-            </Form>
-          )}
-          <Link className="block text-center text-sm underline" to="/entrar">
-            {t("passwordBackToLogin")}
-          </Link>
-        </CardContent>
-      </Card>
-    </main>
+    <AuthLayout
+      title={t("resetPasswordTitle")}
+      footer={
+        <Link className="text-primary font-semibold underline" to="/entrar">
+          {t("passwordBackToLogin")}
+        </Link>
+      }
+    >
+      {token === "" && <ErrorMessage>{t("resetPasswordMissingToken")}</ErrorMessage>}
+      {mutation.isSuccess && <SuccessMessage>{t("resetPasswordDone")}</SuccessMessage>}
+      {token !== "" && !mutation.isSuccess && (
+        <Form {...form}>
+          <form
+            className="space-y-5"
+            noValidate
+            onSubmit={(event) => {
+              void form.handleSubmit((values) => {
+                mutation.mutate(values);
+              })(event);
+            }}
+          >
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("resetPasswordNewLabel")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      autoComplete="new-password"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("resetPasswordConfirmLabel")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      autoComplete="new-password"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {mutation.isError && <ErrorMessage>{t("resetPasswordInvalidLink")}</ErrorMessage>}
+            <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending}>
+              {mutation.isPending ? t("resetPasswordSubmitPending") : t("resetPasswordSubmit")}
+            </Button>
+          </form>
+        </Form>
+      )}
+    </AuthLayout>
   );
 }

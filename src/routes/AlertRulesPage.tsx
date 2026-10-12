@@ -7,6 +7,16 @@ import { useAuth } from "@/auth/AuthContext";
 import { Input } from "@/components/ui/input";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader, Panel } from "@/components/layout/Page";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
 
 type AlertRule = components["schemas"]["AlertRuleOut"];
 type AlertRulePatch = components["schemas"]["AlertRulePatch"];
@@ -47,9 +57,9 @@ function AlertRuleRow({ rule, onPatch, pending }: AlertRuleRowProps) {
   }, [rule.threshold_minutes]);
 
   return (
-    <tr className="border-b">
-      <td className="py-2 pr-4">{t(RULE_LABEL_KEY[rule.rule_kind])}</td>
-      <td className="py-2 pr-4">
+    <TableRow>
+      <TableCell className="font-semibold">{t(RULE_LABEL_KEY[rule.rule_kind])}</TableCell>
+      <TableCell>
         <input
           type="checkbox"
           aria-label={t(RULE_LABEL_KEY[rule.rule_kind])}
@@ -59,8 +69,8 @@ function AlertRuleRow({ rule, onPatch, pending }: AlertRuleRowProps) {
             onPatch(rule.rule_kind, { enabled: event.target.checked });
           }}
         />
-      </td>
-      <td className="py-2">
+      </TableCell>
+      <TableCell>
         <Input
           type="number"
           className="w-40"
@@ -77,8 +87,8 @@ function AlertRuleRow({ rule, onPatch, pending }: AlertRuleRowProps) {
             }
           }}
         />
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -120,45 +130,47 @@ export function AlertRulesPage() {
   });
 
   if (isLoading) {
-    return <p className="text-muted-foreground p-6">{t("alertRulesLoading")}</p>;
+    return (
+      <Page>
+        <LoadingMessage>{t("alertRulesLoading")}</LoadingMessage>
+      </Page>
+    );
   }
   if (error || rules === undefined) {
     return (
-      <p role="alert" className="text-destructive p-6">
-        {t("alertRulesError")}
-      </p>
+      <Page>
+        <ErrorMessage>{t("alertRulesError")}</ErrorMessage>
+      </Page>
     );
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-6">
-      <h1 className="text-xl font-semibold">{t("alertRulesTitle")}</h1>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-muted-foreground border-b text-left">
-            <th className="py-2 pr-4 font-medium">{t("alertRulesColumnRule")}</th>
-            <th className="py-2 pr-4 font-medium">{t("alertRulesColumnEnabled")}</th>
-            <th className="py-2 font-medium">{t("alertRulesColumnThreshold")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortRules(rules).map((rule) => (
-            <AlertRuleRow
-              key={rule.rule_kind}
-              rule={rule}
-              pending={mutation.isPending}
-              onPatch={(ruleKind, body) => {
-                mutation.mutate({ ruleKind, body });
-              }}
-            />
-          ))}
-        </tbody>
-      </table>
-      {mutation.isError && (
-        <p role="alert" className="text-destructive text-sm">
-          {t("alertRulesSaveError")}
-        </p>
-      )}
-    </main>
+    <Page>
+      <PageHeader title={t("alertRulesTitle")} />
+      <Panel>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="font-semibold">{t("alertRulesColumnRule")}</TableHead>
+              <TableHead className="font-semibold">{t("alertRulesColumnEnabled")}</TableHead>
+              <TableHead className="font-semibold">{t("alertRulesColumnThreshold")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortRules(rules).map((rule) => (
+              <AlertRuleRow
+                key={rule.rule_kind}
+                rule={rule}
+                pending={mutation.isPending}
+                onPatch={(ruleKind, body) => {
+                  mutation.mutate({ ruleKind, body });
+                }}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </Panel>
+      {mutation.isError && <ErrorMessage>{t("alertRulesSaveError")}</ErrorMessage>}
+    </Page>
   );
 }

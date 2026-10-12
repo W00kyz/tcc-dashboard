@@ -10,6 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Plus } from "lucide-react";
+import { ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
+import { Badge } from "@/components/ui/badge";
 
 interface ServiceType {
   id: string;
@@ -20,8 +25,6 @@ interface ServiceType {
 type FormOverview = components["schemas"]["FormOverviewResponse"];
 type FormQuestion = components["schemas"]["FormQuestionResponse"];
 type QuestionBody = components["schemas"]["QuestionBody"];
-
-const SELECT_CLASS = "border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm";
 
 function toQuestionBody(question: FormQuestion): QuestionBody {
   return {
@@ -182,91 +185,98 @@ export function FormBuilderPage() {
   const nextVersionNumber = (formQuery.data?.published.length ?? 0) + 1;
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("formBuilderTitle")}</h1>
+    <Page width="wide">
+      <PageHeader title={t("formBuilderTitle")} />
 
-      <div className="space-y-1">
+      <div className="w-full space-y-1.5 sm:max-w-sm">
         <Label htmlFor="form-service-type">{t("formBuilderPickServiceType")}</Label>
-        <select
+        <NativeSelect
           id="form-service-type"
-          className={SELECT_CLASS}
           value={serviceTypeId}
           onChange={(event) => {
             setServiceTypeId(event.target.value);
           }}
         >
-          <option value="">{t("formBuilderPickServiceTypePlaceholder")}</option>
+          <NativeSelectOption value="">
+            {t("formBuilderPickServiceTypePlaceholder")}
+          </NativeSelectOption>
           {serviceTypes?.map((serviceType) => (
-            <option key={serviceType.id} value={serviceType.id}>
+            <NativeSelectOption key={serviceType.id} value={serviceType.id}>
               {serviceType.name}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
-        {serviceTypesError && (
-          <p role="alert" className="text-destructive text-sm">
-            {t("formBuilderServiceTypesError")}
-          </p>
-        )}
+        </NativeSelect>
+        {serviceTypesError && <ErrorMessage>{t("formBuilderServiceTypesError")}</ErrorMessage>}
       </div>
 
-      {formQuery.isLoading && <p className="text-muted-foreground">{t("formBuilderLoading")}</p>}
-      {formQuery.isError && (
-        <p role="alert" className="text-destructive">
-          {t("formBuilderError")}
-        </p>
-      )}
+      {formQuery.isLoading && <LoadingMessage>{t("formBuilderLoading")}</LoadingMessage>}
+      {formQuery.isError && <ErrorMessage>{t("formBuilderError")}</ErrorMessage>}
 
       {formQuery.data && (
-        <>
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t("formBuilderDraftHeading")}</h2>
-              <Button size="sm" onClick={openAddDialog}>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <section aria-labelledby="form-draft-heading" className="bg-card rounded-md border">
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+              <h2 id="form-draft-heading" className="text-primary text-base font-bold">
+                {t("formBuilderDraftHeading")}
+              </h2>
+              <Button size="sm" variant="outline" onClick={openAddDialog}>
+                <Plus aria-hidden="true" />
                 {t("formBuilderAddQuestion")}
               </Button>
             </div>
-            <SortableQuestionList
-              questions={draftQuestions}
-              onReorder={(stableKeys) => {
-                reorderQuestions.mutate(stableKeys);
-              }}
-              onEdit={openEditDialog}
-              onRemove={handleRemove}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={draftQuestions.length === 0}
-              onClick={() => {
-                setPublishOpen(true);
-              }}
-            >
-              {t("formBuilderPublish")}
-            </Button>
-            {publish.isError && (
-              <p role="alert" className="text-destructive text-sm">
-                {t("formBuilderPublishError")}
-              </p>
-            )}
+            <div className="p-4">
+              <SortableQuestionList
+                questions={draftQuestions}
+                onReorder={(stableKeys) => {
+                  reorderQuestions.mutate(stableKeys);
+                }}
+                onEdit={openEditDialog}
+                onRemove={handleRemove}
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-3 border-t px-4 py-3">
+              {publish.isError && <ErrorMessage>{t("formBuilderPublishError")}</ErrorMessage>}
+              <Button
+                disabled={draftQuestions.length === 0}
+                onClick={() => {
+                  setPublishOpen(true);
+                }}
+              >
+                {t("formBuilderPublish")}
+              </Button>
+            </div>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="text-lg font-semibold">{t("formBuilderPublishedVersions")}</h2>
+          <section aria-labelledby="form-published-heading" className="bg-card rounded-md border">
+            <h2
+              id="form-published-heading"
+              className="text-primary border-b px-4 py-3 text-base font-bold"
+            >
+              {t("formBuilderPublishedVersions")}
+            </h2>
             {formQuery.data.published.length === 0 ? (
-              <p className="text-muted-foreground">{t("formBuilderNoPublishedVersions")}</p>
+              <p className="text-muted-foreground px-4 py-6 text-sm">
+                {t("formBuilderNoPublishedVersions")}
+              </p>
             ) : (
-              <ul className="divide-border divide-y">
+              <ul className="divide-y">
                 {formQuery.data.published.map((version) => (
-                  <li key={version.form_version_id} className="py-2 text-sm">
-                    {`v${String(version.version_number)} · ${version.published_at ?? "—"} · ${String(
-                      version.question_count,
-                    )} ${t("formBuilderQuestionCountSuffix")}`}
+                  <li
+                    key={version.form_version_id}
+                    className="flex items-center gap-3 px-4 py-3 text-sm"
+                  >
+                    <Badge variant="plate">{`v${String(version.version_number)}`}</Badge>
+                    <span className="text-muted-foreground">
+                      {`${version.published_at ?? "—"} · ${String(version.question_count)} ${t(
+                        "formBuilderQuestionCountSuffix",
+                      )}`}
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
           </section>
-        </>
+        </div>
       )}
 
       <QuestionEditorDialog
@@ -291,7 +301,6 @@ export function FormBuilderPage() {
           </p>
           <div className="flex justify-end gap-2">
             <Button
-              size="sm"
               variant="outline"
               onClick={() => {
                 setPublishOpen(false);
@@ -300,7 +309,6 @@ export function FormBuilderPage() {
               {t("formBuilderPublishCancel")}
             </Button>
             <Button
-              size="sm"
               disabled={publish.isPending}
               onClick={() => {
                 publish.mutate();
@@ -311,6 +319,6 @@ export function FormBuilderPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </main>
+    </Page>
   );
 }

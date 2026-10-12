@@ -8,6 +8,18 @@ import type { components } from "@/api/generated/schema";
 import { AuthProvider } from "@/auth/AuthContext";
 import { RouteActionsMenu } from "@/components/RouteActionsMenu";
 
+type TestUser = ReturnType<typeof userEvent.setup>;
+
+// The rarer actions sit behind the overflow trigger, as a user would find them.
+async function openMoreActions(user: TestUser) {
+  await user.click(screen.getByRole("button", { name: "Mais ações da rota" }));
+}
+
+async function chooseMoreAction(user: TestUser, name: string) {
+  await openMoreActions(user);
+  await user.click(await screen.findByRole("menuitem", { name }));
+}
+
 type RouteOut = components["schemas"]["RouteOut"];
 type RouteStopOut = components["schemas"]["RouteStopOut"];
 
@@ -120,7 +132,7 @@ describe("RouteActionsMenu", () => {
     const user = userEvent.setup();
     renderMenu(PLANNED_ROUTE, makeFakeFetch({ optimizeStatus: 503 }));
 
-    await user.click(screen.getByRole("button", { name: "Otimizar" }));
+    await chooseMoreAction(user, "Otimizar");
 
     expect(
       await screen.findByText("A otimização de rotas está indisponível no momento."),
@@ -224,7 +236,7 @@ describe("RouteActionsMenu", () => {
     });
     renderMenu(PLANNED_ROUTE, fakeFetch);
 
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await chooseMoreAction(user, "Cancelar");
     const failedDialog = await screen.findByRole("dialog");
     await user.type(
       within(failedDialog).getByRole("textbox", { name: "Motivo do cancelamento" }),
@@ -238,7 +250,7 @@ describe("RouteActionsMenu", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await chooseMoreAction(user, "Cancelar");
     const reopened = await screen.findByRole("dialog");
     expect(
       within(reopened).queryByText("Não foi possível concluir a ação. Tente novamente."),
@@ -264,7 +276,7 @@ describe("RouteActionsMenu", () => {
     });
     renderMenu(PLANNED_ROUTE, fakeFetch);
 
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await chooseMoreAction(user, "Cancelar");
 
     const dialog = await screen.findByRole("dialog");
     await user.type(
@@ -283,7 +295,7 @@ describe("RouteActionsMenu", () => {
     const fakeFetch = makeFakeFetch();
     renderMenu(PLANNED_ROUTE, fakeFetch);
 
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await chooseMoreAction(user, "Cancelar");
 
     const dialog = await screen.findByRole("dialog");
     await user.type(
@@ -304,14 +316,16 @@ describe("RouteActionsMenu", () => {
     expect(body).toEqual({ reason: "Rota duplicada" });
   });
 
-  it("offers 'Concluir ponto sem evidência' when a stop is PENDING or IN_PROGRESS", () => {
+  it("offers 'Concluir ponto sem evidência' when a stop is PENDING or IN_PROGRESS", async () => {
     const pendingRoute: RouteOut = {
       ...PLANNED_ROUTE,
       stops: [makeStop({ id: "s1", status: "PENDING" })],
     };
+    const user = userEvent.setup();
     const { unmount } = renderMenu(pendingRoute, makeFakeFetch());
+    await openMoreActions(user);
     expect(
-      screen.getByRole("button", { name: "Concluir ponto sem evidência" }),
+      screen.getByRole("menuitem", { name: "Concluir ponto sem evidência" }),
     ).toBeInTheDocument();
     unmount();
 
@@ -320,19 +334,23 @@ describe("RouteActionsMenu", () => {
       stops: [makeStop({ id: "s1", status: "IN_PROGRESS" })],
     };
     renderMenu(inProgressRoute, makeFakeFetch());
+    await openMoreActions(user);
     expect(
-      screen.getByRole("button", { name: "Concluir ponto sem evidência" }),
+      screen.getByRole("menuitem", { name: "Concluir ponto sem evidência" }),
     ).toBeInTheDocument();
   });
 
-  it("hides 'Concluir ponto sem evidência' when every stop is DONE", () => {
+  it("hides 'Concluir ponto sem evidência' when every stop is DONE", async () => {
     const doneRoute: RouteOut = {
       ...PLANNED_ROUTE,
       stops: [makeStop({ id: "s1", status: "DONE" })],
     };
+    const user = userEvent.setup();
     renderMenu(doneRoute, makeFakeFetch());
+    await openMoreActions(user);
+    expect(screen.getByRole("menuitem", { name: "Otimizar" })).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Concluir ponto sem evidência" }),
+      screen.queryByRole("menuitem", { name: "Concluir ponto sem evidência" }),
     ).not.toBeInTheDocument();
   });
 
@@ -344,8 +362,9 @@ describe("RouteActionsMenu", () => {
       stops: [makeStop({ id: "s1", status: "PENDING" })],
     };
     renderMenu(doneRouteWithStop, makeFakeFetch());
+    expect(screen.getByRole("button", { name: "Mais ações da rota" })).toBeDisabled();
     expect(
-      screen.queryByRole("button", { name: "Concluir ponto sem evidência" }),
+      screen.queryByRole("menuitem", { name: "Concluir ponto sem evidência" }),
     ).not.toBeInTheDocument();
   });
 
@@ -357,16 +376,17 @@ describe("RouteActionsMenu", () => {
       stops: [makeStop({ id: "s1", status: "PENDING" })],
     };
     renderMenu(cancelledWithStop, makeFakeFetch());
+    expect(screen.getByRole("button", { name: "Mais ações da rota" })).toBeDisabled();
     expect(
-      screen.queryByRole("button", { name: "Concluir ponto sem evidência" }),
+      screen.queryByRole("menuitem", { name: "Concluir ponto sem evidência" }),
     ).not.toBeInTheDocument();
   });
 
   it("disables every action for a route that is CANCELLED", () => {
     renderMenu(CANCELLED_ROUTE, makeFakeFetch());
 
-    const actions = screen.getByTestId("route-actions");
-    for (const name of ["Editar", "Otimizar", "Reatribuir", "Cancelar"]) {
+    const actions = screen.getByRole("group", { name: "Ações da rota" });
+    for (const name of ["Editar", "Reatribuir", "Mais ações da rota"]) {
       expect(within(actions).getByRole("button", { name })).toBeDisabled();
     }
   });

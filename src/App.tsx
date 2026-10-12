@@ -1,16 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  createBrowserRouter,
-  Navigate,
-  Outlet,
-  type RouteObject,
-  RouterProvider,
-} from "react-router-dom";
+import { createBrowserRouter, Navigate, type RouteObject, RouterProvider } from "react-router-dom";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { ConsentGate } from "@/auth/ConsentGate";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
-import { AppNav } from "@/components/AppNav";
+import { AppShell } from "@/components/shell/AppShell";
 import { AlertRulesPage } from "@/routes/AlertRulesPage";
 import { BuildingsPage } from "@/routes/BuildingsPage";
 import { ContractorCompaniesPage } from "@/routes/ContractorCompaniesPage";
@@ -93,20 +87,10 @@ export const appRoutes: RouteObject[] = [
   },
 ];
 
-// Pathless layout route: the only nav shell this dashboard has (spec §7.1). AppNav renders
-// nothing without a session, so /entrar keeps its bare full-screen layout. Kept out of the
+// Pathless layout route: the only nav shell this dashboard has (spec §7.1). AppShell renders
+// the bare page without a session, so /entrar keeps its full-screen layout. Kept out of the
 // exported `appRoutes` so that array still maps ProtectedRoute branches to page paths 1:1.
-const router = createBrowserRouter([
-  {
-    element: (
-      <>
-        <AppNav />
-        <Outlet />
-      </>
-    ),
-    children: appRoutes,
-  },
-]);
+const router = createBrowserRouter([{ element: <AppShell />, children: appRoutes }]);
 
 export function App() {
   return (

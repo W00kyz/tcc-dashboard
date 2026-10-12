@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
@@ -11,11 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
 import { toLocalIsoDate } from "@/lib/dates";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { ErrorMessage } from "@/components/layout/StateMessages";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { ChevronLeft } from "lucide-react";
 
 type RouteType = "REGULAR" | "OCCASIONAL";
 type StopBody = components["schemas"]["StopBody"];
-
-const SELECT_CLASS = "border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm";
 
 // The backend's expected_arrival_* columns are tz-aware (`DateTime(timezone=True)`) and the
 // backend normalises every arrival window to UTC (see routing/service.py `_combine_date_time`).
@@ -264,37 +266,36 @@ export function RouteBuilderPage() {
 
   if (isEdit && routeQuery.isError) {
     return (
-      <main className="mx-auto max-w-2xl space-y-6 p-6">
-        <h1 className="text-xl font-semibold">{t("routeBuilderTitleEdit")}</h1>
-        <p role="alert" className="text-destructive">
-          {t("routeBuilderLoadError")}
-        </p>
-      </main>
+      <Page>
+        <PageHeader title={t("routeBuilderTitleEdit")} />
+        <ErrorMessage>{t("routeBuilderLoadError")}</ErrorMessage>
+      </Page>
     );
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">
-        {isEdit
-          ? t("routeBuilderTitleEdit")
-          : isOccasional
-            ? t("routeBuilderOccasionalTitle")
-            : t("routeBuilderTitleNew")}
-      </h1>
+    <Page width="wide">
+      <Button variant="ghost" size="sm" className="-ml-2 self-start" asChild>
+        <Link to="/rotas">
+          <ChevronLeft aria-hidden="true" />
+          {t("navRouteBoard")}
+        </Link>
+      </Button>
+      <PageHeader
+        title={
+          isEdit
+            ? t("routeBuilderTitleEdit")
+            : isOccasional
+              ? t("routeBuilderOccasionalTitle")
+              : t("routeBuilderTitleNew")
+        }
+        description={isOccasional ? t("routeBuilderOccasionalHint") : undefined}
+      />
 
-      {isOccasional && (
-        <p className="text-muted-foreground text-sm">{t("routeBuilderOccasionalHint")}</p>
-      )}
-
-      {save.isError && (
-        <p role="alert" className="text-destructive">
-          {t("routeBuilderSaveError")}
-        </p>
-      )}
+      {save.isError && <ErrorMessage>{t("routeBuilderSaveError")}</ErrorMessage>}
 
       <form
-        className="space-y-4"
+        className="space-y-6"
         onSubmit={(event) => {
           event.preventDefault();
           // The disabled attribute stops a click, but pressing Enter from another field can
@@ -305,144 +306,168 @@ export function RouteBuilderPage() {
           save.mutate();
         }}
       >
-        {isOccasional ? (
-          <fieldset>
-            <legend className="text-sm leading-none font-medium">
-              {t("routeBuilderPickWorkers")}
-            </legend>
-            <div className="mt-2 space-y-1">
-              {workers?.map((worker) => (
-                <Label key={worker.id} className="font-normal">
-                  <input
-                    type="checkbox"
-                    checked={fieldWorkerIds.includes(worker.id)}
-                    onChange={(event) => {
-                      toggleWorker(worker.id, event.target.checked);
-                    }}
-                  />
-                  {worker.full_name}
-                </Label>
-              ))}
-            </div>
-          </fieldset>
-        ) : (
-          <div>
-            <Label htmlFor="route-worker">{t("routeBuilderWorker")}</Label>
-            <select
-              id="route-worker"
-              className={SELECT_CLASS}
-              value={fieldWorkerId}
-              // Reassignment is a dedicated action (mandatory reason) on the board, not a
-              // side effect of editing — and the backend 409s a PATCH that changes the worker.
-              disabled={isEdit}
-              onChange={(event) => {
-                setFieldWorkerId(event.target.value);
-              }}
-            >
-              <option value="" />
-              {workers?.map((worker) => (
-                <option key={worker.id} value={worker.id}>
-                  {worker.full_name}
-                </option>
-              ))}
-            </select>
-            {isEdit && (
-              <p className="text-muted-foreground mt-1 text-sm">
-                {t("routeBuilderWorkerLockedHint")}
-              </p>
+        <div className="grid items-start gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <section
+            aria-labelledby="route-details-heading"
+            className="bg-card space-y-4 rounded-md border p-4"
+          >
+            <h2 id="route-details-heading" className="text-primary text-base font-bold">
+              {t("routeBuilderDetailsHeading")}
+            </h2>
+            {isOccasional ? (
+              <fieldset>
+                <legend className="text-sm leading-none font-semibold">
+                  {t("routeBuilderPickWorkers")}
+                </legend>
+                <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+                  {workers?.map((worker) => (
+                    <Label key={worker.id} className="font-normal">
+                      <input
+                        type="checkbox"
+                        checked={fieldWorkerIds.includes(worker.id)}
+                        onChange={(event) => {
+                          toggleWorker(worker.id, event.target.checked);
+                        }}
+                      />
+                      {worker.full_name}
+                    </Label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="route-worker">{t("routeBuilderWorker")}</Label>
+                <NativeSelect
+                  id="route-worker"
+                  value={fieldWorkerId}
+                  // Reassignment is a dedicated action (mandatory reason) on the board, not a
+                  // side effect of editing — and the backend 409s a PATCH that changes the worker.
+                  disabled={isEdit}
+                  onChange={(event) => {
+                    setFieldWorkerId(event.target.value);
+                  }}
+                >
+                  <NativeSelectOption value="" />
+                  {workers?.map((worker) => (
+                    <NativeSelectOption key={worker.id} value={worker.id}>
+                      {worker.full_name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+                {isEdit && (
+                  <p className="text-muted-foreground text-sm">
+                    {t("routeBuilderWorkerLockedHint")}
+                  </p>
+                )}
+              </div>
             )}
-          </div>
-        )}
 
-        <div>
-          <Label htmlFor="route-date">{t("routeBuilderDate")}</Label>
-          <Input
-            id="route-date"
-            type="date"
-            value={routeDate}
-            onChange={(event) => {
-              setRouteDate(event.target.value);
-            }}
-          />
+            <div className="space-y-1.5">
+              <Label htmlFor="route-date">{t("routeBuilderDate")}</Label>
+              <Input
+                id="route-date"
+                type="date"
+                value={routeDate}
+                onChange={(event) => {
+                  setRouteDate(event.target.value);
+                }}
+              />
+            </div>
+          </section>
+
+          <section
+            aria-labelledby="route-stops-heading"
+            className="bg-card space-y-4 rounded-md border p-4"
+          >
+            <h2 id="route-stops-heading" className="text-primary text-base font-bold">
+              {t("routeBuilderStopsHeading")}
+            </h2>
+            <div className="grid grid-cols-1 gap-3 border-b pb-4 sm:grid-cols-[1fr_1fr_1.4fr]">
+              <div className="space-y-1.5">
+                <Label htmlFor="route-building">{t("routeBuilderPickBuilding")}</Label>
+                <NativeSelect
+                  id="route-building"
+                  value={buildingId}
+                  onChange={(event) => {
+                    setBuildingId(event.target.value);
+                    setFloorId("");
+                    setServicePointId("");
+                  }}
+                >
+                  <NativeSelectOption value="" />
+                  {buildings?.map((building) => (
+                    <NativeSelectOption key={building.id} value={building.id}>
+                      {building.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="route-floor">{t("routeBuilderPickFloor")}</Label>
+                <NativeSelect
+                  id="route-floor"
+                  value={floorId}
+                  onChange={(event) => {
+                    setFloorId(event.target.value);
+                    setServicePointId("");
+                  }}
+                >
+                  <NativeSelectOption value="" />
+                  {floors?.map((floor) => (
+                    <NativeSelectOption key={floor.id} value={floor.id}>
+                      {floor.label}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </div>
+              <div className="flex items-end gap-2">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <span aria-hidden="true" className="block text-sm leading-none font-medium">
+                    {t("routeBuilderPointLabel")}
+                  </span>
+                  <NativeSelect
+                    aria-label={t("routeBuilderAddPoint")}
+                    value={servicePointId}
+                    onChange={(event) => {
+                      setServicePointId(event.target.value);
+                    }}
+                  >
+                    <NativeSelectOption value="" />
+                    {servicePoints?.map((point) => (
+                      <NativeSelectOption key={point.id} value={point.id}>
+                        {point.name}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                </div>
+                <Button type="button" variant="outline" onClick={addPoint}>
+                  {t("routeBuilderAddPoint")}
+                </Button>
+              </div>
+            </div>
+
+            <SortableStopList
+              stops={stops}
+              serviceTypes={serviceTypes ?? []}
+              onReorder={setStops}
+              onRemove={(key) => {
+                setStops((current) => current.filter((stop) => stop.key !== key));
+              }}
+              onEditWindow={editWindow}
+              onEditServiceType={editServiceType}
+            />
+          </section>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div>
-            <Label htmlFor="route-building">{t("routeBuilderPickBuilding")}</Label>
-            <select
-              id="route-building"
-              className={SELECT_CLASS}
-              value={buildingId}
-              onChange={(event) => {
-                setBuildingId(event.target.value);
-                setFloorId("");
-                setServicePointId("");
-              }}
-            >
-              <option value="" />
-              {buildings?.map((building) => (
-                <option key={building.id} value={building.id}>
-                  {building.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="route-floor">{t("routeBuilderPickFloor")}</Label>
-            <select
-              id="route-floor"
-              className={SELECT_CLASS}
-              value={floorId}
-              onChange={(event) => {
-                setFloorId(event.target.value);
-                setServicePointId("");
-              }}
-            >
-              <option value="" />
-              {floors?.map((floor) => (
-                <option key={floor.id} value={floor.id}>
-                  {floor.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-end gap-2">
-            <select
-              aria-label={t("routeBuilderAddPoint")}
-              className={SELECT_CLASS}
-              value={servicePointId}
-              onChange={(event) => {
-                setServicePointId(event.target.value);
-              }}
-            >
-              <option value="" />
-              {servicePoints?.map((point) => (
-                <option key={point.id} value={point.id}>
-                  {point.name}
-                </option>
-              ))}
-            </select>
-            <Button type="button" variant="outline" onClick={addPoint}>
-              {t("routeBuilderAddPoint")}
-            </Button>
-          </div>
+        <div className="flex justify-end gap-2 border-t pt-4">
+          <Button variant="outline" asChild>
+            <Link to="/rotas">{t("routeActionCancel")}</Link>
+          </Button>
+          <Button type="submit" disabled={submitDisabled}>
+            {t("routeBuilderSave")}
+          </Button>
         </div>
-
-        <SortableStopList
-          stops={stops}
-          serviceTypes={serviceTypes ?? []}
-          onReorder={setStops}
-          onRemove={(key) => {
-            setStops((current) => current.filter((stop) => stop.key !== key));
-          }}
-          onEditWindow={editWindow}
-          onEditServiceType={editServiceType}
-        />
-
-        <Button type="submit" disabled={submitDisabled}>
-          {t("routeBuilderSave")}
-        </Button>
       </form>
-    </main>
+    </Page>
   );
 }

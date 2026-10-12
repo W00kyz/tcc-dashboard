@@ -4,15 +4,20 @@ import { Link } from "react-router-dom";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
+import { ChevronRight } from "lucide-react";
 
 interface BuildingRow {
   id: string;
   name: string;
   campus_area: string;
+  footprint: unknown;
 }
 
 export function BuildingsPage() {
@@ -48,47 +53,66 @@ export function BuildingsPage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("buildingsPageTitle")}</h1>
-      <form
-        className="space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate();
-        }}
-      >
-        <div>
-          <Label htmlFor="building-name">{t("buildingsFieldName")}</Label>
-          <Input
-            id="building-name"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
+    <Page>
+      <PageHeader title={t("buildingsPageTitle")} />
+      <RegistryLayout
+        list={
+          <RegistryList
+            items={buildings}
+            getKey={(building) => building.id}
+            renderItem={(building) => (
+              <>
+                <span className="min-w-0 flex-1">
+                  <span className="text-foreground block font-semibold">{building.name}</span>
+                  <span className="text-muted-foreground text-sm">{building.campus_area}</span>
+                </span>
+                <Badge variant={building.footprint ? "done" : "pending"}>
+                  {t(building.footprint ? "footprintBadgeLinked" : "footprintBadgeMissing")}
+                </Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/predios/${building.id}/andares`}>
+                    {t("buildingsViewFloors")}
+                    <ChevronRight aria-hidden="true" />
+                  </Link>
+                </Button>
+              </>
+            )}
           />
-        </div>
-        <div>
-          <Label htmlFor="building-campus-area">{t("buildingsFieldCampusArea")}</Label>
-          <Input
-            id="building-campus-area"
-            value={campusArea}
-            onChange={(event) => {
-              setCampusArea(event.target.value);
+        }
+        form={
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
             }}
-          />
-        </div>
-        <Button type="submit">{t("buildingsSubmitCreate")}</Button>
-      </form>
-      <ul className="divide-border divide-y">
-        {buildings?.map((building) => (
-          <li key={building.id} className="flex items-center justify-between py-2">
-            <span>{building.name}</span>
-            <Link className="text-sm underline" to={`/predios/${building.id}/andares`}>
-              {t("buildingsViewFloors")}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="building-name">{t("buildingsFieldName")}</Label>
+              <Input
+                id="building-name"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="building-campus-area">{t("buildingsFieldCampusArea")}</Label>
+              <Input
+                id="building-campus-area"
+                value={campusArea}
+                onChange={(event) => {
+                  setCampusArea(event.target.value);
+                }}
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              {t("buildingsSubmitCreate")}
+            </Button>
+          </form>
+        }
+      />
+    </Page>
   );
 }

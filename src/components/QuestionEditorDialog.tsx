@@ -11,6 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { strings } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { ErrorMessage, FieldError } from "@/components/layout/StateMessages";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Plus, Trash2 } from "lucide-react";
 
 type QuestionBody = components["schemas"]["QuestionBody"];
 type QuestionType = components["schemas"]["QuestionType"];
@@ -22,8 +25,6 @@ const QUESTION_TYPES: QuestionType[] = [
   "SINGLE_CHOICE",
   "MULTI_CHOICE",
 ];
-
-const SELECT_CLASS = "border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm";
 
 function isChoiceType(questionType: QuestionType): boolean {
   return questionType === "SINGLE_CHOICE" || questionType === "MULTI_CHOICE";
@@ -127,26 +128,22 @@ export function QuestionEditorDialog({
             void handleSubmit(submit)(event);
           }}
         >
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="question-prompt">{t("formQuestionPrompt")}</Label>
             <Input id="question-prompt" {...register("prompt")} />
-            {formState.errors.prompt && (
-              <p role="alert" className="text-destructive text-sm">
-                {formState.errors.prompt.message}
-              </p>
-            )}
+            {formState.errors.prompt && <FieldError>{formState.errors.prompt.message}</FieldError>}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="question-type">{t("formQuestionType")}</Label>
-            <select id="question-type" className={SELECT_CLASS} {...register("question_type")}>
+            <NativeSelect id="question-type" {...register("question_type")}>
               {QUESTION_TYPES.map((value) => (
-                <option key={value} value={value}>
+                <NativeSelectOption key={value} value={value}>
                   {QUESTION_TYPE_LABELS[value]}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
           </div>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex w-fit items-center gap-2 text-sm font-semibold">
             <input type="checkbox" {...register("required")} />
             {t("formQuestionRequired")}
           </label>
@@ -163,12 +160,12 @@ export function QuestionEditorDialog({
                   <button
                     type="button"
                     aria-label={t("formQuestionRemoveOption")}
-                    className="text-destructive px-2"
+                    className="text-muted-foreground hover:bg-status-late-soft hover:text-status-late flex size-9 shrink-0 items-center justify-center rounded-md"
                     onClick={() => {
                       options.remove(index);
                     }}
                   >
-                    ×
+                    <Trash2 aria-hidden="true" className="size-4" />
                   </button>
                 </div>
               ))}
@@ -180,24 +177,20 @@ export function QuestionEditorDialog({
                   options.append({ value: "" });
                 }}
               >
+                <Plus aria-hidden="true" />
                 {t("formQuestionAddOption")}
               </Button>
               {formState.errors.options && (
-                <p role="alert" className="text-destructive text-sm">
+                <FieldError>
                   {formState.errors.options.message ?? formState.errors.options.root?.message}
-                </p>
+                </FieldError>
               )}
             </div>
           )}
-          {isError && (
-            <p role="alert" className="text-destructive text-sm">
-              {t("formBuilderError")}
-            </p>
-          )}
+          {isError && <ErrorMessage>{t("formBuilderError")}</ErrorMessage>}
           <div className="flex justify-end gap-2">
             <Button
               type="button"
-              size="sm"
               variant="outline"
               onClick={() => {
                 onOpenChange(false);
@@ -205,7 +198,7 @@ export function QuestionEditorDialog({
             >
               {t("formQuestionCancel")}
             </Button>
-            <Button type="submit" size="sm" disabled={isPending}>
+            <Button type="submit" disabled={isPending}>
               {t("formQuestionSave")}
             </Button>
           </div>

@@ -9,6 +9,21 @@ import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
 import { toLocalIsoDate } from "@/lib/dates";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type ApiClient = ReturnType<typeof createApiClient>;
 
@@ -33,16 +48,16 @@ const DEFAULT_WINDOW_DAYS = 7;
 
 // Same green/amber/grey vocabulary as RouteBoardPage's STATUS_PILL: a validated scan reads
 // as "good", out-of-radius as "needs a look", not-validated as neutral/missing.
-const GEO_BADGE: Record<GeoValidation, { key: StringKey; className: string }> = {
-  VALIDATED: { key: "executionsGeoValidated", className: "bg-green-100 text-green-800" },
-  OUT_OF_RADIUS: { key: "executionsGeoOutOfRadius", className: "bg-amber-100 text-amber-800" },
-  NOT_VALIDATED: { key: "executionsGeoNotValidated", className: "bg-muted text-muted-foreground" },
+const GEO_BADGE: Record<GeoValidation, { key: StringKey; tone: BadgeTone }> = {
+  VALIDATED: { key: "executionsGeoValidated", tone: "done" },
+  OUT_OF_RADIUS: { key: "executionsGeoOutOfRadius", tone: "progress" },
+  NOT_VALIDATED: { key: "executionsGeoNotValidated", tone: "pending" },
 };
 
 // NONE is deliberately absent: an execution with nothing to review shows no pill at all.
-const REVIEW_BADGE: Record<"PENDING_REVIEW" | "RESOLVED", { key: StringKey; className: string }> = {
-  PENDING_REVIEW: { key: "executionsReviewPending", className: "bg-amber-100 text-amber-800" },
-  RESOLVED: { key: "executionsReviewResolved", className: "bg-green-100 text-green-800" },
+const REVIEW_BADGE: Record<"PENDING_REVIEW" | "RESOLVED", { key: StringKey; tone: BadgeTone }> = {
+  PENDING_REVIEW: { key: "executionsReviewPending", tone: "signal" },
+  RESOLVED: { key: "executionsReviewResolved", tone: "done" },
 };
 
 const SOURCE_LABEL_KEY: Record<ExecutionSource, StringKey> = {
@@ -143,10 +158,6 @@ async function fetchExecutions(client: ApiClient, filters: ExecutionFilters, pag
   return data ?? { items: [], total: 0, page, page_size: PAGE_SIZE };
 }
 
-const FILTER_CONTROL_CLASS =
-  "border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm";
-const BADGE_CLASS = "inline-block rounded px-2 py-0.5 text-xs font-medium";
-
 export function ExecutionHistoryPage() {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -213,93 +224,88 @@ export function ExecutionHistoryPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <main className="mx-auto max-w-6xl space-y-4 p-6">
-      <h1 className="text-xl font-semibold">{t("executionHistoryTitle")}</h1>
+    <Page width="wide">
+      <PageHeader title={t("executionHistoryTitle")} />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <div>
+      <fieldset className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <legend className="sr-only">{t("routeBoardFiltersLabel")}</legend>
+        <div className="space-y-1.5">
           <Label htmlFor="execution-filter-date-from">{t("executionsFilterDateFrom")}</Label>
-          <input
+          <Input
             id="execution-filter-date-from"
             type="date"
-            className={FILTER_CONTROL_CLASS}
             value={filters.dateFrom}
             onChange={(event) => {
               updateFilters({ dateFrom: event.target.value });
             }}
           />
         </div>
-        <div>
+        <div className="space-y-1.5">
           <Label htmlFor="execution-filter-date-to">{t("executionsFilterDateTo")}</Label>
-          <input
+          <Input
             id="execution-filter-date-to"
             type="date"
-            className={FILTER_CONTROL_CLASS}
             value={filters.dateTo}
             onChange={(event) => {
               updateFilters({ dateTo: event.target.value });
             }}
           />
         </div>
-        <div>
+        <div className="space-y-1.5">
           <Label htmlFor="execution-filter-worker">{t("executionsFilterWorker")}</Label>
-          <select
+          <NativeSelect
             id="execution-filter-worker"
-            className={FILTER_CONTROL_CLASS}
             value={filters.fieldWorkerId}
             onChange={(event) => {
               updateFilters({ fieldWorkerId: event.target.value });
             }}
           >
-            <option value="">{t("executionsFilterAll")}</option>
+            <NativeSelectOption value="">{t("executionsFilterAll")}</NativeSelectOption>
             {workers?.map((worker) => (
-              <option key={worker.id} value={worker.id}>
+              <NativeSelectOption key={worker.id} value={worker.id}>
                 {worker.full_name}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
-        <div>
+        <div className="space-y-1.5">
           <Label htmlFor="execution-filter-service-type">{t("executionsFilterServiceType")}</Label>
-          <select
+          <NativeSelect
             id="execution-filter-service-type"
-            className={FILTER_CONTROL_CLASS}
             value={filters.serviceTypeId}
             onChange={(event) => {
               updateFilters({ serviceTypeId: event.target.value });
             }}
           >
-            <option value="">{t("executionsFilterAll")}</option>
+            <NativeSelectOption value="">{t("executionsFilterAll")}</NativeSelectOption>
             {serviceTypes?.map((serviceType) => (
-              <option key={serviceType.id} value={serviceType.id}>
+              <NativeSelectOption key={serviceType.id} value={serviceType.id}>
                 {serviceType.name}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
-        <div>
+        <div className="space-y-1.5">
           <Label htmlFor="execution-filter-building">{t("executionsFilterBuilding")}</Label>
-          <select
+          <NativeSelect
             id="execution-filter-building"
-            className={FILTER_CONTROL_CLASS}
             value={filters.buildingId}
             onChange={(event) => {
               updateFilters({ buildingId: event.target.value });
             }}
           >
-            <option value="">{t("executionsFilterAll")}</option>
+            <NativeSelectOption value="">{t("executionsFilterAll")}</NativeSelectOption>
             {buildings?.map((building) => (
-              <option key={building.id} value={building.id}>
+              <NativeSelectOption key={building.id} value={building.id}>
                 {building.name}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
-        <div>
+        <div className="space-y-1.5">
           <Label htmlFor="execution-filter-review">{t("executionsFilterReviewStatus")}</Label>
-          <select
+          <NativeSelect
             id="execution-filter-review"
-            className={FILTER_CONTROL_CLASS}
             value={filters.reviewStatus}
             onChange={(event) => {
               updateFilters({
@@ -307,17 +313,20 @@ export function ExecutionHistoryPage() {
               });
             }}
           >
-            <option value="">{t("executionsFilterAll")}</option>
-            <option value="PENDING_REVIEW">{t("executionsReviewPending")}</option>
-            <option value="RESOLVED">{t("executionsReviewResolved")}</option>
-            <option value="NONE">{t("executionsReviewNone")}</option>
-          </select>
+            <NativeSelectOption value="">{t("executionsFilterAll")}</NativeSelectOption>
+            <NativeSelectOption value="PENDING_REVIEW">
+              {t("executionsReviewPending")}
+            </NativeSelectOption>
+            <NativeSelectOption value="RESOLVED">
+              {t("executionsReviewResolved")}
+            </NativeSelectOption>
+            <NativeSelectOption value="NONE">{t("executionsReviewNone")}</NativeSelectOption>
+          </NativeSelect>
         </div>
-        <div>
+        <div className="space-y-1.5">
           <Label htmlFor="execution-filter-geo">{t("executionsFilterGeoValidation")}</Label>
-          <select
+          <NativeSelect
             id="execution-filter-geo"
-            className={FILTER_CONTROL_CLASS}
             value={filters.geoValidation}
             onChange={(event) => {
               updateFilters({
@@ -325,62 +334,67 @@ export function ExecutionHistoryPage() {
               });
             }}
           >
-            <option value="">{t("executionsFilterAll")}</option>
-            <option value="VALIDATED">{t("executionsGeoValidated")}</option>
-            <option value="OUT_OF_RADIUS">{t("executionsGeoOutOfRadius")}</option>
-            <option value="NOT_VALIDATED">{t("executionsGeoNotValidated")}</option>
-          </select>
+            <NativeSelectOption value="">{t("executionsFilterAll")}</NativeSelectOption>
+            <NativeSelectOption value="VALIDATED">{t("executionsGeoValidated")}</NativeSelectOption>
+            <NativeSelectOption value="OUT_OF_RADIUS">
+              {t("executionsGeoOutOfRadius")}
+            </NativeSelectOption>
+            <NativeSelectOption value="NOT_VALIDATED">
+              {t("executionsGeoNotValidated")}
+            </NativeSelectOption>
+          </NativeSelect>
         </div>
-        <div>
+        <div className="space-y-1.5">
           <Label htmlFor="execution-filter-source">{t("executionsFilterSource")}</Label>
-          <select
+          <NativeSelect
             id="execution-filter-source"
-            className={FILTER_CONTROL_CLASS}
             value={filters.source}
             onChange={(event) => {
               updateFilters({ source: event.target.value as ExecutionFilters["source"] });
             }}
           >
-            <option value="">{t("executionsFilterAll")}</option>
-            <option value="APP">{t("executionsSourceApp")}</option>
-            <option value="MANAGER_MANUAL">{t("executionsSourceManual")}</option>
-          </select>
+            <NativeSelectOption value="">{t("executionsFilterAll")}</NativeSelectOption>
+            <NativeSelectOption value="APP">{t("executionsSourceApp")}</NativeSelectOption>
+            <NativeSelectOption value="MANAGER_MANUAL">
+              {t("executionsSourceManual")}
+            </NativeSelectOption>
+          </NativeSelect>
         </div>
-      </div>
+      </fieldset>
 
-      {isLoading && <p className="text-muted-foreground">{t("executionHistoryLoading")}</p>}
-      {error && <p className="text-destructive">{t("executionHistoryError")}</p>}
+      {isLoading && <LoadingMessage>{t("executionHistoryLoading")}</LoadingMessage>}
+      {error && <ErrorMessage>{t("executionHistoryError")}</ErrorMessage>}
       {!isLoading && !error && items.length === 0 && (
-        <p className="text-muted-foreground">{t("executionHistoryEmpty")}</p>
+        <EmptyState>{t("executionHistoryEmpty")}</EmptyState>
       )}
 
       {items.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-muted-foreground border-b">
-              <tr>
-                <th className="py-2 pr-3 font-medium">{t("executionHistoryColWorker")}</th>
-                <th className="py-2 pr-3 font-medium">{t("executionHistoryColPoint")}</th>
-                <th className="py-2 pr-3 font-medium">{t("executionHistoryColCheckIn")}</th>
-                <th className="py-2 pr-3 font-medium">{t("executionHistoryColCheckOut")}</th>
-                <th className="py-2 pr-3 font-medium">{t("executionHistoryColGeo")}</th>
-                <th className="py-2 pr-3 font-medium">{t("executionHistoryColReview")}</th>
-                <th className="py-2 pr-3 font-medium">{t("executionHistoryColSource")}</th>
-                <th className="py-2 pr-3 font-medium">{t("executionHistoryColEvidence")}</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="bg-card rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("executionHistoryColWorker")}</TableHead>
+                <TableHead>{t("executionHistoryColPoint")}</TableHead>
+                <TableHead>{t("executionHistoryColCheckIn")}</TableHead>
+                <TableHead>{t("executionHistoryColCheckOut")}</TableHead>
+                <TableHead>{t("executionHistoryColGeo")}</TableHead>
+                <TableHead>{t("executionHistoryColReview")}</TableHead>
+                <TableHead>{t("executionHistoryColSource")}</TableHead>
+                <TableHead className="text-right">{t("executionHistoryColEvidence")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {items.map((item) => {
                 const geo = toGeoValidation(item.geo_validation);
                 const review = toReviewBadge(item.review_status);
 
                 return (
-                  <tr
+                  <TableRow
                     key={item.execution_id}
+                    className="focus-visible:bg-accent cursor-pointer focus-visible:outline-offset-[-2px]"
                     role="button"
                     tabIndex={0}
                     aria-label={`${t("executionHistoryRowAria")} ${item.field_worker_name}`}
-                    className="hover:bg-muted/50 focus-visible:bg-muted/50 cursor-pointer border-b"
                     onClick={() => {
                       setSelectedId(item.execution_id);
                     }}
@@ -393,70 +407,72 @@ export function ExecutionHistoryPage() {
                       }
                     }}
                   >
-                    <td className="py-2 pr-3">{item.field_worker_name}</td>
-                    <td className="py-2 pr-3">
-                      <span>{item.service_point_name}</span>
+                    <TableCell className="text-primary font-semibold">
+                      {item.field_worker_name}
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-semibold">{item.service_point_name}</span>
                       <span className="text-muted-foreground block text-xs">
                         {item.building_name} · {item.floor_label}
                       </span>
-                    </td>
-                    <td className="py-2 pr-3">{formatDateTime(item.checked_in_at)}</td>
-                    <td className="py-2 pr-3">
+                    </TableCell>
+                    <TableCell>{formatDateTime(item.checked_in_at)}</TableCell>
+                    <TableCell>
                       {item.checked_out_at ? formatDateTime(item.checked_out_at) : "—"}
-                    </td>
-                    <td className="py-2 pr-3">
+                    </TableCell>
+                    <TableCell>
                       {geo ? (
-                        <span className={`${BADGE_CLASS} ${GEO_BADGE[geo].className}`}>
-                          {t(GEO_BADGE[geo].key)}
-                        </span>
+                        <Badge variant={GEO_BADGE[geo].tone}>{t(GEO_BADGE[geo].key)}</Badge>
                       ) : (
                         "—"
                       )}
-                    </td>
-                    <td className="py-2 pr-3">
+                    </TableCell>
+                    <TableCell>
                       {review && (
-                        <span className={`${BADGE_CLASS} ${REVIEW_BADGE[review].className}`}>
+                        <Badge variant={REVIEW_BADGE[review].tone}>
                           {t(REVIEW_BADGE[review].key)}
-                        </span>
+                        </Badge>
                       )}
-                    </td>
-                    <td className="py-2 pr-3">{t(SOURCE_LABEL_KEY[toSource(item.source)])}</td>
-                    <td className="py-2 pr-3">{item.evidence_count}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>{t(SOURCE_LABEL_KEY[toSource(item.source)])}</TableCell>
+                    <TableCell className="text-right">{item.evidence_count}</TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
       {items.length > 0 && (
         <div className="flex items-center justify-between text-sm">
-          <span>
+          <span className="text-muted-foreground">
             {t("executionHistoryPaginationLabel")} {page} {t("executionHistoryPaginationOf")}{" "}
             {totalPages}
           </span>
           <div className="flex gap-2">
-            <button
-              type="button"
-              className="rounded border px-3 py-1 disabled:opacity-50"
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page <= 1}
               onClick={() => {
                 setPage((current) => Math.max(1, current - 1));
               }}
             >
+              <ChevronLeft aria-hidden="true" />
               {t("executionHistoryPrevPage")}
-            </button>
-            <button
-              type="button"
-              className="rounded border px-3 py-1 disabled:opacity-50"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page >= totalPages}
               onClick={() => {
                 setPage((current) => current + 1);
               }}
             >
               {t("executionHistoryNextPage")}
-            </button>
+              <ChevronRight aria-hidden="true" />
+            </Button>
           </div>
         </div>
       )}
@@ -467,6 +483,6 @@ export function ExecutionHistoryPage() {
           setSelectedId(null);
         }}
       />
-    </main>
+    </Page>
   );
 }

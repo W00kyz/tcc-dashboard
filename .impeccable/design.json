@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-11T23:30:00Z",
+  "title": "Design System: Rotas do Campus",
+  "extensions": {
+    "colorMeta": {
+      "sign-blue": {
+        "role": "primary",
+        "displayName": "Azul-Placa",
+        "canonical": "#14213d",
+        "tonalRamp": [
+          "#0a1120",
+          "#14213d",
+          "#1f2e50",
+          "#2f4170",
+          "#4a5d8f",
+          "#7584ad",
+          "#a8b2cd",
+          "#dde2ee"
+        ]
+      },
+      "sign-yellow": {
+        "role": "secondary",
+        "displayName": "Amarelo-Placa",
+        "canonical": "#e9b949",
+        "tonalRamp": [
+          "#5a420c",
+          "#8a6516",
+          "#b98a24",
+          "#e9b949",
+          "#efc96f",
+          "#f4d995",
+          "#f8e8bc",
+          "#fbf1d3"
+        ]
+      },
+      "campus-ground": {
+        "role": "neutral",
+        "displayName": "Chão do Campus",
+        "canonical": "#f4f5f2"
+      },
+      "plate-white": { "role": "neutral", "displayName": "Placa Branca", "canonical": "#ffffff" },
+      "ink": { "role": "neutral", "displayName": "Tinta", "canonical": "#1f2329" },
+      "muted-ink": { "role": "neutral", "displayName": "Tinta Apagada", "canonical": "#5a5f68" },
+      "hairline": { "role": "neutral", "displayName": "Filete", "canonical": "#dcdfe4" },
+      "status-late": { "role": "status", "displayName": "Atraso", "canonical": "#b3261e" },
+      "status-done": { "role": "status", "displayName": "Concluído", "canonical": "#23683f" },
+      "status-progress": { "role": "status", "displayName": "Em andamento", "canonical": "#8a5a00" }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "O h1 de cada página." },
+      "title": { "displayName": "Title", "purpose": "Títulos de painel e de card." },
+      "body": { "displayName": "Body", "purpose": "Texto, células de tabela, metadados." },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Cabeçalhos de tabela e rótulos de módulo, em caixa alta."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-layer",
+        "value": "0 24px 48px -16px rgb(20 33 61 / 0.35)",
+        "purpose": "Diálogos."
+      },
+      {
+        "name": "side-drawer",
+        "value": "-8px 0 24px -12px rgb(20 33 61 / 0.35)",
+        "purpose": "Gaveta de detalhes da execução."
+      }
+    ],
+    "motion": [
+      {
+        "name": "route-line-fill",
+        "value": "500ms ease-out (colors)",
+        "purpose": "Disco e traço da linha de percurso ao mudar de estado."
+      },
+      {
+        "name": "drawer-enter",
+        "value": "200ms ease-out, slide-in-from-right 2rem",
+        "purpose": "Entrada da gaveta de detalhes."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md (sidebar becomes sheet below)", "value": "768px" },
+      { "name": "lg (rails and side panels)", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal da página.",
+      "html": "<button class=\"ds-btn-primary\">Nova rota</button>",
+      "css": ".ds-btn-primary { background: #14213d; color: #fff; height: 36px; padding: 0 16px; border: 0; border-radius: 6px; font: 500 14px Overpass, system-ui, sans-serif; cursor: pointer; transition: background .15s; } .ds-btn-primary:hover { background: #1f2e50; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(20 33 61 / .5); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Ação secundária.",
+      "html": "<button class=\"ds-btn-outline\">Nova rota eventual</button>",
+      "css": ".ds-btn-outline { background: #fff; color: #1f2329; height: 36px; padding: 0 16px; border: 1px solid #dcdfe4; border-radius: 6px; font: 500 14px Overpass, system-ui, sans-serif; cursor: pointer; } .ds-btn-outline:hover { background: #eef1f6; color: #14213d; } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(20 33 61 / .5); }"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Campo de texto branco sobre o chão do campus.",
+      "html": "<input class=\"ds-input\" placeholder=\"Nome\" />",
+      "css": ".ds-input { background: #fff; color: #1f2329; height: 36px; padding: 0 12px; border: 1px solid #c5cad3; border-radius: 6px; font: 400 14px Overpass, system-ui, sans-serif; } .ds-input:focus-visible { outline: none; border-color: #14213d; box-shadow: 0 0 0 3px rgb(20 33 61 / .5); }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Trilho azul-placa; item ativo como placa branca, com contador amarelo.",
+      "html": "<nav class=\"ds-rail\"><span class=\"ds-rail-label\">OPERAÇÃO</span><a class=\"ds-rail-item ds-active\">Quadro de rotas</a><a class=\"ds-rail-item\">Execuções <b class=\"ds-count\">8</b></a></nav>",
+      "css": ".ds-rail { background: #14213d; padding: 8px; width: 240px; display: flex; flex-direction: column; gap: 2px; font-family: Overpass, system-ui, sans-serif; } .ds-rail-label { color: #8f9ab4; font-size: 11px; font-weight: 700; letter-spacing: .12em; padding: 8px; } .ds-rail-item { color: #d3d9e6; font-size: 14px; padding: 8px 10px; border-radius: 6px; display: flex; justify-content: space-between; cursor: pointer; } .ds-rail-item:hover { background: #1f2e50; color: #fff; } .ds-active { background: #fff; color: #14213d; font-weight: 600; } .ds-count { background: #e9b949; color: #14213d; border-radius: 9999px; font-size: 12px; padding: 0 6px; }"
+    },
+    {
+      "name": "State Plate",
+      "kind": "chip",
+      "refersTo": "status-plate-late",
+      "description": "Badge de estado: tinta sobre fundo suave, sempre com rótulo.",
+      "html": "<span class=\"ds-plate ds-late\">Atrasada</span> <span class=\"ds-plate ds-progress\">Em andamento</span> <span class=\"ds-plate ds-done\">Concluída</span>",
+      "css": ".ds-plate { display: inline-flex; border-radius: 3px; padding: 2px 8px; font: 600 12px Overpass, system-ui, sans-serif; } .ds-late { background: #fbe7e5; color: #b3261e; } .ds-progress { background: #fbf1d3; color: #8a5a00; } .ds-done { background: #e2f0e6; color: #23683f; }"
+    },
+    {
+      "name": "Route Line",
+      "kind": "custom",
+      "refersTo": "code-plate",
+      "description": "Assinatura: discos numerados ligados por traço, cheio até a última parada concluída.",
+      "html": "<ol class=\"ds-line\"><li class=\"ds-d done\">1</li><li class=\"ds-t done\"></li><li class=\"ds-d done\">2</li><li class=\"ds-t\"></li><li class=\"ds-d now\">3</li><li class=\"ds-t\"></li><li class=\"ds-d\">4</li></ol>",
+      "css": ".ds-line { display: flex; align-items: center; list-style: none; padding: 0; margin: 0; font: 700 11px Overpass, system-ui, sans-serif; } .ds-d { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #c5cad3; background: #fff; color: #5a5f68; display: grid; place-items: center; transition: background-color .5s ease-out, border-color .5s ease-out; } .ds-d.done { background: #14213d; border-color: #14213d; color: #fff; } .ds-d.now { background: #e9b949; border-color: #14213d; color: #14213d; } .ds-t { width: 28px; height: 2px; background: #c5cad3; } .ds-t.done { background: #14213d; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Campus Sinalizado",
+    "overview": "O painel se orienta como o campus que ele administra: navegação como poste de sinalização azul, páginas como placas brancas sobre um chão neutro e frio, e o que pede atenção acende em amarelo de placa. Cada rota é desenhada como uma linha de percurso. É uma ferramenta de trabalho: densa, quase sem decoração, com caráter vindo da letra de sinalização (Overpass), das placas de cantos quase retos e da disciplina de cor.",
+    "keyCharacteristics": [
+      "Trilho lateral azul-placa com módulos recolhíveis; o item ativo é uma placa branca.",
+      "Chão #f4f5f2 com superfícies brancas e filetes de 1px; sem sombras decorativas.",
+      "Linha de percurso (discos numerados + traço) como assinatura recorrente.",
+      "Amarelo-placa reservado para contadores e \"precisa de atenção\".",
+      "Números tabulares em todo o painel."
+    ],
+    "rules": [
+      {
+        "name": "The Plate Yellow Rule",
+        "body": "O amarelo só marca contagem e atenção. Nunca é fundo de região nem cor de texto.",
+        "section": "colors"
+      },
+      {
+        "name": "The Word-Beside-Colour Rule",
+        "body": "Estado nunca é comunicado só por cor: todo badge de estado tem rótulo, e os críticos têm ícone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Todo número (datas, contagens, coordenadas, horários) usa algarismos tabulares, para alinhar em colunas.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Plate Rule",
+        "body": "Painéis e cards em repouso não têm sombra: só borda de 1px.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do abrir toda página com um `PageHeader` (h1 em azul-placa, 800) e as ações principais à direita.",
+      "Do colocar listas e tabelas em painéis brancos com borda de 1px sobre o chão #f4f5f2.",
+      "Do usar a linha de percurso sempre que uma sequência de paradas aparecer.",
+      "Do usar ícones lucide, nunca glifos Unicode (×, ⠿, ◀).",
+      "Do manter filtros e selects como controles nativos estilizados."
+    ],
+    "donts": [
+      "Don't usar o amarelo-placa como fundo de região ou cor de texto.",
+      "Don't comunicar estado só por cor.",
+      "Don't pôr sombra em painéis ou cards em repouso.",
+      "Don't usar a identidade oficial da UFCG (brasão, cores oficiais).",
+      "Don't criar tema escuro: o painel é só claro (decisão do produto)."
+    ]
+  }
+}

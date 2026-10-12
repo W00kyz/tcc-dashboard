@@ -11,6 +11,7 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { ConsentGate } from "@/auth/ConsentGate";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { RouteTemplatesPage } from "@/routes/RouteTemplatesPage";
+import { listItemWithText } from "@/test/queries";
 
 const BUILDINGS = [{ id: "b1", name: "Bloco CI", campus_area: "CCT" }];
 const FLOORS = [{ id: "f1", building_id: "b1", label: "Térreo" }];
@@ -244,7 +245,8 @@ describe("RouteTemplatesPage", () => {
     const user = userEvent.setup();
     renderPage(fakeFetch);
 
-    const row = await screen.findByTestId("template-row-t1");
+    await screen.findByText("Ronda matinal");
+    const row = listItemWithText("Ronda matinal");
     await user.click(within(row).getByRole("checkbox", { name: "Ativo" }));
 
     const call = await findRequest(fakeFetch, "PATCH", "/route-templates/t1");
@@ -257,7 +259,8 @@ describe("RouteTemplatesPage", () => {
     const user = userEvent.setup();
     renderPage(fakeFetch);
 
-    const row = await screen.findByTestId("template-row-t1");
+    await screen.findByText("Ronda matinal");
+    const row = listItemWithText("Ronda matinal");
     await user.click(within(row).getByRole("checkbox", { name: "Ativo" }));
 
     expect(await within(row).findByRole("alert")).toHaveTextContent(

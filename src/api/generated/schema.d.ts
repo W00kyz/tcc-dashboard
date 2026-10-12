@@ -751,6 +751,24 @@ export interface paths {
     patch: operations["update_building_buildings__building_id__patch"];
     trace?: never;
   };
+  "/buildings/{building_id}/footprint": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set Building Footprint */
+    put: operations["set_building_footprint_buildings__building_id__footprint_put"];
+    post?: never;
+    /** Clear Building Footprint */
+    delete: operations["clear_building_footprint_buildings__building_id__footprint_delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/floors": {
     parameters: {
       query?: never;
@@ -1691,6 +1709,12 @@ export interface components {
       /** Campus Area */
       campus_area: string;
     };
+    /** BuildingFootprintRequest */
+    BuildingFootprintRequest: {
+      footprint: components["schemas"]["PolygonFootprint"];
+      /** Osm Way Id */
+      osm_way_id: number;
+    };
     /** BuildingOut */
     BuildingOut: {
       /**
@@ -1702,6 +1726,14 @@ export interface components {
       name: string;
       /** Campus Area */
       campus_area: string;
+      /** Footprint */
+      footprint?: {
+        [key: string]: unknown;
+      } | null;
+      /** Footprint Source */
+      footprint_source?: string | null;
+      /** Osm Way Id */
+      osm_way_id?: number | null;
     };
     /** BuildingUpdateRequest */
     BuildingUpdateRequest: {
@@ -2721,6 +2753,16 @@ export interface components {
      * @enum {string}
      */
     PointType: "REGULAR" | "OCCASIONAL";
+    /** PolygonFootprint */
+    PolygonFootprint: {
+      /**
+       * Type
+       * @constant
+       */
+      type: "Polygon";
+      /** Coordinates */
+      coordinates: number[][][];
+    };
     /** ProfileOut */
     ProfileOut: {
       /**
@@ -4864,6 +4906,72 @@ export interface operations {
         "application/json": components["schemas"]["BuildingUpdateRequest"];
       };
     };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BuildingOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  set_building_footprint_buildings__building_id__footprint_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        building_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BuildingFootprintRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BuildingOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  clear_building_footprint_buildings__building_id__footprint_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        building_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description Successful Response */
       200: {

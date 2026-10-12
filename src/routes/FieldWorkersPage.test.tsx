@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
+import { listItemWithText } from "@/test/queries";
 
 function renderPage(fetchImpl: typeof fetch) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -61,10 +62,7 @@ describe("FieldWorkersPage", () => {
     await waitFor(() => {
       expect(screen.getByText("João da Silva")).toBeInTheDocument();
     });
-    const worker = screen.getByText("João da Silva").closest("li");
-    if (worker === null) {
-      throw new Error("expected the worker's list item to have a <li> ancestor");
-    }
+    const worker = listItemWithText("João da Silva");
     expect(within(worker).getByText("Limpa Tudo")).toBeInTheDocument();
   });
 

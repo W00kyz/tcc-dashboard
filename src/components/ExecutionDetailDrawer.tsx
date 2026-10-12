@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { EvidenceViewer } from "@/components/EvidenceViewer";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { X } from "lucide-react";
+import { ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
 
 type ExecutionDetail = components["schemas"]["ExecutionDetail"];
 type ExecutionScan = components["schemas"]["ExecutionScan"];
@@ -18,8 +21,6 @@ interface ExecutionDetailDrawerProps {
   executionId: string | null;
   onClose: () => void;
 }
-
-const BADGE_CLASS = "inline-block rounded px-2 py-0.5 text-xs font-medium";
 
 // `validation_flags` is typed as bare `string[]`; a value outside this set falls back to its
 // raw text so a new backend flag still shows up instead of disappearing.
@@ -46,10 +47,10 @@ const ASSIGNMENT_OUTCOME_LABEL_KEY: Record<string, StringKey> = {
 };
 
 // Same green/amber/grey vocabulary and label keys as ExecutionHistoryPage's GEO_BADGE.
-const GEO_BADGE_CLASS: Record<string, string> = {
-  VALIDATED: "bg-green-100 text-green-800",
-  OUT_OF_RADIUS: "bg-amber-100 text-amber-800",
-  NOT_VALIDATED: "bg-muted text-muted-foreground",
+const GEO_BADGE_TONE: Record<string, BadgeTone> = {
+  VALIDATED: "done",
+  OUT_OF_RADIUS: "progress",
+  NOT_VALIDATED: "pending",
 };
 
 const GEO_LABEL_KEY: Record<string, StringKey> = {
@@ -74,13 +75,7 @@ function geoLabel(t: Translate, value: string | null): string {
 function GeoBadge({ value }: { value: string }) {
   const { t } = useTranslation();
 
-  return (
-    <span
-      className={`${BADGE_CLASS} ${GEO_BADGE_CLASS[value] ?? "bg-muted text-muted-foreground"}`}
-    >
-      {geoLabel(t, value)}
-    </span>
-  );
+  return <Badge variant={GEO_BADGE_TONE[value] ?? "pending"}>{geoLabel(t, value)}</Badge>;
 }
 
 function formatDateTime(iso: string): string {
@@ -142,7 +137,7 @@ function AssignmentRow({ assignment }: { assignment: ExecutionAssignment }) {
         </span>
       )}
       {assignment.outcome && (
-        <span className={`${BADGE_CLASS} ml-2 bg-muted text-muted-foreground`}>
+        <span className="bg-status-pending-soft text-status-pending ml-2 rounded-[3px] px-2 py-0.5 text-xs font-semibold">
           {outcomeKey ? t(outcomeKey) : assignment.outcome}
         </span>
       )}
@@ -199,9 +194,11 @@ function DetailBody({
   });
 
   return (
-    <div className="mt-4 space-y-6">
+    <div className="divide-y [&>*]:py-4 [&>*:first-child]:pt-0">
       <section>
-        <h3 className="text-sm font-semibold">{t("executionTimelineHeading")}</h3>
+        <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
+          {t("executionTimelineHeading")}
+        </h3>
         <p className="text-sm">
           <span className="text-muted-foreground">{t("executionCheckInLabel")}: </span>
           <time dateTime={detail.checked_in_at}>{formatDateTime(detail.checked_in_at)}</time>
@@ -221,22 +218,24 @@ function DetailBody({
       </section>
 
       {detail.clock_skew_seconds !== null && (
-        <p className="text-amber-800 text-sm font-medium">
+        <p className="text-status-progress text-sm font-semibold">
           {t("executionClockSkew")}: {Math.round(detail.clock_skew_seconds)} s
         </p>
       )}
 
       {detail.validation_flags.length > 0 && (
         <section>
-          <h3 className="text-sm font-semibold">{t("executionFlagsHeading")}</h3>
+          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
+            {t("executionFlagsHeading")}
+          </h3>
           <div className="mt-1 flex flex-wrap gap-2">
             {detail.validation_flags.map((flag) => {
               const labelKey = FLAG_LABEL_KEY[flag];
 
               return (
-                <span key={flag} className={`${BADGE_CLASS} bg-amber-100 text-amber-800`}>
+                <Badge key={flag} variant="progress">
                   {labelKey ? t(labelKey) : flag}
-                </span>
+                </Badge>
               );
             })}
           </div>
@@ -245,7 +244,9 @@ function DetailBody({
 
       {detail.form_version_id !== null && (
         <section>
-          <h3 className="text-sm font-semibold">{t("executionFormHeading")}</h3>
+          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
+            {t("executionFormHeading")}
+          </h3>
           <ul className="mt-1 space-y-1">
             {detail.answers.map((answer) => (
               <AnswerRow key={answer.question_stable_key} answer={answer} />
@@ -256,7 +257,9 @@ function DetailBody({
 
       {detail.reassigned && detail.assignment_history !== null && (
         <section>
-          <h3 className="text-sm font-semibold">{t("executionReassignmentHeading")}</h3>
+          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
+            {t("executionReassignmentHeading")}
+          </h3>
           <ul className="mt-1 space-y-1">
             {detail.assignment_history.map((assignment) => (
               <AssignmentRow key={assignment.sequence} assignment={assignment} />
@@ -267,7 +270,9 @@ function DetailBody({
 
       {detail.scans.length > 0 && (
         <section>
-          <h3 className="text-sm font-semibold">{t("executionScansHeading")}</h3>
+          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
+            {t("executionScansHeading")}
+          </h3>
           <ul className="mt-1 space-y-1">
             {detail.scans.map((scan) => (
               <ScanRow key={`${scan.kind}-${scan.scanned_at}`} scan={scan} />
@@ -278,7 +283,9 @@ function DetailBody({
 
       {detail.manual_completion !== null && (
         <section>
-          <h3 className="text-sm font-semibold">{t("executionManualCompletionHeading")}</h3>
+          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
+            {t("executionManualCompletionHeading")}
+          </h3>
           <p className="text-sm">
             <span className="text-muted-foreground">{t("executionManualCompletionReason")}: </span>
             {detail.manual_completion.reason}
@@ -297,7 +304,9 @@ function DetailBody({
       )}
 
       <section>
-        <h3 className="text-sm font-semibold">{t("executionEvidenceHeading")}</h3>
+        <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
+          {t("executionEvidenceHeading")}
+        </h3>
         {detail.evidence.length === 0 ? (
           <p className="text-muted-foreground mt-1 text-sm">{t("executionNoEvidence")}</p>
         ) : (
@@ -319,17 +328,15 @@ function DetailBody({
           >
             {t("executionResolveReviewButton")}
           </Button>
-          {resolveReview.isError && (
-            <p role="alert" className="text-destructive text-sm">
-              {t("executionResolveReviewError")}
-            </p>
-          )}
+          {resolveReview.isError && <ErrorMessage>{t("executionResolveReviewError")}</ErrorMessage>}
         </section>
       )}
 
-      <button type="button" className="text-sm underline" onClick={onClose}>
-        {t("executionDetailDrawerClose")}
-      </button>
+      <div>
+        <Button type="button" variant="outline" onClick={onClose}>
+          {t("executionDetailDrawerClose")}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -381,41 +388,43 @@ export function ExecutionDetailDrawer({ executionId, onClose }: ExecutionDetailD
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="bg-black/40 absolute inset-0" aria-hidden="true" onClick={onClose} />
+      <div
+        className="bg-primary/30 animate-in fade-in-0 absolute inset-0"
+        aria-hidden="true"
+        onClick={onClose}
+      />
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={t("executionDetailDrawerTitle")}
-        className="bg-background relative z-10 w-full max-w-md overflow-y-auto border-l p-6 shadow-lg"
+        className="bg-card animate-in slide-in-from-right-8 relative z-10 flex w-full max-w-lg flex-col border-l shadow-[-8px_0_24px_-12px_rgb(20_33_61/0.35)] duration-200 ease-out"
       >
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{t("executionDetailDrawerTitle")}</h2>
-          <button
+        <div className="flex h-14 shrink-0 items-center justify-between border-b px-5">
+          <h2 className="text-primary text-base font-bold">{t("executionDetailDrawerTitle")}</h2>
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label={t("executionDetailDrawerClose")}
-            className="text-xl leading-none"
             onClick={onClose}
           >
-            ×
-          </button>
+            <X aria-hidden="true" />
+          </Button>
         </div>
-
-        {isError && (
-          <p role="alert" className="text-destructive mt-4 text-sm">
-            {t("executionDetailError")}
-          </p>
-        )}
-        {!isError && detail === undefined && (
-          <p className="text-muted-foreground mt-4 text-sm">{t("executionDetailLoading")}</p>
-        )}
-        {detail !== undefined && (
-          <DetailBody
-            detail={detail}
-            executionId={executionId}
-            onClose={onClose}
-            onLightboxOpenChange={setLightboxOpen}
-          />
-        )}
+        <div className="flex-1 overflow-y-auto p-5">
+          {isError && <ErrorMessage>{t("executionDetailError")}</ErrorMessage>}
+          {!isError && detail === undefined && (
+            <LoadingMessage>{t("executionDetailLoading")}</LoadingMessage>
+          )}
+          {detail !== undefined && (
+            <DetailBody
+              detail={detail}
+              executionId={executionId}
+              onClose={onClose}
+              onLightboxOpenChange={setLightboxOpen}
+            />
+          )}
+        </div>
       </aside>
     </div>
   );

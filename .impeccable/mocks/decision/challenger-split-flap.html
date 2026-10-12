@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:Barlow,sans-serif;background:#f6f6f3;color:#111;display:flex}
+aside{width:232px;background:#fff;border-right:1px solid #d6d6d0;padding:20px 12px}
+aside b{font:700 18px "Barlow Condensed";letter-spacing:.04em;text-transform:uppercase;display:block;padding:0 8px 20px}
+.grp{font:600 12px "Barlow Condensed";letter-spacing:.12em;text-transform:uppercase;color:#77776f;padding:12px 8px 4px}
+.it{padding:7px 10px;border-radius:4px;font-size:14px}.it.on{background:#111;color:#fff}
+main{flex:1;padding:28px 32px;display:flex;flex-direction:column;gap:16px}
+h1{font:700 34px "Barlow Condensed";text-transform:uppercase;letter-spacing:.03em}
+.clock{font:600 34px "Barlow Condensed";margin-left:auto}
+.hd{display:flex;align-items:center;gap:16px}
+.board{background:#fff;border:1px solid #d6d6d0}
+.r{display:grid;grid-template-columns:120px 300px 1fr 200px 160px;align-items:center;border-bottom:1px solid #e4e4de;padding:10px 16px;gap:12px}
+.r.h{font:600 12px "Barlow Condensed";letter-spacing:.12em;text-transform:uppercase;color:#77776f}
+.cells{display:flex;gap:2px}
+.cells span{width:22px;height:30px;background:#1b1b1b;color:#fff;font:600 20px "Barlow Condensed";display:grid;place-items:center;border-radius:2px;position:relative}
+.cells span:after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#000}
+.nm{font:600 22px "Barlow Condensed";text-transform:uppercase}
+.lamp{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px}
+.st{font:600 18px "Barlow Condensed";text-transform:uppercase;letter-spacing:.05em}
+.dl{background:#fff6e2}.cx .nm,.cx .st{color:#b3261e;opacity:.7}
+.btn{height:36px;padding:0 14px;background:#111;color:#fff;display:inline-flex;align-items:center;border-radius:4px;font-weight:500}
+</style></head><body>
+<aside><b>Rotas · PU</b>
+<div class="grp">Operação</div><div class="it on">Quadro de rotas</div><div class="it">Execuções</div><div class="it">Reatribuições</div><div class="it">Notificações</div>
+<div class="grp">Planejamento</div><div class="it">Templates e regras</div><div class="grp">Análise</div><div class="it">Relatórios</div>
+<div class="grp">Cadastros</div><div class="it">Campus e serviços</div><div class="grp">Administração</div><div class="it">Usuários e sistema</div></aside>
+<main>
+<div class="hd"><h1>Quadro de rotas · Sábado 11/10</h1><span class="clock">14:32</span><span class="btn">Nova rota</span></div>
+<div class="board">
+<div class="r h"><span>Início</span><span>Profissional</span><span>Próxima parada</span><span>Situação</span><span>Paradas</span></div>
+<div class="r dl"><div class="cells"><span>0</span><span>7</span><span>3</span><span>0</span></div><span class="nm">Jéssica Lima</span><span>Bloco H · Banheiros 2º andar</span><span class="st"><i class="lamp" style="background:#e8a317"></i>Atraso 42 min</span><span class="cells"><span>3</span><span>/</span><span>7</span></span></div>
+<div class="r"><div class="cells"><span>0</span><span>8</span><span>0</span><span>0</span></div><span class="nm">Carlos Andrade</span><span>CTRN · Sala de aula 104</span><span class="st"><i class="lamp" style="background:#2f7a4c"></i>No horário</span><span class="cells"><span>4</span><span>/</span><span>6</span></span></div>
+<div class="r"><div class="cells"><span>0</span><span>8</span><span>3</span><span>0</span></div><span class="nm">Ana Beatriz Costa</span><span>Biblioteca Central · Hall</span><span class="st"><i class="lamp" style="background:#2f7a4c"></i>No horário</span><span class="cells"><span>1</span><span>/</span><span>5</span></span></div>
+<div class="r"><div class="cells"><span>1</span><span>3</span><span>0</span><span>0</span></div><span class="nm">Rafael Nóbrega</span><span>Reitoria · Auditório</span><span class="st"><i class="lamp" style="background:#bbb"></i>Planejada</span><span class="cells"><span>0</span><span>/</span><span>8</span></span></div>
+<div class="r cx"><div class="cells"><span>0</span><span>9</span><span>0</span><span>0</span></div><span class="nm">Paulo Henrique</span><span>—</span><span class="st"><i class="lamp" style="background:#b3261e"></i>Cancelada</span><span class="cells"><span>0</span><span>/</span><span>4</span></span></div>
+</div></main></body></html>

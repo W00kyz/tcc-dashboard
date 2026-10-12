@@ -11,6 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { strings, type StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import {
+  ErrorMessage,
+  FieldError,
+  LoadingMessage,
+  SuccessMessage,
+} from "@/components/layout/StateMessages";
 
 // Defined at module scope, outside the component, so useTranslation() isn't in scope —
 // the range message comes straight from the dictionary (same choice as LoginPage's schema).
@@ -135,21 +142,25 @@ export function SettingsPage() {
   });
 
   if (isLoading) {
-    return <p className="text-muted-foreground p-6">{t("settingsLoading")}</p>;
+    return (
+      <Page>
+        <LoadingMessage>{t("settingsLoading")}</LoadingMessage>
+      </Page>
+    );
   }
   if (error) {
     return (
-      <p role="alert" className="text-destructive p-6">
-        {t("settingsError")}
-      </p>
+      <Page>
+        <ErrorMessage>{t("settingsError")}</ErrorMessage>
+      </Page>
     );
   }
 
   return (
-    <main className="mx-auto max-w-md space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("settingsTitle")}</h1>
+    <Page width="narrow">
+      <PageHeader title={t("settingsTitle")} />
       <form
-        className="space-y-3"
+        className="bg-card space-y-5 rounded-md border p-5 sm:p-6"
         noValidate
         onSubmit={(event) => {
           void handleSubmit((values) => {
@@ -162,7 +173,7 @@ export function SettingsPage() {
           const fieldError = formState.errors[name];
 
           return (
-            <div key={name} className="space-y-1">
+            <div key={name} className="space-y-1.5">
               <Label htmlFor={`settings-${name}`}>{t(labelKey)}</Label>
               <Input
                 id={`settings-${name}`}
@@ -175,23 +186,15 @@ export function SettingsPage() {
                 }}
               />
               {hintKey && <p className="text-muted-foreground text-sm">{t(hintKey)}</p>}
-              {fieldError && (
-                <p role="alert" className="text-destructive text-sm">
-                  {fieldError.message}
-                </p>
-              )}
+              {fieldError && <FieldError>{fieldError.message}</FieldError>}
             </div>
           );
         })}
-        {mutation.isSuccess && (
-          <p role="status" className="text-sm text-green-700">
-            {t("settingsSaved")}
-          </p>
-        )}
+        {mutation.isSuccess && <SuccessMessage>{t("settingsSaved")}</SuccessMessage>}
         <Button type="submit" disabled={mutation.isPending}>
           {t("settingsSave")}
         </Button>
       </form>
-    </main>
+    </Page>
   );
 }

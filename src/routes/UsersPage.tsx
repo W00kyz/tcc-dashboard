@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Badge } from "@/components/ui/badge";
+import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
+import type { StringKey } from "@/i18n/strings";
 
 type UserRole = "ADMIN" | "MANAGER" | "FIELD_WORKER";
 interface UserRow {
@@ -16,6 +21,12 @@ interface UserRow {
   role: UserRole;
   is_active: boolean;
 }
+
+const USER_ROLE_LABEL: Record<UserRole, StringKey> = {
+  ADMIN: "usersRoleAdmin",
+  MANAGER: "usersRoleManager",
+  FIELD_WORKER: "usersRoleFieldWorker",
+};
 
 export function UsersPage() {
   const { t } = useTranslation();
@@ -64,73 +75,88 @@ export function UsersPage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("usersPageTitle")}</h1>
+    <Page>
+      <PageHeader title={t("usersPageTitle")} />
 
-      <form
-        className="space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          createUser.mutate();
-        }}
-      >
-        <div>
-          <Label htmlFor="user-name">{t("usersFieldName")}</Label>
-          <Input
-            id="user-name"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
+      <RegistryLayout
+        list={
+          <RegistryList
+            items={users}
+            getKey={(user) => user.id}
+            renderItem={(user) => (
+              <>
+                <span className="min-w-0 flex-1">
+                  <span className="text-foreground block font-semibold">{user.name}</span>
+                  <span className="text-muted-foreground text-sm break-all">{user.email}</span>
+                </span>
+                <Badge variant="outline">{t(USER_ROLE_LABEL[user.role])}</Badge>
+                <Badge variant={user.is_active ? "done" : "pending"}>
+                  {user.is_active ? t("usersStatusActive") : t("usersStatusInactive")}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    toggleActive.mutate({ id: user.id, activate: !user.is_active });
+                  }}
+                >
+                  {user.is_active ? t("usersDeactivate") : t("usersActivate")}
+                </Button>
+              </>
+            )}
           />
-        </div>
-        <div>
-          <Label htmlFor="user-email">{t("usersFieldEmail")}</Label>
-          <Input
-            id="user-email"
-            type="email"
-            value={email}
-            onChange={(event) => {
-              setEmail(event.target.value);
-            }}
-          />
-        </div>
-        <div>
-          <Label htmlFor="user-role">{t("usersFieldRole")}</Label>
-          <select
-            id="user-role"
-            className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-            value={role}
-            onChange={(event) => {
-              setRole(event.target.value as UserRole);
+        }
+        form={
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              createUser.mutate();
             }}
           >
-            <option value="ADMIN">{t("usersRoleAdmin")}</option>
-            <option value="MANAGER">{t("usersRoleManager")}</option>
-            <option value="FIELD_WORKER">{t("usersRoleFieldWorker")}</option>
-          </select>
-        </div>
-        <Button type="submit">{t("usersSubmitCreate")}</Button>
-      </form>
-
-      <ul className="divide-border divide-y">
-        {users?.map((user) => (
-          <li key={user.id} className="flex items-center justify-between py-2">
-            <span>
-              <span className="font-medium">{user.name}</span>{" "}
-              <span className="text-muted-foreground">{user.email}</span>
-            </span>
-            <Button
-              variant="outline"
-              onClick={() => {
-                toggleActive.mutate({ id: user.id, activate: !user.is_active });
-              }}
-            >
-              {user.is_active ? t("usersDeactivate") : t("usersActivate")}
+            <div className="space-y-1.5">
+              <Label htmlFor="user-name">{t("usersFieldName")}</Label>
+              <Input
+                id="user-name"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="user-email">{t("usersFieldEmail")}</Label>
+              <Input
+                id="user-email"
+                type="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="user-role">{t("usersFieldRole")}</Label>
+              <NativeSelect
+                id="user-role"
+                value={role}
+                onChange={(event) => {
+                  setRole(event.target.value as UserRole);
+                }}
+              >
+                <NativeSelectOption value="ADMIN">{t("usersRoleAdmin")}</NativeSelectOption>
+                <NativeSelectOption value="MANAGER">{t("usersRoleManager")}</NativeSelectOption>
+                <NativeSelectOption value="FIELD_WORKER">
+                  {t("usersRoleFieldWorker")}
+                </NativeSelectOption>
+              </NativeSelect>
+            </div>
+            <Button type="submit" className="w-full">
+              {t("usersSubmitCreate")}
             </Button>
-          </li>
-        ))}
-      </ul>
-    </main>
+          </form>
+        }
+      />
+    </Page>
   );
 }
