@@ -8,6 +8,20 @@ import { useAuth } from "@/auth/AuthContext";
 import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { FileDown, FileSpreadsheet } from "lucide-react";
+import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type ApiClient = ReturnType<typeof createApiClient>;
 type ComplianceReport = components["schemas"]["ComplianceReportOut"];
@@ -54,8 +68,6 @@ const METRIC_COLUMNS: { field: keyof ComplianceTotals; key: StringKey }[] = [
   { field: "impediments_total", key: "reportsColImpediments" },
   { field: "alerts_total", key: "reportsColAlerts" },
 ];
-
-const CONTROL_CLASS = "border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm";
 
 // "87,3%" — one decimal, pt-BR comma. `completion_rate` is a 0..1 ratio from the builder.
 function formatRate(rate: number): string {
@@ -135,42 +147,44 @@ function ReportTable({ report }: { report: ComplianceReport }) {
   const { t } = useTranslation();
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead className="text-muted-foreground border-b">
-          <tr>
-            <th className="py-2 pr-3 font-medium">{t("reportsColPeriod")}</th>
+    <div className="bg-card rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t("reportsColPeriod")}</TableHead>
             {METRIC_COLUMNS.map((column) => (
-              <th key={column.field} className="py-2 pr-3 text-right font-medium">
+              <TableHead className="text-right" key={column.field}>
                 {t(column.key)}
-              </th>
+              </TableHead>
             ))}
-            <th className="py-2 pr-3 text-right font-medium">{t("reportsColCompletionRate")}</th>
-          </tr>
-        </thead>
-        <tbody>
+            <TableHead className="text-right">{t("reportsColCompletionRate")}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {report.periods.map((period) => (
-            <tr key={period.period_start} className="border-b">
-              <td className="py-2 pr-3">{period.period_label}</td>
+            <TableRow key={period.period_start}>
+              <TableCell className="font-semibold">{period.period_label}</TableCell>
               {METRIC_COLUMNS.map((column) => (
-                <td key={column.field} className="py-2 pr-3 text-right">
+                <TableCell className="text-right" key={column.field}>
                   {period[column.field]}
-                </td>
+                </TableCell>
               ))}
-              <td className="py-2 pr-3 text-right">{formatRate(period.completion_rate)}</td>
-            </tr>
+              <TableCell className="text-right">{formatRate(period.completion_rate)}</TableCell>
+            </TableRow>
           ))}
-          <tr className="border-b font-bold">
-            <td className="py-2 pr-3">{t("reportsTotalsRow")}</td>
+          <TableRow className="bg-muted/60 font-bold hover:bg-muted/60">
+            <TableCell>{t("reportsTotalsRow")}</TableCell>
             {METRIC_COLUMNS.map((column) => (
-              <td key={column.field} className="py-2 pr-3 text-right">
+              <TableCell className="text-right" key={column.field}>
                 {report.totals[column.field]}
-              </td>
+              </TableCell>
             ))}
-            <td className="py-2 pr-3 text-right">{formatRate(report.totals.completion_rate)}</td>
-          </tr>
-        </tbody>
-      </table>
+            <TableCell className="text-right">
+              {formatRate(report.totals.completion_rate)}
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -266,179 +280,178 @@ export function ReportsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl space-y-4 p-6">
-      <h1 className="text-xl font-semibold">{t("reportsTitle")}</h1>
+    <Page width="wide">
+      <PageHeader title={t("reportsTitle")} />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <div>
-          <Label htmlFor="report-date-from">{t("reportsFilterDateFrom")}</Label>
-          <input
-            id="report-date-from"
-            type="date"
-            className={CONTROL_CLASS}
-            value={filters.dateFrom}
-            onChange={(event) => {
-              updateFilters({ dateFrom: event.target.value });
-            }}
-          />
-        </div>
-        <div>
-          <Label htmlFor="report-date-to">{t("reportsFilterDateTo")}</Label>
-          <input
-            id="report-date-to"
-            type="date"
-            className={CONTROL_CLASS}
-            value={filters.dateTo}
-            onChange={(event) => {
-              updateFilters({ dateTo: event.target.value });
-            }}
-          />
-        </div>
-        <div>
-          <Label htmlFor="report-worker">{t("reportsFilterWorker")}</Label>
-          <select
-            id="report-worker"
-            className={CONTROL_CLASS}
-            value={filters.fieldWorkerId}
-            onChange={(event) => {
-              updateFilters({ fieldWorkerId: event.target.value });
-            }}
-          >
-            <option value="">{t("reportsFilterAll")}</option>
-            {workers?.map((worker) => (
-              <option key={worker.id} value={worker.id}>
-                {worker.full_name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="report-service-type">{t("reportsFilterServiceType")}</Label>
-          <select
-            id="report-service-type"
-            className={CONTROL_CLASS}
-            value={filters.serviceTypeId}
-            onChange={(event) => {
-              updateFilters({ serviceTypeId: event.target.value });
-            }}
-          >
-            <option value="">{t("reportsFilterAll")}</option>
-            {serviceTypes?.map((serviceType) => (
-              <option key={serviceType.id} value={serviceType.id}>
-                {serviceType.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="report-building">{t("reportsFilterBuilding")}</Label>
-          <select
-            id="report-building"
-            className={CONTROL_CLASS}
-            value={filters.buildingId}
-            onChange={(event) => {
-              updateFilters({ buildingId: event.target.value });
-            }}
-          >
-            <option value="">{t("reportsFilterAll")}</option>
-            {buildings?.map((building) => (
-              <option key={building.id} value={building.id}>
-                {building.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="report-route-status">{t("reportsFilterRouteStatus")}</Label>
-          <select
-            id="report-route-status"
-            className={CONTROL_CLASS}
-            value={filters.routeStatus}
-            onChange={(event) => {
-              updateFilters({ routeStatus: event.target.value });
-            }}
-          >
-            <option value="">{t("reportsFilterAll")}</option>
-            {ROUTE_STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {t(option.key)}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <span className="text-sm font-medium">{t("reportsGranularityLabel")}</span>
-          <div className="mt-1 flex gap-1" role="group" aria-label={t("reportsGranularityLabel")}>
-            {GRANULARITY_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={filters.granularity === option.value}
-                className={`rounded border px-3 py-1 text-sm ${
-                  filters.granularity === option.value
-                    ? "bg-foreground text-background"
-                    : "bg-transparent"
-                }`}
-                onClick={() => {
-                  updateFilters({ granularity: option.value });
-                }}
-              >
-                {t(option.key)}
-              </button>
-            ))}
+      <section
+        aria-label={t("reportsParametersLabel")}
+        className="bg-card space-y-5 rounded-md border p-4 sm:p-5"
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="space-y-1.5">
+            <Label htmlFor="report-date-from">{t("reportsFilterDateFrom")}</Label>
+            <Input
+              id="report-date-from"
+              type="date"
+              value={filters.dateFrom}
+              onChange={(event) => {
+                updateFilters({ dateFrom: event.target.value });
+              }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="report-date-to">{t("reportsFilterDateTo")}</Label>
+            <Input
+              id="report-date-to"
+              type="date"
+              value={filters.dateTo}
+              onChange={(event) => {
+                updateFilters({ dateTo: event.target.value });
+              }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="report-worker">{t("reportsFilterWorker")}</Label>
+            <NativeSelect
+              id="report-worker"
+              value={filters.fieldWorkerId}
+              onChange={(event) => {
+                updateFilters({ fieldWorkerId: event.target.value });
+              }}
+            >
+              <NativeSelectOption value="">{t("reportsFilterAll")}</NativeSelectOption>
+              {workers?.map((worker) => (
+                <NativeSelectOption key={worker.id} value={worker.id}>
+                  {worker.full_name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="report-service-type">{t("reportsFilterServiceType")}</Label>
+            <NativeSelect
+              id="report-service-type"
+              value={filters.serviceTypeId}
+              onChange={(event) => {
+                updateFilters({ serviceTypeId: event.target.value });
+              }}
+            >
+              <NativeSelectOption value="">{t("reportsFilterAll")}</NativeSelectOption>
+              {serviceTypes?.map((serviceType) => (
+                <NativeSelectOption key={serviceType.id} value={serviceType.id}>
+                  {serviceType.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="report-building">{t("reportsFilterBuilding")}</Label>
+            <NativeSelect
+              id="report-building"
+              value={filters.buildingId}
+              onChange={(event) => {
+                updateFilters({ buildingId: event.target.value });
+              }}
+            >
+              <NativeSelectOption value="">{t("reportsFilterAll")}</NativeSelectOption>
+              {buildings?.map((building) => (
+                <NativeSelectOption key={building.id} value={building.id}>
+                  {building.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="report-route-status">{t("reportsFilterRouteStatus")}</Label>
+            <NativeSelect
+              id="report-route-status"
+              value={filters.routeStatus}
+              onChange={(event) => {
+                updateFilters({ routeStatus: event.target.value });
+              }}
+            >
+              <NativeSelectOption value="">{t("reportsFilterAll")}</NativeSelectOption>
+              {ROUTE_STATUS_OPTIONS.map((option) => (
+                <NativeSelectOption key={option.value} value={option.value}>
+                  {t(option.key)}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
           </div>
         </div>
 
-        <button
-          type="button"
-          className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-          disabled={!rangeValid}
-          onClick={() => {
-            setGeneratedFilters(filters);
-          }}
-        >
-          {t("reportsGenerate")}
-        </button>
-        <button
-          type="button"
-          className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-          disabled={!rangeValid}
-          onClick={() => {
-            void downloadReport("pdf");
-          }}
-        >
-          {t("reportsExportPdf")}
-        </button>
-        <button
-          type="button"
-          className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-          disabled={!rangeValid}
-          onClick={() => {
-            void downloadReport("xlsx");
-          }}
-        >
-          {t("reportsExportXlsx")}
-        </button>
-      </div>
+        <div className="flex flex-wrap items-end justify-between gap-4 border-t pt-4">
+          <div className="space-y-1.5">
+            <span className="text-sm font-semibold">{t("reportsGranularityLabel")}</span>
+            <div
+              className="bg-muted flex gap-1 rounded-md p-1"
+              role="group"
+              aria-label={t("reportsGranularityLabel")}
+            >
+              {GRANULARITY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={filters.granularity === option.value}
+                  className="text-muted-foreground hover:text-foreground aria-pressed:bg-primary aria-pressed:text-primary-foreground rounded-[4px] px-3 py-1.5 text-sm font-semibold transition-colors"
+                  onClick={() => {
+                    updateFilters({ granularity: option.value });
+                  }}
+                >
+                  {t(option.key)}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {exportError && <p className="text-destructive text-sm">{exportError}</p>}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={!rangeValid}
+              onClick={() => {
+                void downloadReport("pdf");
+              }}
+            >
+              <FileDown aria-hidden="true" />
+              {t("reportsExportPdf")}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!rangeValid}
+              onClick={() => {
+                void downloadReport("xlsx");
+              }}
+            >
+              <FileSpreadsheet aria-hidden="true" />
+              {t("reportsExportXlsx")}
+            </Button>
+            <Button
+              disabled={!rangeValid}
+              onClick={() => {
+                setGeneratedFilters(filters);
+              }}
+            >
+              {t("reportsGenerate")}
+            </Button>
+          </div>
+        </div>
+      </section>
 
-      {reportQuery.isLoading && <p className="text-muted-foreground">{t("reportsLoading")}</p>}
-      {reportQuery.isError && <p className="text-destructive">{t("reportsError")}</p>}
+      {exportError && <ErrorMessage>{exportError}</ErrorMessage>}
+
+      {reportQuery.isLoading && <LoadingMessage>{t("reportsLoading")}</LoadingMessage>}
+      {reportQuery.isError && <ErrorMessage>{t("reportsError")}</ErrorMessage>}
 
       {reportQuery.data && (
         <div className="space-y-2">
           <FiltersAppliedCaption report={reportQuery.data} />
           {reportQuery.data.periods.length === 0 ? (
-            <p className="text-muted-foreground">{t("reportsEmpty")}</p>
+            <EmptyState>{t("reportsEmpty")}</EmptyState>
           ) : (
             <ReportTable report={reportQuery.data} />
           )}
         </div>
       )}
-    </main>
+    </Page>
   );
 }

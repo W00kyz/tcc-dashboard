@@ -1,83 +1,121 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@fontsource/ibm-plex-sans/400.css";
-@import "@fontsource/ibm-plex-sans/500.css";
-@import "@fontsource/ibm-plex-sans/600.css";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/overpass/400.css";
+@import "@fontsource/overpass/600.css";
+@import "@fontsource/overpass/700.css";
+@import "@fontsource/overpass/800.css";
+
+/* Campus wayfinding world: a cool neutral ground, white plates, sign-blue for the shell
+ * and primary actions, sign-yellow reserved for counts and attention. Light theme only
+ * (PRODUCT.md, 2026-10-11): the old prefers-color-scheme override was dropped on
+ * purpose, not forgotten. */
+/* Overpass's middle dot has almost no right side bearing, so "Bloco H · Banheiros" read as
+ * "H ·Banheiros". This face covers only U+00B7 with a system font listed ahead of Overpass. */
+@font-face {
+  font-family: "Separator Dot";
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans"), local("DejaVu Sans");
+  unicode-range: U+00B7;
+}
 
 @theme {
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --font-sans: "Separator Dot", "Overpass", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", monospace;
   --radius: 0.375rem;
 
-  --color-background: #f7f7f4;
-  --color-foreground: #1a1f1c;
-  --color-primary: #1b4332;
-  --color-primary-foreground: #f7f7f4;
-  --color-muted: #e7e5de;
-  --color-muted-foreground: #5c6058;
-  --color-border: #d8d5cc;
+  --color-background: #f4f5f2;
+  --color-foreground: #1f2329;
   --color-card: #ffffff;
-  --color-card-foreground: #1a1f1c;
-  --color-destructive: #b23a34;
-  --color-destructive-foreground: #f7f7f4;
+  --color-card-foreground: #1f2329;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1f2329;
+  --color-primary: #14213d;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e9ecf1;
+  --color-secondary-foreground: #14213d;
+  --color-muted: #eceee9;
+  --color-muted-foreground: #5a5f68;
+  --color-accent: #eef1f6;
+  --color-accent-foreground: #14213d;
+  --color-destructive: #b3261e;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #dcdfe4;
+  --color-input: #c5cad3;
+  --color-ring: #14213d;
 
-  /* Semantic slots shadcn's generated components expect (focus rings, form
-   * borders, secondary/accent surfaces) but Step 2's palette didn't name —
-   * mapped onto already-decided tokens above, not new color decisions. */
-  --color-ring: #1b4332;
-  --color-input: #d8d5cc;
-  --color-secondary: #e7e5de;
-  --color-secondary-foreground: #1a1f1c;
-  --color-accent: #e7e5de;
-  --color-accent-foreground: #1a1f1c;
+  /* Sign-yellow: the plate colour of counters and "needs attention" markers. Text on it
+   * is always sign-blue, never white (white on #e9b949 fails contrast). */
+  --color-signal: #e9b949;
+  --color-signal-foreground: #14213d;
+  --color-signal-soft: #fbf1d3;
 
-  --color-status-pending: #8a8f87;
-  --color-status-progress: #b5792b;
-  --color-status-done: #2f7a4c;
-  --color-status-late: #b23a34;
+  /* Stop / route state. Each pairs an ink (text, icon, disc) with a soft plate
+   * background; state is always also carried by a label or icon, never colour alone. */
+  --color-status-pending: #6b7079;
+  --color-status-pending-soft: #eceee9;
+  --color-status-progress: #8a5a00;
+  --color-status-progress-soft: #fbf1d3;
+  --color-status-done: #23683f;
+  --color-status-done-soft: #e2f0e6;
+  --color-status-late: #b3261e;
+  --color-status-late-soft: #fbe7e5;
+
+  --color-sidebar: #14213d;
+  --color-sidebar-foreground: #d3d9e6;
+  --color-sidebar-muted: #8f9ab4;
+  --color-sidebar-primary: #ffffff;
+  --color-sidebar-primary-foreground: #14213d;
+  --color-sidebar-accent: #1f2e50;
+  --color-sidebar-accent-foreground: #ffffff;
+  --color-sidebar-border: #27365a;
+  --color-sidebar-ring: #e9b949;
 }
 
-/* Dark overrides go on a plain :root, not another @theme block: @theme is a
- * compile-time registry Tailwind v4 flattens into a single namespace, so a
- * second @theme with the same custom property names — even nested inside a
- * @media block — silently wins over the first at build time instead of
- * applying conditionally at runtime (verified against the compiled output:
- * the light values never reached the bundle). A plain :root override inside
- * the media query is the correct, standard CSS-custom-property mechanism for
- * a runtime-conditional value swap; the utilities still reference
- * var(--color-*), so the cascade resolves it normally. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: #12160f;
-    --color-foreground: #ede9df;
-    --color-primary: #4e8467;
-    --color-primary-foreground: #12160f;
-    --color-muted: #1c2118;
-    --color-muted-foreground: #a3a89b;
-    --color-border: #2a2f25;
-    --color-card: #171b13;
-    --color-card-foreground: #ede9df;
-    --color-destructive: #d9534b;
-    --color-destructive-foreground: #12160f;
-
-    --color-ring: #4e8467;
-    --color-input: #2a2f25;
-    --color-secondary: #1c2118;
-    --color-secondary-foreground: #ede9df;
-    --color-accent: #1c2118;
-    --color-accent-foreground: #ede9df;
-
-    --color-status-pending: #6f746a;
-    --color-status-progress: #c98f45;
-    --color-status-done: #4a9968;
-    --color-status-late: #d9534b;
+@layer base {
+  * {
+    border-color: var(--color-border);
   }
-}
 
-body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    caret-color: var(--color-primary);
+  }
+
+  ::selection {
+    background-color: var(--color-signal);
+    color: var(--color-signal-foreground);
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #b8bec9 transparent;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-primary);
+    width: 1rem;
+    height: 1rem;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.6;
+    cursor: pointer;
+  }
 }

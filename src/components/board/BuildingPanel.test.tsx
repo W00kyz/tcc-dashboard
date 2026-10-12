@@ -1,0 +1,117 @@
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+
+import { BuildingPanel } from "@/components/board/BuildingPanel";
+
+const FLOORS = [
+  { id: "f0", building_id: "b1", label: "Térreo" },
+  { id: "f1", building_id: "b1", label: "1º andar" },
+];
+const POINTS = new Map([
+  ["f0", [{ id: "p1", floor_id: "f0", name: "Banheiro térreo", latitude: -7.2, longitude: -35.9 }]],
+  ["f1", [{ id: "p2", floor_id: "f1", name: "Sala 104", latitude: -7.2, longitude: -35.9 }]],
+]);
+
+function panelProps(overrides: Partial<Parameters<typeof BuildingPanel>[0]> = {}) {
+  return {
+    building: { id: "b1", name: "Bloco CD", campusArea: "CEEI" },
+    floors: FLOORS,
+    pointsByFloor: POINTS,
+    statuses: new Map([["p1", "LATE" as const]]),
+    selectedFloorId: "all" as const,
+    onSelectFloor: vi.fn(),
+    selectedPointId: null,
+    onSelectPoint: vi.fn(),
+    onClose: vi.fn(),
+    isLoading: false,
+    isError: false,
+    ...overrides,
+  };
+}
+
+function renderPanel(overrides: Partial<Parameters<typeof BuildingPanel>[0]> = {}) {
+  const props = panelProps(overrides);
+  render(<BuildingPanel {...props} />);
+
+  return props;
+}
+
+describe("BuildingPanel", () => {
+  it("summarises today and lists each point with its status", () => {
+    renderPanel();
+
+    expect(screen.getByRole("heading", { name: "Bloco CD" })).toBeInTheDocument();
+    expect(screen.getByText("2 pontos · 0 feitos · 1 atrasado")).toBeInTheDocument();
+    const late = within(screen.getByRole("listitem", { name: /Banheiro térreo/ }));
+    expect(late.getByText("Atrasado")).toBeInTheDocument();
+    const idle = within(screen.getByRole("listitem", { name: /Sala 104/ }));
+    expect(idle.getByText("Sem visita hoje")).toBeInTheDocument();
+  });
+
+  it("uses the singular forms for one point", () => {
+    renderPanel({ floors: FLOORS.slice(0, 1), statuses: new Map([["p1", "DONE" as const]]) });
+
+    expect(screen.getByText("1 ponto · 1 feito · 0 atrasados")).toBeInTheDocument();
+  });
+
+  it("switches floor and highlights a point", async () => {
+    const user = userEvent.setup();
+    const props = renderPanel();
+
+    await user.click(screen.getByRole("tab", { name: "1º andar" }));
+    await user.click(screen.getByRole("button", { name: /Banheiro térreo/ }));
+
+    expect(props.onSelectFloor).toHaveBeenCalledWith("f1");
+    expect(props.onSelectPoint).toHaveBeenCalledWith("p1");
+  });
+
+  it("lists only the selected floor's points", () => {
+    renderPanel({ selectedFloorId: "f1" });
+
+    expect(screen.queryByRole("listitem", { name: /Banheiro térreo/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: /Sala 104/ })).toBeInTheDocument();
+  });
+
+  it("goes back to the alerts with the back button or Escape", async () => {
+    const user = userEvent.setup();
+    const props = renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "Voltar aos alertas" }));
+    await user.keyboard("{Escape}");
+
+    expect(props.onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("says when the building has no floors", () => {
+    renderPanel({ floors: [], pointsByFloor: new Map() });
+
+    expect(screen.getByText("Nenhum andar cadastrado neste prédio.")).toBeInTheDocument();
+  });
+
+  it("says when loading fails", () => {
+    renderPanel({ floors: undefined, isError: true });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar os andares e pontos deste prédio.",
+    );
+  });
+
+  it("ignores an Escape that a menu or dialog already consumed", () => {
+    const props = renderPanel();
+    const consumed = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+    consumed.preventDefault();
+
+    document.dispatchEvent(consumed);
+
+    expect(props.onClose).not.toHaveBeenCalled();
+  });
+
+  it("shows no summary line while floors load or after an error", () => {
+    const { rerender } = render(<BuildingPanel {...panelProps({ floors: undefined })} />);
+    expect(screen.queryByText(/pontos · 0 feitos/)).not.toBeInTheDocument();
+
+    rerender(<BuildingPanel {...panelProps({ isError: true })} />);
+    expect(screen.queryByText(/pontos · 0 feitos/)).not.toBeInTheDocument();
+  });
+});

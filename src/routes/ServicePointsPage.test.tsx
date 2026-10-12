@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { ServicePointsPage } from "@/routes/ServicePointsPage";
+import { listItemWithText } from "@/test/queries";
 
 function renderPage(fetchImpl: typeof fetch) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -87,11 +88,8 @@ describe("ServicePointsPage", () => {
 
     // Only the OCCASIONAL point ("Tenda") gets a promote button — REGULAR points already
     // satisfy the backend's own guard (Task 6) that 409s on promoting an already-REGULAR point.
-    const regularItem = screen.getByText("Sala 101").closest("li");
-    const occasionalItem = screen.getByText("Tenda").closest("li");
-    if (regularItem === null || occasionalItem === null) {
-      throw new Error("expected both points' list items to have an <li> ancestor");
-    }
+    const regularItem = listItemWithText("Sala 101");
+    const occasionalItem = listItemWithText("Tenda");
     expect(
       within(regularItem).queryByRole("button", { name: "Promover a regular" }),
     ).not.toBeInTheDocument();

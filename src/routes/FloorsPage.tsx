@@ -9,6 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { Ban, ChevronLeft, FileDown, QrCode } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ErrorMessage } from "@/components/layout/StateMessages";
+import { BuildingFootprintSection } from "@/components/buildings/BuildingFootprintSection";
+import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
 
 interface FloorRow {
   id: string;
@@ -157,74 +163,95 @@ export function FloorsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("floorsPageTitle")}</h1>
-      <form
-        className="flex items-end gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate();
-        }}
-      >
-        <div className="flex-1">
-          <Label htmlFor="floor-label">{t("floorsFieldLabel")}</Label>
-          <Input
-            id="floor-label"
-            value={label}
-            onChange={(event) => {
-              setLabel(event.target.value);
+    <Page>
+      <Button variant="ghost" size="sm" className="-ml-2 self-start" asChild>
+        <Link to="/predios">
+          <ChevronLeft aria-hidden="true" />
+          {t("floorsBackToBuildings")}
+        </Link>
+      </Button>
+      <PageHeader title={t("floorsPageTitle")} />
+      <BuildingFootprintSection buildingId={buildingId ?? ""} />
+      {pdfDownloadError !== null && <ErrorMessage>{pdfDownloadError}</ErrorMessage>}
+      <RegistryLayout
+        list={
+          <RegistryList
+            items={floors}
+            getKey={(floor) => floor.id}
+            renderItem={(floor) => {
+              const activeQr = activeQrByFloor[floor.id];
+
+              return (
+                <>
+                  <span className="text-foreground min-w-0 flex-1 font-semibold">
+                    {floor.label}
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        handleGenerateQr(floor.id);
+                      }}
+                    >
+                      <QrCode aria-hidden="true" />
+                      {t("floorsGenerateQr")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={activeQr === undefined}
+                      onClick={() => {
+                        if (activeQr === undefined) {
+                          return;
+                        }
+
+                        handleRevokeQr(floor.id, activeQr.id);
+                      }}
+                    >
+                      <Ban aria-hidden="true" />
+                      {t("floorsRevokeQr")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        void downloadPdf(floor.id);
+                      }}
+                    >
+                      <FileDown aria-hidden="true" />
+                      {t("floorsDownloadPdf")}
+                    </Button>
+                  </div>
+                </>
+              );
             }}
           />
-        </div>
-        <Button type="submit">{t("floorsSubmitCreate")}</Button>
-      </form>
-      {pdfDownloadError !== null && (
-        <p role="alert" className="text-sm text-destructive">
-          {pdfDownloadError}
-        </p>
-      )}
-      <ul className="divide-border divide-y">
-        {floors?.map((floor) => {
-          const activeQr = activeQrByFloor[floor.id];
-
-          return (
-            <li key={floor.id} className="flex items-center justify-between py-2">
-              <span>{floor.label}</span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    handleGenerateQr(floor.id);
-                  }}
-                >
-                  {t("floorsGenerateQr")}
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={activeQr === undefined}
-                  onClick={() => {
-                    if (activeQr === undefined) {
-                      return;
-                    }
-
-                    handleRevokeQr(floor.id, activeQr.id);
-                  }}
-                >
-                  {t("floorsRevokeQr")}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    void downloadPdf(floor.id);
-                  }}
-                >
-                  {t("floorsDownloadPdf")}
-                </Button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </main>
+        }
+        form={
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="floor-label">{t("floorsFieldLabel")}</Label>
+              <Input
+                id="floor-label"
+                value={label}
+                onChange={(event) => {
+                  setLabel(event.target.value);
+                }}
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              {t("floorsSubmitCreate")}
+            </Button>
+          </form>
+        }
+      />
+    </Page>
   );
 }

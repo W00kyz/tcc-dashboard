@@ -105,6 +105,10 @@ function makeFakeFetch(options: FakeFetchOptions = {}) {
     if (url.includes("/service-types")) {
       return Promise.resolve(jsonResponse(SERVICE_TYPES));
     }
+    // The board it lands on after saving groups routes by company.
+    if (url.includes("/contractor-companies")) {
+      return Promise.resolve(jsonResponse([]));
+    }
     if (method === "GET" && /\/routes\/[^/]+$/.exec(url)) {
       return Promise.resolve(jsonResponse(routeBody, routeStatus));
     }
@@ -406,7 +410,7 @@ describe("RouteBuilderPage", () => {
     // Lands on the board already filtered to occasional routes *for the route's own date*:
     // the redirect keeps `date=` instead of dropping the manager on a board defaulted to
     // today, and the board's own GET /routes carries both filters from the query string.
-    expect(await screen.findByTestId("route-card-board1")).toBeInTheDocument();
+    expect(await screen.findByRole("row", { name: /João da Silva/ })).toBeInTheDocument();
     const boardQuery = fakeFetch.mock.calls
       .map(([input]) => (input instanceof Request ? input.url : String(input)))
       .find((url) => url.includes("/routes") && url.includes("route_type=OCCASIONAL"));

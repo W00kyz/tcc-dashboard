@@ -36,3 +36,25 @@ Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
     return this.tagName === "LI" ? stackedRowRect(this) : rect(0, 0, 0);
   },
 });
+
+// jsdom has no matchMedia; the shadcn sidebar's useIsMobile() calls it on mount. Report a
+// desktop viewport (no media query matches) so the shell renders its desktop sidebar.
+Object.defineProperty(window, "matchMedia", {
+  configurable: true,
+  value: (query: string): MediaQueryList =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as MediaQueryList,
+});
+
+// jsdom implements no scrolling; the board's pager scrolls the route table into view.
+if (typeof Element.prototype.scrollIntoView !== "function") {
+  Element.prototype.scrollIntoView = () => undefined;
+}

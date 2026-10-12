@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
+import { formatIsoDateBr } from "@/lib/dates";
 
 interface EventRow {
   id: string;
@@ -52,59 +55,69 @@ export function EventsPage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("eventsPageTitle")}</h1>
-      <form
-        className="space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate();
-        }}
-      >
-        <div>
-          <Label htmlFor="event-name">{t("eventsFieldName")}</Label>
-          <Input
-            id="event-name"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
+    <Page>
+      <PageHeader title={t("eventsPageTitle")} />
+      <RegistryLayout
+        list={
+          <RegistryList
+            items={events}
+            getKey={(event) => event.id}
+            renderItem={(event) => (
+              <>
+                <span className="text-foreground min-w-0 flex-1 font-semibold">{event.name}</span>
+                <span className="text-muted-foreground text-sm">
+                  {formatIsoDateBr(event.valid_from)} a {formatIsoDateBr(event.valid_until)}
+                </span>
+              </>
+            )}
           />
-        </div>
-        <div>
-          <Label htmlFor="event-valid-from">{t("eventsFieldValidFrom")}</Label>
-          <Input
-            id="event-valid-from"
-            type="date"
-            value={validFrom}
-            onChange={(event) => {
-              setValidFrom(event.target.value);
+        }
+        form={
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
             }}
-          />
-        </div>
-        <div>
-          <Label htmlFor="event-valid-until">{t("eventsFieldValidUntil")}</Label>
-          <Input
-            id="event-valid-until"
-            type="date"
-            value={validUntil}
-            onChange={(event) => {
-              setValidUntil(event.target.value);
-            }}
-          />
-        </div>
-        <Button type="submit">{t("eventsSubmitCreate")}</Button>
-      </form>
-      <ul className="divide-border divide-y">
-        {events?.map((event) => (
-          <li key={event.id} className="py-2">
-            <span className="font-medium">{event.name}</span>{" "}
-            <span className="text-muted-foreground">
-              {event.valid_from} a {event.valid_until}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </main>
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="event-name">{t("eventsFieldName")}</Label>
+              <Input
+                id="event-name"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="event-valid-from">{t("eventsFieldValidFrom")}</Label>
+              <Input
+                id="event-valid-from"
+                type="date"
+                value={validFrom}
+                onChange={(event) => {
+                  setValidFrom(event.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="event-valid-until">{t("eventsFieldValidUntil")}</Label>
+              <Input
+                id="event-valid-until"
+                type="date"
+                value={validUntil}
+                onChange={(event) => {
+                  setValidUntil(event.target.value);
+                }}
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              {t("eventsSubmitCreate")}
+            </Button>
+          </form>
+        }
+      />
+    </Page>
   );
 }

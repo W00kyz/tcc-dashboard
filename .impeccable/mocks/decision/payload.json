@@ -1,0 +1,69 @@
+{
+  "title": "Escolha o mundo visual do painel",
+  "question": "A rolagem atribuiu o Boletim de Serviço. Mantenha, troque por uma alternativa ou role de novo.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Boletim de Serviço",
+      "kicker": "THE ROLL",
+      "lineage": "Diário Oficial e boletins de serviço da administração pública",
+      "thesis": "Cada rota, alerta e execução é registrado como um ato numerado e datado, com o rigor de um boletim oficial.",
+      "palette": ["#fafaf7", "#15171c", "#1e2635", "#d8d9d4", "#9a3b2e"],
+      "materials": ["papel de boletim, filetes finos", "serifa de título + sans de serviço público", "numeração formal de atos"],
+      "viewport": "Sidebar ardósia escura com 5 módulos; título 'Seção 1 · Operação' em serifa; faixa do alerta mais grave; tabela densa de rotas com cabeçalho de ato 'ROTA Nº 0412 · 11 OUT 2026'.",
+      "risk": "Se a serifa se espalhar além de títulos e cabeçalhos de ato, vira jornal em vez de ferramenta.",
+      "raised": [
+        {"from": "emigre-bitmap-specimen", "raise": "Uma família por função numa escala estrita de 5 passos, repetida sem exceção."},
+        {"from": "pop-culture-shelf-vertical-video-feed-surface", "raise": "Uma exceção por vez domina o topo: o alerta mais grave ocupa a faixa sozinho."},
+        {"from": "aww2-zoo-gardens-guide-map", "raise": "Cor chapada e filetes dividem; nenhuma sombra ou gradiente faz esse trabalho."},
+        {"from": "editorial-sequence-montage-botanical-folio-season", "raise": "Faixas de paradas em células de escala fixa, comparáveis linha a linha."},
+        {"from": "vernacular-ephemera-cassette-j-card", "raise": "Números tabulares alinhados à direita, colados à margem."}
+      ],
+      "html": ".impeccable/mocks/decision/assigned.html"
+    },
+    {
+      "id": "model-pick",
+      "label": "Sinalização de Campus",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "placas de bloco, diretórios de andar e sinalização modernista de campi",
+      "thesis": "O painel se orienta como o campus: códigos de bloco, placas e linhas numeradas levam o gestor a cada ponto.",
+      "palette": ["#f4f5f2", "#14213d", "#ffffff", "#e9b949", "#2b2d31"],
+      "materials": ["placas esmaltadas", "códigos de bloco em chips", "linhas de percurso com discos numerados"],
+      "viewport": "Sidebar azul-placa; cada rota mostra suas paradas como uma linha de percurso com discos numerados e códigos de prédio em placas.",
+      "risk": "É a direção mais próxima do que muitos painéis já fazem; segura, porém familiar.",
+      "html": ".impeccable/mocks/decision/model-pick.html"
+    },
+    {
+      "id": "challenger-split-flap",
+      "label": "Quadro de Partidas",
+      "verdict": "competitive",
+      "lineage": "quadro split-flap de rodoviária e estação",
+      "thesis": "O quadro de rotas lido como um quadro de partidas: linhas vivas ordenadas por horário, atrasos acendem sem quebrar a grade.",
+      "palette": ["#f6f6f3", "#111111", "#e8a317", "#b3261e", "#d6d6d0"],
+      "materials": ["células de caractere fixas", "lâmpada âmbar de atraso", "virada caractere a caractere"],
+      "viewport": "Tabela de rotas em células fixas, colunas imóveis; status e previsão viram caractere a caractere quando mudam.",
+      "case": "Funde bem no quadro de rotas e perde em identificação: cadastros e formulários não têm análogo; claro por exigência do brief.",
+      "risk": "Fora do quadro de rotas, a gramática do split-flap não tem o que fazer.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-split-flap-concourse-hero.webp",
+      "html": ".impeccable/mocks/decision/challenger-split-flap.html"
+    },
+    {"id": "challenger-emigre", "label": "Emigre Bitmap Specimen", "verdict": "declined", "lineage": "Emigre bitmap specimens", "thesis": "Tipos bitmap em escala de cartaz.", "palette": ["#ffffff", "#111111", "#ff3b00"], "materials": ["halftone", "pixel type"], "viewport": "Título em pixels sobre colunas densas.", "risk": "Ruído visual numa ferramenta diária.", "case": "Perde nos dois eixos: gestores não se identificam e a clareza cai.", "kept": "Uma família numa escala estrita de tamanhos."},
+    {"id": "challenger-feed", "label": "Feed Vertical", "verdict": "declined", "lineage": "feeds de vídeo vertical", "thesis": "Um item ocupa a tela inteira.", "palette": ["#000000", "#ffffff"], "materials": ["mídia em tela cheia", "trilho de ícones"], "viewport": "Uma rota por tela.", "risk": "Esconde a visão do conjunto de que o gestor precisa.", "case": "Perde nos dois eixos: o painel exige varrer muitas rotas.", "kept": "Uma exceção por vez domina o foco."},
+    {"id": "challenger-zoo", "label": "Mapa de Zoológico", "verdict": "declined", "lineage": "mapas-guia de parques", "thesis": "Áreas como lóbulos de cor chapada.", "palette": ["#8ED462", "#F5F1E4", "#2C2E2A", "#FF705D"], "materials": ["cor chapada", "costa em SVG"], "viewport": "Lóbulos coloridos por módulo.", "risk": "Lúdico demais para o tom institucional.", "case": "Perde nos dois eixos: conflita com o tom sóbrio pedido.", "kept": "Cor chapada sem sombras nem gradientes."},
+    {"id": "challenger-folio", "label": "Fólio Botânico", "verdict": "declined", "lineage": "pranchas botânicas sazonais", "thesis": "A mesma planta em escala fixa por estágio.", "palette": ["#f3ecd9", "#2f5d34", "#b3261e"], "materials": ["pranchas", "filetes sépia"], "viewport": "Estágios lado a lado.", "risk": "Editorial demais para operar.", "case": "Perde nos dois eixos.", "kept": "Escala fixa para comparar estados."},
+    {"id": "challenger-jcard", "label": "Capa de Fita K7", "verdict": "declined", "lineage": "j-cards de mixtape", "thesis": "Lista manuscrita cronometrada.", "palette": ["#ffffff", "#1d3fbb", "#c8102e"], "materials": ["esferográfica", "pautas"], "viewport": "Lado A / lado B.", "risk": "Informal, oposto do institucional.", "case": "Perde nos dois eixos.", "kept": "Tempos alinhados à direita, colados à margem."}
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code"},
+  "canon": true,
+  "canonCard": {
+    "label": "O padrão da categoria",
+    "thesis": "O painel admin shadcn que a categoria entrega, executado com capricho.",
+    "palette": ["#ffffff", "#09090b", "#f4f4f5", "#18181b"],
+    "materials": ["neutros zinc", "cards de KPI", "sidebar padrão"],
+    "viewport": "Sidebar shadcn, cards de KPI no topo e tabela de rotas logo abaixo.",
+    "risk": "Indistinguível de qualquer outro painel, por definição.",
+    "html": ".impeccable/mocks/decision/canon.html"
+  },
+  "steer": true
+}

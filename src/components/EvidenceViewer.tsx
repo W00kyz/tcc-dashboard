@@ -6,6 +6,7 @@ import { apiBaseUrl } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import { useTranslation } from "@/i18n/useTranslation";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 type ExecutionEvidence = components["schemas"]["ExecutionEvidence"];
 
@@ -87,7 +88,7 @@ function PhotoThumbnail({ item, token, onOpen }: PhotoThumbnailProps) {
     <li>
       <button
         type="button"
-        className="border-input block w-full overflow-hidden rounded-md border"
+        className="hover:border-primary block w-full overflow-hidden rounded-md border transition-colors"
         onClick={onOpen}
       >
         {resource.objectUrl === undefined ? (
@@ -143,28 +144,28 @@ function Lightbox({ photos, index, token, onIndexChange, onClose }: LightboxProp
     <div
       role="dialog"
       aria-label={t("evidenceLightboxTitle")}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0b1222]/90 p-4"
       onClick={onClose}
     >
       <button
         type="button"
         aria-label={t("evidenceLightboxClose")}
-        className="absolute top-4 right-4 text-2xl text-white"
+        className="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-30"
         onClick={onClose}
       >
-        ×
+        <X aria-hidden="true" className="size-5" />
       </button>
       <button
         type="button"
         aria-label={t("evidenceLightboxPrev")}
-        className="absolute left-4 text-3xl text-white disabled:opacity-30"
+        className="absolute left-4 flex size-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-30"
         disabled={index <= 0}
         onClick={(event) => {
           event.stopPropagation();
           onIndexChange(index - 1);
         }}
       >
-        ◀
+        <ChevronLeft aria-hidden="true" className="size-6" />
       </button>
       {resource.objectUrl === undefined ? (
         <span className="text-sm text-white">
@@ -174,7 +175,7 @@ function Lightbox({ photos, index, token, onIndexChange, onClose }: LightboxProp
         <img
           src={resource.objectUrl}
           alt={t("evidencePhotoAlt")}
-          className="max-h-full max-w-full object-contain"
+          className="max-h-full max-w-full rounded-md object-contain"
           onClick={(event) => {
             event.stopPropagation();
           }}
@@ -183,14 +184,14 @@ function Lightbox({ photos, index, token, onIndexChange, onClose }: LightboxProp
       <button
         type="button"
         aria-label={t("evidenceLightboxNext")}
-        className="absolute right-4 text-3xl text-white disabled:opacity-30"
+        className="absolute right-4 flex size-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-30"
         disabled={index >= photos.length - 1}
         onClick={(event) => {
           event.stopPropagation();
           onIndexChange(index + 1);
         }}
       >
-        ▶
+        <ChevronRight aria-hidden="true" className="size-6" />
       </button>
     </div>
   );
@@ -230,7 +231,7 @@ export function EvidenceViewer({ items, onLightboxOpenChange }: EvidenceViewerPr
   return (
     <div className="space-y-3">
       {notes.map((note) => (
-        <div key={note.id} className="border-input rounded-md border p-3 text-sm">
+        <div key={note.id} className="bg-muted/50 rounded-md border p-3 text-sm">
           <p className="whitespace-pre-wrap">{note.text_body}</p>
           <span className="text-muted-foreground mt-1 block text-xs">
             {t("evidenceNoteLabel")} · {formatDateTime(note.captured_at)}

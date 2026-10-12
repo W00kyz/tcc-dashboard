@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -291,7 +291,8 @@ describe("FormBuilderPage", () => {
     await user.click(screen.getByRole("button", { name: "Publicar" }));
     await user.click(await screen.findByRole("button", { name: "Publicar versão" }));
 
-    expect(await screen.findByText(/^v1 · /)).toBeInTheDocument();
+    const versions = await screen.findByRole("region", { name: "Versões publicadas" });
+    expect(await within(versions).findByText("v1")).toBeInTheDocument();
     const publishCalls = requestsMatching(
       fakeFetch,
       (request) => request.method === "POST" && request.url.includes("/forms/f1/publish"),

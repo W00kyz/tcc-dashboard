@@ -5,6 +5,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { FloorsPage } from "@/routes/FloorsPage";
+import { listItemWithText } from "@/test/queries";
+
+// The footprint section has its own requests (the buildings list and the Overpass query). They
+// are answered here so the queued responses below stay mapped to the floors/QR calls under test.
+vi.mock("@/api/overpass", () => ({ fetchCampusBuildings: () => Promise.resolve([]) }));
+
+function requestUrl(input: RequestInfo | URL): string {
+  return typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+}
 
 function renderPage(responses: Response[]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -12,7 +21,11 @@ function renderPage(responses: Response[]) {
   responses.forEach((response) => {
     fakeFetch.mockResolvedValueOnce(response);
   });
-  vi.stubGlobal("fetch", fakeFetch);
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+    requestUrl(input).endsWith("/buildings")
+      ? Promise.resolve(new Response(JSON.stringify([]), { status: 200 }))
+      : (fakeFetch(input, init) as Promise<Response>),
+  );
 
   return {
     fakeFetch,
@@ -154,10 +167,7 @@ describe("FloorsPage", () => {
     const { default: userEvent } = await import("@testing-library/user-event");
 
     await screen.findByText("Térreo");
-    const row = screen.getByText("Térreo").closest("li");
-    if (row === null) {
-      throw new Error("expected the floor's list item to have a <li> ancestor");
-    }
+    const row = listItemWithText("Térreo");
 
     expect(within(row).getByRole("button", { name: "Revogar QR" })).toBeDisabled();
 

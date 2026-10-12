@@ -5,6 +5,17 @@ import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 type PersonalData = components["schemas"]["PersonalDataOut"];
 
@@ -32,18 +43,26 @@ function formatBytes(bytes: number): string {
 
 function DataRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 py-1">
+    <div className="flex justify-between gap-4 py-2 first:pt-0 last:pb-0">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right font-medium">{value}</dd>
+      <dd className="text-right font-semibold break-all">{value}</dd>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({
+  title,
+  wide = false,
+  children,
+}: {
+  title: string;
+  wide?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <section className="rounded-lg border p-4">
-      <h2 className="mb-2 text-lg font-semibold">{title}</h2>
-      {children}
+    <section className={cn("bg-card rounded-md border", wide && "lg:col-span-2")}>
+      <h2 className="text-primary border-b px-4 py-3 text-base font-bold">{title}</h2>
+      <div className="p-4 [&_dl]:divide-y">{children}</div>
     </section>
   );
 }
@@ -68,18 +87,14 @@ export function MyDataPage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-6">
-      <h1 className="text-xl font-semibold">{t("myDataTitle")}</h1>
+    <Page>
+      <PageHeader title={t("myDataTitle")} />
 
-      {isLoading && <p className="text-muted-foreground">{t("myDataLoading")}</p>}
-      {error && (
-        <p role="alert" className="text-destructive">
-          {t("myDataError")}
-        </p>
-      )}
+      {isLoading && <LoadingMessage>{t("myDataLoading")}</LoadingMessage>}
+      {error && <ErrorMessage>{t("myDataError")}</ErrorMessage>}
 
       {data && (
-        <>
+        <div className="grid items-start gap-4 lg:grid-cols-2">
           <Section title={t("myDataProfileHeading")}>
             <dl className="text-sm">
               <DataRow label={t("myDataProfileEmail")} value={data.profile.email} />
@@ -121,15 +136,15 @@ export function MyDataPage() {
             )}
           </Section>
 
-          <Section title={t("myDataConsentHeading")}>
+          <Section wide title={t("myDataConsentHeading")}>
             {data.consent_history.length === 0 ? (
               <p className="text-muted-foreground text-sm">{t("myDataEmpty")}</p>
             ) : (
-              <ul className="divide-border divide-y text-sm">
+              <ul className="divide-y text-sm">
                 {data.consent_history.map((entry) => (
                   <li
                     key={`${String(entry.notice_version)}-${entry.accepted_at}`}
-                    className="flex justify-between gap-4 py-1"
+                    className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-2 first:pt-0 last:pb-0"
                   >
                     <span>
                       {t("myDataConsentNoticeVersion")} {entry.notice_version}
@@ -143,28 +158,28 @@ export function MyDataPage() {
             )}
           </Section>
 
-          <Section title={t("myDataAuthEventsHeading")}>
+          <Section wide title={t("myDataAuthEventsHeading")}>
             {data.auth_events.length === 0 ? (
               <p className="text-muted-foreground text-sm">{t("myDataEmpty")}</p>
             ) : (
-              <table className="w-full text-left text-sm">
-                <thead className="text-muted-foreground">
-                  <tr>
-                    <th className="py-1 pr-3 font-medium">{t("myDataAuthEventColEvent")}</th>
-                    <th className="py-1 pr-3 font-medium">{t("myDataAuthEventColIp")}</th>
-                    <th className="py-1 font-medium">{t("myDataAuthEventColAt")}</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("myDataAuthEventColEvent")}</TableHead>
+                    <TableHead>{t("myDataAuthEventColIp")}</TableHead>
+                    <TableHead>{t("myDataAuthEventColAt")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {data.auth_events.map((event, index) => (
-                    <tr key={`${event.event}-${event.created_at}-${String(index)}`}>
-                      <td className="py-1 pr-3">{event.event}</td>
-                      <td className="py-1 pr-3">{event.ip_address ?? NULL_VALUE}</td>
-                      <td className="py-1">{formatDateTime(event.created_at)}</td>
-                    </tr>
+                    <TableRow key={`${event.event}-${event.created_at}-${String(index)}`}>
+                      <TableCell>{event.event}</TableCell>
+                      <TableCell>{event.ip_address ?? NULL_VALUE}</TableCell>
+                      <TableCell>{formatDateTime(event.created_at)}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             )}
           </Section>
 
@@ -227,8 +242,8 @@ export function MyDataPage() {
               />
             </dl>
           </Section>
-        </>
+        </div>
       )}
-    </main>
+    </Page>
   );
 }

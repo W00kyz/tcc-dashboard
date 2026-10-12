@@ -1,135 +1,58 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
-import { apiBaseUrl, createApiClient } from "@/api/client";
-import type { components } from "@/api/generated/schema";
-import { useAuth } from "@/auth/AuthContext";
+import {
+  fetchNotifications,
+  formatNotificationTime,
+  NOTIFICATION_KIND_LABEL_KEY,
+  useNotificationActions,
+} from "@/components/notifications/useNotifications";
 import { Button } from "@/components/ui/button";
-import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
-
-type ApiClient = ReturnType<typeof createApiClient>;
-type Notification = components["schemas"]["NotificationOut"];
+import { Page, PageHeader } from "@/components/layout/Page";
+import { CheckCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 
-// Shared query-key prefix: the unread badge in AppNav lives under ["notifications", ...],
-// so invalidating ["notifications"] refreshes both the list and the badge count.
-const NOTIFICATIONS_KEY = ["notifications"] as const;
-
-const KIND_LABEL_KEY: Record<string, StringKey> = {
-  ALERT: "notificationKindAlert",
-  ROUTE_ASSIGNED: "notificationKindRouteAssigned",
-  ROUTE_MODIFIED: "notificationKindRouteModified",
-  STOP_REASSIGNED: "notificationKindStopReassigned",
-  IMPEDIMENT_REPORTED: "notificationKindImpedimentReported",
-};
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-}
-
-// Best-effort deep link: the route board is the only place that renders alerts and route
-// context, so both `alert_id` and `route_id` point there. No useful target → just mark read.
-function targetFor(data: Notification["data"]): string | null {
-  // RF17: an impediment is worked from the reassignment queue, not the board.
-  if (typeof data.impediment_id === "string") {
-    return "/reatribuicoes";
-  }
-  if (typeof data.route_id === "string" || typeof data.alert_id === "string") {
-    return "/rotas";
-  }
-
-  return null;
-}
-
-async function fetchNotifications(client: ApiClient, unreadOnly: boolean, page: number) {
-  const { data, response } = await client.GET("/notifications/me", {
-    params: { query: { unread_only: unreadOnly, page, page_size: PAGE_SIZE } },
-  });
-  if (!response.ok) {
-    throw new Error(`GET /notifications/me failed (${String(response.status)}).`);
-  }
-
-  return data ?? { items: [], total: 0, page, page_size: PAGE_SIZE };
-}
-
 export function NotificationsPage() {
   const { t } = useTranslation();
-  const { session } = useAuth();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
+  const { client, markRead, markAllRead, openNotification } = useNotificationActions();
 
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["notifications", "list", { unreadOnly, page }],
-    queryFn: () => fetchNotifications(client, unreadOnly, page),
+    queryFn: () => fetchNotifications(client, unreadOnly, page, PAGE_SIZE),
     placeholderData: keepPreviousData,
   });
-
-  const markRead = useMutation({
-    mutationFn: async (notificationId: string) => {
-      const { response } = await client.POST("/notifications/{notification_id}/read", {
-        params: { path: { notification_id: notificationId } },
-      });
-      if (!response.ok) {
-        throw new Error(
-          `POST /notifications/${notificationId}/read failed (${String(response.status)}).`,
-        );
-      }
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
-    },
-  });
-
-  const markAllRead = useMutation({
-    mutationFn: async () => {
-      const { response } = await client.POST("/notifications/me/read-all");
-      if (!response.ok) {
-        throw new Error(`POST /notifications/me/read-all failed (${String(response.status)}).`);
-      }
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
-    },
-  });
-
-  function openNotification(notification: Notification) {
-    if (notification.read_at === null) {
-      markRead.mutate(notification.id);
-    }
-    const target = targetFor(notification.data);
-    if (target !== null) {
-      void navigate(target);
-    }
-  }
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-6">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">{t("notificationsTitle")}</h1>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={markAllRead.isPending}
-          onClick={() => {
-            markAllRead.mutate();
-          }}
-        >
-          {t("notificationsMarkAllRead")}
-        </Button>
-      </div>
+    <Page>
+      <PageHeader
+        title={t("notificationsTitle")}
+        actions={
+          <Button
+            variant="outline"
+            disabled={markAllRead.isPending}
+            onClick={() => {
+              markAllRead.mutate();
+            }}
+          >
+            <CheckCheck aria-hidden="true" />
+            {t("notificationsMarkAllRead")}
+          </Button>
+        }
+      />
 
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex w-fit items-center gap-2 text-sm font-semibold">
         <input
           type="checkbox"
           checked={unreadOnly}
@@ -142,81 +65,99 @@ export function NotificationsPage() {
       </label>
 
       {(markRead.isError || markAllRead.isError) && (
-        <p role="alert" className="text-destructive text-sm">
-          {t("notificationsMarkReadError")}
-        </p>
+        <ErrorMessage>{t("notificationsMarkReadError")}</ErrorMessage>
       )}
 
-      {isLoading && <p className="text-muted-foreground">{t("notificationsLoading")}</p>}
-      {error && (
-        <p role="alert" className="text-destructive">
-          {t("notificationsError")}
-        </p>
-      )}
+      {isLoading && <LoadingMessage>{t("notificationsLoading")}</LoadingMessage>}
+      {error && <ErrorMessage>{t("notificationsError")}</ErrorMessage>}
       {!isLoading && !error && items.length === 0 && (
-        <p className="text-muted-foreground">{t("notificationsEmpty")}</p>
+        <EmptyState>{t("notificationsEmpty")}</EmptyState>
       )}
 
-      <ul className="divide-border divide-y">
-        {items.map((notification) => {
-          const unread = notification.read_at === null;
+      {items.length > 0 && (
+        <ul className="bg-card divide-y rounded-md border">
+          {items.map((notification) => {
+            const unread = notification.read_at === null;
 
-          return (
-            <li key={notification.id}>
-              <button
-                type="button"
-                data-testid={`notification-${notification.id}`}
-                data-unread={unread ? "true" : "false"}
-                className="hover:bg-muted/50 w-full space-y-1 px-1 py-3 text-left"
-                onClick={() => {
-                  openNotification(notification);
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-medium">
-                    {t(KIND_LABEL_KEY[notification.kind] ?? "notificationKindOther")}
+            return (
+              <li key={notification.id}>
+                <button
+                  type="button"
+                  className={cn(
+                    "hover:bg-accent flex w-full gap-3 px-4 py-3.5 text-left transition-colors focus-visible:outline-offset-[-2px]",
+                    unread && "bg-signal-soft/50",
+                  )}
+                  onClick={() => {
+                    openNotification(notification);
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "mt-1.5 size-2 shrink-0 rounded-full",
+                      unread ? "bg-signal ring-signal-foreground/20 ring-2" : "bg-transparent",
+                    )}
+                  />
+                  <span className="min-w-0 flex-1 space-y-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Badge variant="pending">
+                        {t(
+                          NOTIFICATION_KIND_LABEL_KEY[notification.kind] ?? "notificationKindOther",
+                        )}
+                      </Badge>
+                      {unread && <Badge variant="signal">{t("notificationUnreadLabel")}</Badge>}
+                      <span className="text-muted-foreground text-xs">
+                        {formatNotificationTime(notification.created_at)}
+                      </span>
+                    </span>
+                    <span
+                      className={cn(
+                        "block",
+                        unread ? "text-primary font-bold" : "text-foreground font-semibold",
+                      )}
+                    >
+                      {notification.title}
+                    </span>
+                    <span className="text-muted-foreground block text-sm">{notification.body}</span>
                   </span>
-                  <span className="text-muted-foreground text-xs">
-                    {formatDateTime(notification.created_at)}
-                  </span>
-                </div>
-                <p className={unread ? "font-semibold" : undefined}>{notification.title}</p>
-                <p className="text-muted-foreground text-sm">{notification.body}</p>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {items.length > 0 && (
         <div className="flex items-center justify-between text-sm">
-          <span>
+          <span className="text-muted-foreground">
             {t("notificationsPaginationLabel")} {page} {t("notificationsPaginationOf")} {totalPages}
           </span>
           <div className="flex gap-2">
-            <button
-              type="button"
-              className="rounded border px-3 py-1 disabled:opacity-50"
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page <= 1}
               onClick={() => {
                 setPage((current) => Math.max(1, current - 1));
               }}
             >
+              <ChevronLeft aria-hidden="true" />
               {t("notificationsPrevPage")}
-            </button>
-            <button
-              type="button"
-              className="rounded border px-3 py-1 disabled:opacity-50"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page >= totalPages}
               onClick={() => {
                 setPage((current) => current + 1);
               }}
             >
               {t("notificationsNextPage")}
-            </button>
+              <ChevronRight aria-hidden="true" />
+            </Button>
           </div>
         </div>
       )}
-    </main>
+    </Page>
   );
 }

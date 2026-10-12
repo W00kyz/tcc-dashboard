@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
 
 interface FieldWorkerRow {
   id: string;
@@ -111,93 +114,103 @@ export function FieldWorkersPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("fieldWorkersPageTitle")}</h1>
-      <form
-        className="space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate();
-        }}
-      >
-        <div>
-          <Label htmlFor="worker-name">{t("fieldWorkersFieldName")}</Label>
-          <Input
-            id="worker-name"
-            value={fullName}
-            onChange={(event) => {
-              setFullName(event.target.value);
-            }}
+    <Page>
+      <PageHeader title={t("fieldWorkersPageTitle")} />
+      <RegistryLayout
+        list={
+          <RegistryList
+            items={workers}
+            getKey={(worker) => worker.id}
+            renderItem={(worker) => (
+              <>
+                <span className="text-foreground min-w-0 flex-1 font-semibold">
+                  {worker.full_name}
+                </span>
+                <span className="text-muted-foreground text-sm">
+                  {companyName(worker.contractor_company_id)}
+                </span>
+              </>
+            )}
           />
-        </div>
-        <div>
-          <Label htmlFor="worker-company">{t("fieldWorkersFieldCompany")}</Label>
-          <select
-            id="worker-company"
-            className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-            value={companyId}
-            onChange={(event) => {
-              setCompanyId(event.target.value);
+        }
+        form={
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
             }}
           >
-            <option value="" />
-            {companies?.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="worker-service-types">{t("fieldWorkersFieldServiceTypes")}</Label>
-          <select
-            id="worker-service-types"
-            multiple
-            className="border-input h-24 w-full rounded-md border bg-transparent px-3 text-sm"
-            value={selectedServiceTypeIds}
-            onChange={(event) => {
-              setSelectedServiceTypeIds(
-                Array.from(event.target.selectedOptions, (option) => option.value),
-              );
-            }}
-          >
-            {serviceTypes?.map((serviceType) => (
-              <option key={serviceType.id} value={serviceType.id}>
-                {serviceType.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="worker-linked-user">{t("fieldWorkersFieldLinkedUser")}</Label>
-          <select
-            id="worker-linked-user"
-            className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-            value={linkedUserId}
-            onChange={(event) => {
-              setLinkedUserId(event.target.value);
-            }}
-          >
-            <option value="">{t("fieldWorkersNoLinkedUser")}</option>
-            {linkableUsers?.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name} — {user.email}
-              </option>
-            ))}
-          </select>
-        </div>
-        <Button type="submit">{t("fieldWorkersSubmitCreate")}</Button>
-      </form>
-      <ul className="divide-border divide-y">
-        {workers?.map((worker) => (
-          <li key={worker.id} className="py-2">
-            <span className="font-medium">{worker.full_name}</span>{" "}
-            <span className="text-muted-foreground">
-              {companyName(worker.contractor_company_id)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </main>
+            <div className="space-y-1.5">
+              <Label htmlFor="worker-name">{t("fieldWorkersFieldName")}</Label>
+              <Input
+                id="worker-name"
+                value={fullName}
+                onChange={(event) => {
+                  setFullName(event.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="worker-company">{t("fieldWorkersFieldCompany")}</Label>
+              <NativeSelect
+                id="worker-company"
+                value={companyId}
+                onChange={(event) => {
+                  setCompanyId(event.target.value);
+                }}
+              >
+                <NativeSelectOption value="" />
+                {companies?.map((company) => (
+                  <NativeSelectOption key={company.id} value={company.id}>
+                    {company.name}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="worker-service-types">{t("fieldWorkersFieldServiceTypes")}</Label>
+              <select
+                id="worker-service-types"
+                multiple
+                className="border-input bg-card h-28 w-full rounded-md border px-2 py-1 text-sm"
+                value={selectedServiceTypeIds}
+                onChange={(event) => {
+                  setSelectedServiceTypeIds(
+                    Array.from(event.target.selectedOptions, (option) => option.value),
+                  );
+                }}
+              >
+                {serviceTypes?.map((serviceType) => (
+                  <option key={serviceType.id} value={serviceType.id}>
+                    {serviceType.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="worker-linked-user">{t("fieldWorkersFieldLinkedUser")}</Label>
+              <NativeSelect
+                id="worker-linked-user"
+                value={linkedUserId}
+                onChange={(event) => {
+                  setLinkedUserId(event.target.value);
+                }}
+              >
+                <NativeSelectOption value="">{t("fieldWorkersNoLinkedUser")}</NativeSelectOption>
+                {linkableUsers?.map((user) => (
+                  <NativeSelectOption key={user.id} value={user.id}>
+                    {user.name} — {user.email}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </div>
+            <Button type="submit" className="w-full">
+              {t("fieldWorkersSubmitCreate")}
+            </Button>
+          </form>
+        }
+      />
+    </Page>
   );
 }

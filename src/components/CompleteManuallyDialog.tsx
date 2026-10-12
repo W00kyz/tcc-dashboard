@@ -9,16 +9,15 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
 import { toStopStatus } from "@/lib/stopStatus";
+import { ErrorMessage } from "@/components/layout/StateMessages";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 
 type RouteOut = components["schemas"]["RouteOut"];
 type RouteStopOut = components["schemas"]["RouteStopOut"];
 
 // The backend caps `reason` at 500 chars (CompleteManuallyBody); anything longer 422s.
 const REASON_MAX_LENGTH = 500;
-
-const SELECT_CLASS = "border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm";
-const TEXTAREA_CLASS =
-  "border-input min-h-20 w-full rounded-md border bg-transparent px-3 py-2 text-sm";
 
 /** A stop can only be closed without evidence while it is still open — a DONE stop already
  * has an execution and the backend answers 409. */
@@ -100,30 +99,28 @@ export function CompleteManuallyDialog({
             complete.mutate();
           }}
         >
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="complete-manually-stop">{t("routeCompleteManuallyStopLabel")}</Label>
-            <select
+            <NativeSelect
               id="complete-manually-stop"
-              className={SELECT_CLASS}
               value={selectedStopId}
               onChange={(event) => {
                 setStopId(event.target.value);
               }}
             >
               {stops.map((stop) => (
-                <option key={stop.id} value={stop.id}>
+                <NativeSelectOption key={stop.id} value={stop.id}>
                   {`${String(stop.order_index)}. ${stop.service_point_name}`}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
           </div>
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="complete-manually-reason">
               {t("routeCompleteManuallyReasonLabel")}
             </Label>
-            <textarea
+            <Textarea
               id="complete-manually-reason"
-              className={TEXTAREA_CLASS}
               required
               maxLength={REASON_MAX_LENGTH}
               value={reason}
@@ -132,14 +129,9 @@ export function CompleteManuallyDialog({
               }}
             />
           </div>
-          {complete.isError && (
-            <p role="alert" className="text-destructive text-sm">
-              {t("routeCompleteManuallyError")}
-            </p>
-          )}
+          {complete.isError && <ErrorMessage>{t("routeCompleteManuallyError")}</ErrorMessage>}
           <Button
             type="submit"
-            size="sm"
             disabled={selectedStopId === "" || reason.trim() === "" || complete.isPending}
           >
             {t("routeCompleteManuallyConfirm")}

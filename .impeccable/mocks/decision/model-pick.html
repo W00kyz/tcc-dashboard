@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:Overpass,sans-serif;background:#f4f5f2;color:#2b2d31;display:flex;font-size:14px}
+aside{width:240px;background:#14213d;color:#cfd6e4;padding:20px 12px;display:flex;flex-direction:column}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 22px}
+.plate{background:#e9b949;color:#14213d;font-weight:800;padding:4px 8px;border-radius:3px;font-size:13px}
+.brand b{color:#fff;font-size:15px}
+.grp{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7f8aa3;padding:14px 8px 6px}
+.it{padding:8px 10px;border-radius:4px;display:flex;justify-content:space-between}
+.it.on{background:#fff;color:#14213d;font-weight:700}
+.n{background:#e9b949;color:#14213d;font-weight:800;font-size:11px;padding:1px 7px;border-radius:9px}
+main{flex:1;padding:28px 32px;display:flex;flex-direction:column;gap:18px}
+.hd{display:flex;justify-content:space-between;align-items:center}
+h1{font-size:28px;font-weight:800;color:#14213d}
+.sub{color:#6b6f78;font-size:13px}
+.btn{height:36px;padding:0 14px;border-radius:4px;background:#14213d;color:#fff;display:inline-flex;align-items:center;font-weight:600}
+.btn.o{background:#fff;color:#14213d;border:1px solid #c7ccd6}
+.sum{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.s{background:#fff;border:1px solid #dcdfe5;border-radius:6px;padding:14px 16px}
+.s b{display:block;font-size:26px;font-weight:800;color:#14213d}
+.s.w{border-color:#e9b949;box-shadow:inset 4px 0 #e9b949}
+.card{background:#fff;border:1px solid #dcdfe5;border-radius:6px;padding:16px 18px}
+.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.who{font-weight:700;font-size:16px;color:#14213d}
+.tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;text-transform:uppercase}
+.line{display:flex;align-items:center}
+.stop{display:flex;flex-direction:column;align-items:center;gap:4px;width:110px}
+.disk{width:28px;height:28px;border-radius:50%;border:3px solid #14213d;background:#fff;display:grid;place-items:center;font-weight:800;font-size:12px}
+.disk.d{background:#14213d;color:#fff}.disk.l{border-color:#b3261e;background:#b3261e;color:#fff}
+.seg{flex:1;height:3px;background:#14213d;margin:0 -40px 18px}
+.code{font-size:11px;font-weight:700;background:#14213d;color:#fff;padding:1px 6px;border-radius:2px}
+.cols{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+</style></head><body>
+<aside>
+<div class="brand"><span class="plate">PU</span><b>Rotas do Campus</b></div>
+<div class="grp">Operação</div><div class="it on">Quadro de rotas</div><div class="it">Execuções <span class="n">7</span></div><div class="it">Reatribuições</div><div class="it">Notificações <span class="n">3</span></div>
+<div class="grp">Planejamento</div><div class="it">Templates e regras</div>
+<div class="grp">Análise</div><div class="it">Relatórios</div>
+<div class="grp">Cadastros</div><div class="it">Campus e serviços</div>
+<div class="grp">Administração</div><div class="it">Usuários e sistema</div>
+</aside>
+<main>
+<div class="hd"><div><h1>Quadro de rotas</h1><div class="sub">Sábado, 11 de outubro · ao vivo</div></div><div style="display:flex;gap:8px"><span class="btn o">Rota ocasional</span><span class="btn">Nova rota</span></div></div>
+<div class="sum"><div class="s"><b>18</b>rotas hoje</div><div class="s"><b>11</b>em andamento</div><div class="s w"><b>2</b>atrasadas</div><div class="s"><b>64%</b>paradas concluídas</div></div>
+<div class="cols"><div style="display:flex;flex-direction:column;gap:12px">
+<div class="card"><div class="row"><span class="who">Jéssica Lima</span><span class="tag" style="background:#fbe5e3;color:#b3261e">Atrasada · 42 min</span></div>
+<div class="line"><div class="stop"><span class="disk d">1</span><span class="code">CAA</span></div><div class="seg"></div><div class="stop"><span class="disk d">2</span><span class="code">CD 1º</span></div><div class="seg"></div><div class="stop"><span class="disk d">3</span><span class="code">CD 2º</span></div><div class="seg"></div><div class="stop"><span class="disk l">4</span><span class="code">BL-H</span></div><div class="seg" style="background:#c7ccd6"></div><div class="stop"><span class="disk">5</span><span class="code">RU</span></div></div></div>
+<div class="card"><div class="row"><span class="who">Carlos Andrade</span><span class="tag" style="background:#fdf2d6;color:#7a5600">Em andamento</span></div>
+<div class="line"><div class="stop"><span class="disk d">1</span><span class="code">BIB</span></div><div class="seg"></div><div class="stop"><span class="disk d">2</span><span class="code">CEEI</span></div><div class="seg"></div><div class="stop"><span class="disk">3</span><span class="code">CTRN</span></div><div class="seg" style="background:#c7ccd6"></div><div class="stop"><span class="disk">4</span><span class="code">REIT</span></div></div></div>
+</div>
+<div class="card"><div class="row"><span class="who">Alertas abertos</span><span class="n">2</span></div><p>Rota de Jéssica Lima parada há 42 min no Bloco H.</p></div></div>
+</main></body></html>

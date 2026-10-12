@@ -1,49 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { BoardSnapshot } from "@/api/monitoringStream";
 import { useBoardStream } from "@/api/monitoringStream";
 import { useAuth } from "@/auth/AuthContext";
-import { RouteActionsMenu } from "@/components/RouteActionsMenu";
-import { RouteStopStrip } from "@/components/RouteStopStrip";
-import { WorkerPositionsList } from "@/components/WorkerPositionsList";
+import { BoardKpiStrip } from "@/components/board/BoardKpiStrip";
+import { BoardPager } from "@/components/board/BoardPager";
+import { BuildingPanel } from "@/components/board/BuildingPanel";
+import { OpenAlertsPanel } from "@/components/board/OpenAlertsPanel";
+import { OperationsMapPanel } from "@/components/board/OperationsMapPanel";
+import { RouteBoardFilters, type RouteFilters } from "@/components/board/RouteBoardFilters";
+import { RouteBoardTable } from "@/components/board/RouteBoardTable";
+import { useBoardBuildings } from "@/components/board/useBoardBuildings";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import type { StringKey } from "@/i18n/strings";
+import { useReviewQueueCount } from "@/hooks/useReviewQueueCount";
 import { useTranslation } from "@/i18n/useTranslation";
-import { toLocalIsoDate } from "@/lib/dates";
-import { toStopStatus } from "@/lib/stopStatus";
+import { computeBoardKpis } from "@/lib/boardKpis";
+import {
+  buildBoardRows,
+  filterRowsByWorkerName,
+  groupRowsByCompany,
+  paginateGroups,
+} from "@/lib/boardRows";
+import { formatIsoDateLongBr, toLocalIsoDate } from "@/lib/dates";
+import { cn } from "@/lib/utils";
 
 type ApiClient = ReturnType<typeof createApiClient>;
-
-type RouteType = "REGULAR" | "OCCASIONAL";
-type RouteStatus = "PLANNED" | "IN_PROGRESS" | "DONE" | "CANCELLED";
-
-interface RouteFilters {
-  date: string;
-  fieldWorkerId: string;
-  routeType: "" | RouteType;
-  status: "" | RouteStatus;
-}
-
-const STATUS_LABEL_KEY: Record<RouteStatus, StringKey> = {
-  PLANNED: "routeStatusPlanned",
-  IN_PROGRESS: "routeStatusInProgress",
-  DONE: "routeStatusDone",
-  CANCELLED: "routeStatusCancelled",
-};
-
-// Pill palette from the board spec: PLANNED neutral, IN_PROGRESS amber, DONE green,
-// CANCELLED grey with the worker name struck through (handled on the title, not here).
-const STATUS_PILL_CLASS: Record<RouteStatus, string> = {
-  PLANNED: "bg-muted text-muted-foreground",
-  IN_PROGRESS: "bg-amber-100 text-amber-800",
-  DONE: "bg-green-100 text-green-800",
-  CANCELLED: "bg-muted text-muted-foreground",
-};
 
 // The board's filters live in the URL, not in component state: a route just created elsewhere
 // navigates here with `?route_type=OCCASIONAL` (Task 11) or `?date=<materialized>` (Task 12),
@@ -55,7 +41,8 @@ function filtersFromParams(params: URLSearchParams): RouteFilters {
   // the input) is kept as "" so the fetch omits the date and the backend returns every date.
   return {
     date: params.get("date") ?? toLocalIsoDate(),
-    fieldWorkerId: params.get("field_worker_id") ?? "",
+    workerQuery: params.get("q") ?? "",
+    companyId: params.get("company") ?? "",
     routeType: (params.get("route_type") as RouteFilters["routeType"] | null) ?? "",
     status: (params.get("status") as RouteFilters["status"] | null) ?? "",
   };
@@ -66,8 +53,11 @@ function paramsFromFilters(filters: RouteFilters): URLSearchParams {
   // Always written (even when empty) so a cleared date stays cleared instead of snapping
   // back to today on the next render.
   params.set("date", filters.date);
-  if (filters.fieldWorkerId !== "") {
-    params.set("field_worker_id", filters.fieldWorkerId);
+  if (filters.workerQuery !== "") {
+    params.set("q", filters.workerQuery);
+  }
+  if (filters.companyId !== "") {
+    params.set("company", filters.companyId);
   }
   if (filters.routeType !== "") {
     params.set("route_type", filters.routeType);
@@ -81,35 +71,11 @@ function paramsFromFilters(filters: RouteFilters): URLSearchParams {
 
 type BoardAlert = BoardSnapshot["open_alerts"][number];
 
-const ALERT_SEVERITY_LABEL_KEY: Record<string, StringKey> = {
-  INFO: "alertSeverityInfo",
-  WARNING: "alertSeverityWarning",
-  CRITICAL: "alertSeverityCritical",
-};
+// The subset of filters the API applies; search and company are applied in the browser, so
+// they stay out of the query key and typing a name never refetches.
+type ApiRouteFilters = Pick<RouteFilters, "date" | "routeType" | "status">;
 
-// Spec §5 / Ruling 4: INFO grey, WARNING amber, CRITICAL red — as a left border accent.
-const ALERT_SEVERITY_INFO_CLASS = "border-l-muted-foreground bg-muted/40";
-const ALERT_SEVERITY_CLASS: Record<string, string> = {
-  INFO: ALERT_SEVERITY_INFO_CLASS,
-  WARNING: "border-l-amber-500 bg-amber-50",
-  CRITICAL: "border-l-red-600 bg-red-50",
-};
-
-function alertSeverityLabelKey(severity: string): StringKey {
-  return ALERT_SEVERITY_LABEL_KEY[severity] ?? "alertSeverityInfo";
-}
-
-function alertSeverityClass(severity: string): string {
-  return ALERT_SEVERITY_CLASS[severity] ?? ALERT_SEVERITY_INFO_CLASS;
-}
-
-// `RouteOut.status` is a bare string in the OpenAPI contract; fold any unknown value
-// back to PLANNED so the pill never renders undefined.
-function toRouteStatus(value: string): RouteStatus {
-  return value === "IN_PROGRESS" || value === "DONE" || value === "CANCELLED" ? value : "PLANNED";
-}
-
-async function fetchRoutes(client: ApiClient, filters: RouteFilters) {
+async function fetchRoutes(client: ApiClient, filters: ApiRouteFilters) {
   // The OpenAPI spec for GET /routes only declares the 200 response, so openapi-fetch
   // types `error` as always-undefined here; check `response.ok` instead to still catch
   // an undeclared 401/500 at runtime.
@@ -120,7 +86,6 @@ async function fetchRoutes(client: ApiClient, filters: RouteFilters) {
         // `undefined` so openapi-fetch omits the param — the backend treats a missing
         // `date` as "every date" and would 422 on an empty string.
         date: filters.date || undefined,
-        field_worker_id: filters.fieldWorkerId || undefined,
         route_type: filters.routeType || undefined,
         status: filters.status || undefined,
       },
@@ -132,8 +97,6 @@ async function fetchRoutes(client: ApiClient, filters: RouteFilters) {
 
   return data ?? [];
 }
-
-const FILTER_SELECT_CLASS = "border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm";
 
 export function RouteBoardPage() {
   const { t } = useTranslation();
@@ -174,8 +137,24 @@ export function RouteBoardPage() {
   const snapshot: BoardSnapshot | null = fallback
     ? (boardFallbackQuery.data ?? streamSnapshot ?? null)
     : (streamSnapshot ?? boardFallbackQuery.data ?? null);
-  const boardRouteById = new Map((snapshot?.routes ?? []).map((route) => [route.route_id, route]));
   const openAlerts: BoardAlert[] = snapshot?.open_alerts ?? [];
+  const workerPositions = snapshot?.worker_positions ?? [];
+  const delayedWorkerIds = useMemo(
+    () =>
+      new Set(
+        (snapshot?.routes ?? [])
+          .filter((route) => route.is_delayed)
+          .map((route) => route.field_worker_id),
+      ),
+    [snapshot],
+  );
+  // The map's view is fixed on the campus: "locating" a worker highlights their marker (bigger,
+  // haloed, labelled) instead of moving the map, and a marker click highlights the row.
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+  function locateWorker(workerId: string) {
+    setSelectedWorkerId(workerId);
+  }
+  const reviewQueue = useReviewQueueCount(true);
 
   // The stream is now the realtime channel the old `refetchInterval` stood in for: when the
   // snapshot changes a route's membership OR its in-place state (a PLANNED→IN_PROGRESS
@@ -226,6 +205,21 @@ export function RouteBoardPage() {
     setSearchParams(paramsFromFilters({ ...filters, ...patch }), { replace: true });
   }
 
+  const apiFilters: ApiRouteFilters = {
+    date: filters.date,
+    routeType: filters.routeType,
+    status: filters.status,
+  };
+
+  const { data: companies } = useQuery({
+    queryKey: ["contractor-companies"],
+    queryFn: async () => {
+      const { data } = await client.GET("/contractor-companies");
+
+      return data ?? [];
+    },
+  });
+
   const { data: workers } = useQuery({
     queryKey: ["field-workers"],
     queryFn: async () => {
@@ -240,221 +234,169 @@ export function RouteBoardPage() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["routes", filters],
-    queryFn: () => fetchRoutes(client, filters),
+    queryKey: ["routes", apiFilters],
+    queryFn: () => fetchRoutes(client, apiFilters),
     // No `refetchInterval` any more — the board stream (Ruling 4) drives realtime updates and
     // invalidates this query when the snapshot's route set changes.
   });
 
+  const groups = useMemo(() => {
+    const rows = buildBoardRows({ routes: routes ?? [], snapshot, workers: workers ?? [] });
+    const byCompany =
+      filters.companyId === "" ? rows : rows.filter((row) => row.companyId === filters.companyId);
+
+    return groupRowsByCompany(
+      filterRowsByWorkerName(byCompany, filters.workerQuery),
+      companies ?? [],
+    );
+  }, [routes, snapshot, workers, companies, filters.companyId, filters.workerQuery]);
+
+  // The KPIs describe the whole day whatever the table filters say. With the default filters
+  // this is the same query key as the table's, so React Query serves both from one request;
+  // the stream's ["routes"] invalidation refreshes it too.
+  const today = toLocalIsoDate();
+  const dayFilters: ApiRouteFilters = { date: today, routeType: "", status: "" };
+  const { data: dayRoutes } = useQuery({
+    queryKey: ["routes", dayFilters],
+    queryFn: () => fetchRoutes(client, dayFilters),
+  });
+  const kpis = useMemo(
+    () => computeBoardKpis({ dayRoutes: dayRoutes ?? [], snapshot }),
+    [dayRoutes, snapshot],
+  );
+
+  // Buildings are drawn on the map; opening one swaps the alert rail for its floors and points.
+  const delayedRouteIds = useMemo(
+    () => new Set((snapshot?.routes ?? []).filter((r) => r.is_delayed).map((r) => r.route_id)),
+    [snapshot],
+  );
+  const board = useBoardBuildings({ dayRoutes: dayRoutes ?? [], delayedRouteIds });
+
+  // Any filter change (all of them live in the query string) starts again at page 1.
+  const filterKey = searchParams.toString();
+  const [pageState, setPageState] = useState({ filterKey, page: 1 });
+  const requestedPage = pageState.filterKey === filterKey ? pageState.page : 1;
+  const tablePage = paginateGroups(groups, requestedPage);
+  const routesSectionRef = useRef<HTMLElement>(null);
+  function goToPage(page: number) {
+    setPageState({ filterKey, page });
+    // Keep the manager's eyes on the table's first row, not wherever the pager was.
+    routesSectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{t("routeBoardTitle")}</h1>
-        <div className="flex gap-2">
-          <Link
-            className="text-sm underline"
-            to={{ pathname: "/rotas/nova", search: "?type=REGULAR" }}
-          >
-            {t("routeBoardNewRoute")}
-          </Link>
-          <Link
-            className="text-sm underline"
-            to={{ pathname: "/rotas/nova", search: "?type=OCCASIONAL" }}
-          >
-            {t("routeBoardNewOccasionalRoute")}
-          </Link>
-        </div>
+    <Page width="wide">
+      <PageHeader
+        title={t("routeBoardTitle")}
+        description={<BoardLiveStatus fallback={fallback} date={filters.date} />}
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link to={{ pathname: "/rotas/nova", search: "?type=OCCASIONAL" }}>
+                {t("routeBoardNewOccasionalRoute")}
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to={{ pathname: "/rotas/nova", search: "?type=REGULAR" }}>
+                {t("routeBoardNewRoute")}
+              </Link>
+            </Button>
+          </>
+        }
+      />
+
+      <BoardKpiStrip
+        kpis={kpis}
+        reviewQueue={reviewQueue}
+        onShowInProgress={() => {
+          updateFilters({ status: "IN_PROGRESS" });
+        }}
+      />
+
+      <RouteBoardFilters filters={filters} companies={companies ?? []} onChange={updateFilters} />
+
+      {/* The map is the board's centrepiece, with the alert rail beside it on wide screens and
+       * right under it on a phone. The exact positions live in the table's position column. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <OperationsMapPanel
+          positions={workerPositions}
+          delayedWorkerIds={delayedWorkerIds}
+          selectedWorkerId={selectedWorkerId}
+          onSelectWorker={setSelectedWorkerId}
+          buildings={board.mapBuildings}
+          selectedBuildingId={board.selectedBuildingId}
+          onSelectBuilding={board.selectBuilding}
+          servicePoints={board.mapPoints}
+          selectedPointId={board.selectedPointId}
+          onSelectPoint={board.selectPoint}
+        />
+        <aside className="space-y-6">
+          {board.panelProps !== null && <BuildingPanel {...board.panelProps} />}
+          {board.panelProps === null && (
+            <OpenAlertsPanel
+              alerts={openAlerts}
+              onAcknowledge={(alertId) => {
+                acknowledgeAlert.mutate(alertId);
+              }}
+              onResolve={(alertId) => {
+                resolveAlert.mutate(alertId);
+              }}
+              acknowledgePending={acknowledgeAlert.isPending}
+              resolvePending={resolveAlert.isPending}
+              actionFailed={acknowledgeAlert.isError || resolveAlert.isError}
+            />
+          )}
+        </aside>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div>
-          <Label htmlFor="route-filter-date">{t("routeBoardFilterDate")}</Label>
-          <input
-            id="route-filter-date"
-            type="date"
-            className={FILTER_SELECT_CLASS}
-            value={filters.date}
-            onChange={(event) => {
-              updateFilters({ date: event.target.value });
-            }}
-          />
-        </div>
-        <div>
-          <Label htmlFor="route-filter-worker">{t("routeBoardFilterWorker")}</Label>
-          <select
-            id="route-filter-worker"
-            className={FILTER_SELECT_CLASS}
-            value={filters.fieldWorkerId}
-            onChange={(event) => {
-              updateFilters({ fieldWorkerId: event.target.value });
-            }}
-          >
-            <option value="">{t("routeBoardFilterAll")}</option>
-            {workers?.map((worker) => (
-              <option key={worker.id} value={worker.id}>
-                {worker.full_name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="route-filter-type">{t("routeBoardFilterType")}</Label>
-          <select
-            id="route-filter-type"
-            className={FILTER_SELECT_CLASS}
-            value={filters.routeType}
-            onChange={(event) => {
-              updateFilters({ routeType: event.target.value as RouteFilters["routeType"] });
-            }}
-          >
-            <option value="">{t("routeBoardFilterAll")}</option>
-            <option value="REGULAR">{t("routeTypeRegular")}</option>
-            <option value="OCCASIONAL">{t("routeTypeOccasional")}</option>
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="route-filter-status">{t("routeBoardFilterStatus")}</Label>
-          <select
-            id="route-filter-status"
-            className={FILTER_SELECT_CLASS}
-            value={filters.status}
-            onChange={(event) => {
-              updateFilters({ status: event.target.value as RouteFilters["status"] });
-            }}
-          >
-            <option value="">{t("routeBoardFilterAll")}</option>
-            <option value="PLANNED">{t("routeStatusPlanned")}</option>
-            <option value="IN_PROGRESS">{t("routeStatusInProgress")}</option>
-            <option value="DONE">{t("routeStatusDone")}</option>
-            <option value="CANCELLED">{t("routeStatusCancelled")}</option>
-          </select>
-        </div>
-      </div>
-
-      <section className="space-y-2" aria-labelledby="open-alerts-heading">
-        <h2 id="open-alerts-heading" className="text-lg font-semibold">
-          {t("monitoringOpenAlertsTitle")}
+      <section
+        ref={routesSectionRef}
+        aria-labelledby="board-routes-heading"
+        className="scroll-mt-20 space-y-3"
+      >
+        <h2 id="board-routes-heading" className="text-primary text-base font-bold">
+          {t("routeBoardRoutesLabel")}
         </h2>
-        {openAlerts.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{t("monitoringNoOpenAlerts")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {openAlerts.map((alert) => (
-              <li
-                key={alert.id}
-                data-testid={`alert-${alert.id}`}
-                className={`space-y-1 rounded border-l-4 p-3 text-sm ${alertSeverityClass(alert.severity)}`}
-              >
-                <p className="font-medium">
-                  {t(alertSeverityLabelKey(alert.severity))}
-                  {alert.status === "ACKNOWLEDGED" && (
-                    <span className="text-muted-foreground ml-2 text-xs font-normal">
-                      {t("monitoringAlertStatusAcknowledged")}
-                    </span>
-                  )}
-                </p>
-                <p>{alert.description}</p>
-                <div className="flex gap-2">
-                  {alert.status !== "ACKNOWLEDGED" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={acknowledgeAlert.isPending}
-                      onClick={() => {
-                        acknowledgeAlert.mutate(alert.id);
-                      }}
-                    >
-                      {t("monitoringAlertAcknowledge")}
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={resolveAlert.isPending}
-                    onClick={() => {
-                      resolveAlert.mutate(alert.id);
-                    }}
-                  >
-                    {t("monitoringAlertResolve")}
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+        {isLoading && <LoadingMessage>{t("routeBoardLoading")}</LoadingMessage>}
+        {error && <ErrorMessage>{t("routeBoardError")}</ErrorMessage>}
+        {!isLoading && !error && routes?.length === 0 && (
+          <EmptyState>{t("routeBoardEmpty")}</EmptyState>
         )}
-        {(acknowledgeAlert.isError || resolveAlert.isError) && (
-          <p role="alert" className="text-destructive text-sm">
-            {t("monitoringAlertActionError")}
-          </p>
+        {routes !== undefined && routes.length > 0 && groups.length === 0 && (
+          <EmptyState>{t("routeBoardNoMatch")}</EmptyState>
+        )}
+        {groups.length > 0 && (
+          <>
+            <RouteBoardTable
+              groups={tablePage.groups}
+              selectedWorkerId={selectedWorkerId}
+              onSelectWorker={locateWorker}
+            />
+            <BoardPager page={tablePage} onPageChange={goToPage} />
+          </>
         )}
       </section>
+    </Page>
+  );
+}
 
-      {isLoading && <p className="text-muted-foreground">{t("routeBoardLoading")}</p>}
-      {error && <p className="text-destructive">{t("routeBoardError")}</p>}
-      {!isLoading && !error && routes?.length === 0 && (
-        <p className="text-muted-foreground">{t("routeBoardEmpty")}</p>
+function BoardLiveStatus({ fallback, date }: { fallback: boolean; date: string }) {
+  const { t } = useTranslation();
+  const longDate = formatIsoDateLongBr(date);
+
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+      {longDate && (
+        <span className="text-foreground font-semibold first-letter:uppercase">{longDate}</span>
       )}
-
-      {routes?.map((route) => {
-        const status = toRouteStatus(route.status);
-        const boardRoute = boardRouteById.get(route.id);
-        const isDelayed = boardRoute?.is_delayed ?? false;
-        const openAlertCount = boardRoute?.open_alert_count ?? 0;
-
-        return (
-          <Card
-            key={route.id}
-            data-testid={`route-card-${route.id}`}
-            className={isDelayed ? "border-amber-500" : undefined}
-          >
-            <CardHeader>
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className={`text-base ${status === "CANCELLED" ? "line-through" : ""}`}>
-                  {route.field_worker_name}
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  {isDelayed && (
-                    <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 uppercase">
-                      {t("routeBoardDelayed")}
-                    </span>
-                  )}
-                  {openAlertCount > 0 && (
-                    <span
-                      className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800"
-                      data-testid={`route-alert-count-${route.id}`}
-                    >
-                      {t("routeBoardOpenAlertCount").replace("{n}", String(openAlertCount))}
-                    </span>
-                  )}
-                  {route.route_type === "OCCASIONAL" && (
-                    <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 uppercase">
-                      {t("routeBadgeOccasional")}
-                    </span>
-                  )}
-                  <span
-                    className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_PILL_CLASS[status]}`}
-                  >
-                    {t(STATUS_LABEL_KEY[status])}
-                  </span>
-                </div>
-              </div>
-              <p className="font-mono text-xs text-muted-foreground">{route.route_date}</p>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <RouteStopStrip
-                stops={route.stops.map((stop) => ({
-                  id: stop.id,
-                  orderIndex: stop.order_index,
-                  status: toStopStatus(stop.status),
-                }))}
-              />
-              <RouteActionsMenu route={route} />
-            </CardContent>
-          </Card>
-        );
-      })}
-
-      <WorkerPositionsList positions={snapshot?.worker_positions ?? []} />
-    </main>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "size-2 rounded-full",
+          fallback ? "bg-status-progress" : "bg-status-done animate-pulse",
+        )}
+      />
+      {fallback ? t("boardLivePolling") : t("boardLiveStream")}
+    </span>
   );
 }

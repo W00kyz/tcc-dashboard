@@ -19,6 +19,9 @@ import { CSS } from "@dnd-kit/utilities";
 import type { components } from "@/api/generated/schema";
 import { strings } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/layout/StateMessages";
 
 type FormQuestion = components["schemas"]["FormQuestionResponse"];
 type QuestionType = components["schemas"]["QuestionType"];
@@ -54,7 +57,7 @@ function SortableQuestionRow({ question, onEdit, onRemove }: SortableQuestionRow
   return (
     <li
       ref={setNodeRef}
-      className="flex items-start gap-2 py-2"
+      className="bg-card flex items-start gap-2 py-3"
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       {/* Same dual-sensor handle contract as SortableStopList: PointerSensor for the mouse,
@@ -63,47 +66,43 @@ function SortableQuestionRow({ question, onEdit, onRemove }: SortableQuestionRow
         type="button"
         ref={setActivatorNodeRef}
         aria-label={t("formBuilderDragHandle")}
-        className="text-muted-foreground cursor-grab px-1"
+        className="text-muted-foreground hover:text-foreground hover:bg-accent flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md active:cursor-grabbing"
         {...attributes}
         {...listeners}
       >
-        ⠿
+        <GripVertical aria-hidden="true" className="size-4" />
       </button>
-      <div className="flex-1 space-y-1">
-        <p className="font-medium">{question.prompt}</p>
-        <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="rounded-full border px-2 py-0.5">
-            {QUESTION_TYPE_LABELS[question.question_type]}
-          </span>
-          {question.required && (
-            <span className="rounded-full border px-2 py-0.5">{t("formBuilderRequiredBadge")}</span>
-          )}
+      <div className="min-w-0 flex-1 space-y-1.5 pt-1">
+        <p className="text-foreground font-semibold">{question.prompt}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant="plate">{QUESTION_TYPE_LABELS[question.question_type]}</Badge>
+          {question.required && <Badge variant="progress">{t("formBuilderRequiredBadge")}</Badge>}
           {question.options.map((option) => (
-            <span key={option} className="bg-muted rounded-full px-2 py-0.5">
+            <Badge key={option} variant="outline" className="font-normal">
               {option}
-            </span>
+            </Badge>
           ))}
         </div>
       </div>
       <button
         type="button"
         aria-label={t("formBuilderEditQuestion")}
-        className="px-2 text-sm"
+        className="text-muted-foreground hover:text-foreground hover:bg-accent flex size-8 shrink-0 items-center justify-center rounded-md"
         onClick={() => {
           onEdit(question);
         }}
       >
-        ✎
+        <Pencil aria-hidden="true" className="size-4" />
       </button>
       <button
         type="button"
         aria-label={t("formBuilderRemoveQuestion")}
-        className="text-destructive px-2"
+        className="text-muted-foreground hover:bg-status-late-soft hover:text-status-late flex size-8 shrink-0 items-center justify-center rounded-md"
         onClick={() => {
           onRemove(question.stable_key);
         }}
       >
-        ×
+        <Trash2 aria-hidden="true" className="size-4" />
       </button>
     </li>
   );
@@ -132,7 +131,7 @@ export function SortableQuestionList({
   }
 
   if (questions.length === 0) {
-    return <p className="text-muted-foreground">{t("formBuilderEmptyDraft")}</p>;
+    return <EmptyState>{t("formBuilderEmptyDraft")}</EmptyState>;
   }
 
   return (
@@ -141,7 +140,7 @@ export function SortableQuestionList({
         items={questions.map((question) => question.stable_key)}
         strategy={verticalListSortingStrategy}
       >
-        <ol className="divide-border divide-y">
+        <ol className="divide-y">
           {questions.map((question) => (
             <SortableQuestionRow
               key={question.stable_key}

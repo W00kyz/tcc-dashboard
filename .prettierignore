@@ -7,3 +7,7 @@ package-lock.json
 # project's style (Task 10 of Etapa 2).
 src/components/ui
 src/lib/utils.ts
+.impeccable/mocks/
+
+# Agent working notes (specs, review reports), not project source.
+.superpowers/

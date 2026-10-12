@@ -11,3 +11,37 @@ export function toLocalIsoDate(date: Date = new Date()): string {
 
   return `${String(date.getFullYear())}-${month}-${day}`;
 }
+
+/**
+ * A `YYYY-MM-DD` API date as the pt-BR `DD/MM/YYYY` a manager reads. Pure string work, so
+ * no timezone can shift the day. Anything not in that shape comes back unchanged.
+ *
+ * @example formatIsoDateBr("2026-08-31") // "31/08/2026"
+ */
+export function formatIsoDateBr(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (match === null) {
+    return isoDate;
+  }
+
+  return `${match[3] ?? ""}/${match[2] ?? ""}/${match[1] ?? ""}`;
+}
+
+/**
+ * A `YYYY-MM-DD` API date as a pt-BR long date for headings. Built at local noon so no
+ * timezone can roll it to a neighbouring day. Returns "" for anything else.
+ *
+ * @example formatIsoDateLongBr("2026-10-11") // "domingo, 11 de outubro de 2026"
+ */
+export function formatIsoDateLongBr(isoDate: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    return "";
+  }
+
+  return new Date(`${isoDate}T12:00:00`).toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}

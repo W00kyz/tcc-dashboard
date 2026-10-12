@@ -11,6 +11,7 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { ConsentGate } from "@/auth/ConsentGate";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { ReassignmentsPage } from "@/routes/ReassignmentsPage";
+import { listItemWithText } from "@/test/queries";
 
 const STOP_IMPEDIMENT = {
   id: "imp1",
@@ -142,23 +143,23 @@ describe("ReassignmentsPage", () => {
   it("lists pending impediments with their translated reason and scope", async () => {
     renderPage(makeFakeFetch());
 
-    const card = await screen.findByTestId("impediment-card-imp1");
+    const card = await screen.findByRole("article", { name: "Acesso bloqueado" });
     expect(within(card).getByText("Acesso bloqueado")).toBeInTheDocument();
     expect(within(card).getByText("Ponto específico")).toBeInTheDocument();
 
-    const remainderCard = screen.getByTestId("impediment-card-imp2");
+    const remainderCard = screen.getByRole("article", { name: "Problema de saúde" });
     expect(within(remainderCard).getByText("Restante da rota")).toBeInTheDocument();
   });
 
   it("names the affected stop for a STOP impediment and counts every open stop for ROUTE_REMAINDER", async () => {
     renderPage(makeFakeFetch());
 
-    const card = await screen.findByTestId("impediment-card-imp1");
+    const card = await screen.findByRole("article", { name: "Acesso bloqueado" });
     await within(card).findByText(/Sala 102 · Bloco A/);
 
     // The route has 2 PENDING stops (s2, s4), 1 IN_PROGRESS (s3) and 1 DONE (s1). The backend
     // `_affected_stops` reassigns PENDING + IN_PROGRESS, so the tally is "3", not "2".
-    const remainderCard = screen.getByTestId("impediment-card-imp2");
+    const remainderCard = screen.getByRole("article", { name: "Problema de saúde" });
     await within(remainderCard).findByText("3 pontos restantes na rota");
   });
 
@@ -166,7 +167,7 @@ describe("ReassignmentsPage", () => {
     const user = userEvent.setup();
     renderPage(makeFakeFetch());
 
-    const card = await screen.findByTestId("impediment-card-imp1");
+    const card = await screen.findByRole("article", { name: "Acesso bloqueado" });
     await user.click(within(card).getByRole("button", { name: "Ver candidatos" }));
 
     expect(await within(card).findByText("Maria Souza")).toBeInTheDocument();
@@ -178,12 +179,12 @@ describe("ReassignmentsPage", () => {
     const user = userEvent.setup();
     renderPage(fakeFetch);
 
-    const card = await screen.findByTestId("impediment-card-imp1");
+    const card = await screen.findByRole("article", { name: "Acesso bloqueado" });
     await user.click(within(card).getByRole("button", { name: "Ver candidatos" }));
 
-    const candidate = await within(card).findByText("Maria Souza");
+    await within(card).findByText("Maria Souza");
     await user.click(
-      within(candidate.closest("li") as HTMLElement).getByRole("button", { name: "Reatribuir" }),
+      within(listItemWithText("Maria Souza")).getByRole("button", { name: "Reatribuir" }),
     );
 
     return { user, dialog: await screen.findByRole("dialog") };
@@ -239,7 +240,7 @@ describe("ReassignmentsPage", () => {
     const fakeFetch = makeFakeFetch();
     renderPage(fakeFetch);
 
-    const card = await screen.findByTestId("impediment-card-imp1");
+    const card = await screen.findByRole("article", { name: "Acesso bloqueado" });
     await user.click(within(card).getByRole("button", { name: "Descartar" }));
 
     await waitFor(() => {

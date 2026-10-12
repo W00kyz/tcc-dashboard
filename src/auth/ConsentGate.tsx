@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
+import { Page, PageHeader, Panel } from "@/components/layout/Page";
+import { ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
 
@@ -56,35 +58,36 @@ export function ConsentGate({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-6">
-      <h1 className="text-xl font-semibold">
-        {notice.data?.notice?.title ?? t("consentGateTitle")}
-      </h1>
+    <div className="bg-background min-h-screen">
+      <Page width="narrow">
+        <PageHeader title={notice.data?.notice?.title ?? t("consentGateTitle")} />
 
-      {notice.isLoading && <p className="text-muted-foreground">{t("consentGateBodyLoading")}</p>}
+        {notice.isLoading && <LoadingMessage>{t("consentGateBodyLoading")}</LoadingMessage>}
 
-      {notice.data?.notice && (
-        // No markdown renderer in the dashboard and RNF10 does not warrant a new
-        // dependency — the notice body reads fine as pre-wrapped prose.
-        <pre className="whitespace-pre-wrap font-sans text-sm">
-          {notice.data.notice.body_markdown}
-        </pre>
-      )}
+        {notice.data?.notice && (
+          <Panel className="p-6">
+            {/* No markdown renderer in the dashboard and RNF10 does not warrant a new
+             * dependency — the notice body reads fine as pre-wrapped prose. */}
+            <pre className="max-w-[70ch] font-sans text-sm leading-relaxed whitespace-pre-wrap">
+              {notice.data.notice.body_markdown}
+            </pre>
+          </Panel>
+        )}
 
-      {(notice.isError || accept.isError) && (
-        <p role="alert" className="text-destructive text-sm">
-          {t("consentGateError")}
-        </p>
-      )}
+        {(notice.isError || accept.isError) && <ErrorMessage>{t("consentGateError")}</ErrorMessage>}
 
-      <Button
-        disabled={accept.isPending || notice.isLoading}
-        onClick={() => {
-          accept.mutate();
-        }}
-      >
-        {accept.isPending ? t("consentGateAcceptPending") : t("consentGateAccept")}
-      </Button>
-    </main>
+        <div>
+          <Button
+            size="lg"
+            disabled={accept.isPending || notice.isLoading}
+            onClick={() => {
+              accept.mutate();
+            }}
+          >
+            {accept.isPending ? t("consentGateAcceptPending") : t("consentGateAccept")}
+          </Button>
+        </div>
+      </Page>
+    </div>
   );
 }

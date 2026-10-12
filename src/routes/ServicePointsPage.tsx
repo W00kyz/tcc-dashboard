@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Page, PageHeader } from "@/components/layout/Page";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Badge } from "@/components/ui/badge";
+import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
 
 type PointType = "REGULAR" | "OCCASIONAL";
 
@@ -139,164 +143,188 @@ export function ServicePointsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">{t("servicePointsPageTitle")}</h1>
-      <form
-        className="space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate();
-        }}
-      >
-        <div>
-          <Label htmlFor="point-floor">{t("servicePointsFieldFloor")}</Label>
-          <select
-            id="point-floor"
-            className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-            value={floorId}
-            onChange={(event) => {
-              setFloorId(event.target.value);
-            }}
-          >
-            <option value="" />
-            {floors?.map((floor) => (
-              <option key={floor.id} value={floor.id}>
-                {floor.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="point-name">{t("servicePointsFieldName")}</Label>
-          <Input
-            id="point-name"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
-          />
-        </div>
-        <div>
-          <Label htmlFor="point-description">{t("servicePointsFieldDescription")}</Label>
-          <Input
-            id="point-description"
-            value={description}
-            onChange={(event) => {
-              setDescription(event.target.value);
-            }}
-          />
-        </div>
-        <div>
-          <Label htmlFor="point-latitude">{t("servicePointsFieldLatitude")}</Label>
-          <Input
-            id="point-latitude"
-            type="number"
-            step="any"
-            value={latitude}
-            onChange={(event) => {
-              setLatitude(Number(event.target.value));
-            }}
-          />
-        </div>
-        <div>
-          <Label htmlFor="point-longitude">{t("servicePointsFieldLongitude")}</Label>
-          <Input
-            id="point-longitude"
-            type="number"
-            step="any"
-            value={longitude}
-            onChange={(event) => {
-              setLongitude(Number(event.target.value));
-            }}
-          />
-        </div>
-        <div>
-          <Label htmlFor="point-type">{t("servicePointsFieldType")}</Label>
-          <select
-            id="point-type"
-            className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-            value={pointType}
-            onChange={(event) => {
-              setPointType(event.target.value as PointType);
-            }}
-          >
-            <option value="REGULAR">{t("servicePointsTypeRegular")}</option>
-            <option value="OCCASIONAL">{t("servicePointsTypeOccasional")}</option>
-          </select>
-        </div>
-        {pointType === "OCCASIONAL" && (
-          <div>
-            <Label htmlFor="point-event">{t("servicePointsFieldEvent")}</Label>
-            <select
-              id="point-event"
-              className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-              value={eventId}
-              onChange={(event) => {
-                setEventId(event.target.value);
-              }}
-            >
-              <option value="" />
-              {events?.map((event) => (
-                <option key={event.id} value={event.id}>
-                  {event.name}
-                </option>
-              ))}
-            </select>
+    <Page>
+      <PageHeader title={t("servicePointsPageTitle")} />
+      <RegistryLayout
+        list={
+          <div className="space-y-3">
+            <fieldset className="flex flex-wrap items-end gap-x-6 gap-y-3">
+              <legend className="sr-only">{t("servicePointsListFiltersLabel")}</legend>
+              <div className="w-full space-y-1.5 sm:w-64">
+                <Label htmlFor="point-floor-filter">{t("servicePointsFilterFloor")}</Label>
+                <NativeSelect
+                  id="point-floor-filter"
+                  value={floorFilterId}
+                  onChange={(event) => {
+                    setFloorFilterId(event.target.value);
+                  }}
+                >
+                  <NativeSelectOption value="">
+                    {t("servicePointsFilterFloorAll")}
+                  </NativeSelectOption>
+                  {floors?.map((floor) => (
+                    <NativeSelectOption key={floor.id} value={floor.id}>
+                      {floor.label}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </div>
+
+              <Label className="text-sm font-normal">
+                <input
+                  className="accent-primary size-4"
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(event) => {
+                    setShowArchived(event.target.checked);
+                  }}
+                />
+                {t("servicePointsShowArchived")}
+              </Label>
+            </fieldset>
+            <RegistryList
+              items={points}
+              getKey={(point) => point.id}
+              renderItem={(point) => (
+                <>
+                  <span className="min-w-0 flex-1">
+                    <span className="text-foreground block font-semibold">{point.name}</span>
+                    <span className="text-muted-foreground text-sm">
+                      {floorLabel(point.floor_id)}
+                    </span>
+                  </span>
+                  {point.point_type === "OCCASIONAL" && (
+                    <>
+                      <Badge variant="plate">{t("servicePointsTypeOccasional")}</Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          promote.mutate(point.id);
+                        }}
+                      >
+                        {t("servicePointsPromote")}
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+            />
           </div>
-        )}
-        <Button type="submit">{t("servicePointsSubmitCreate")}</Button>
-      </form>
-
-      <div>
-        <Label htmlFor="point-floor-filter">{t("servicePointsFilterFloor")}</Label>
-        <select
-          id="point-floor-filter"
-          className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-          value={floorFilterId}
-          onChange={(event) => {
-            setFloorFilterId(event.target.value);
-          }}
-        >
-          <option value="">{t("servicePointsFilterFloorAll")}</option>
-          {floors?.map((floor) => (
-            <option key={floor.id} value={floor.id}>
-              {floor.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <Label className="text-sm">
-        <input
-          type="checkbox"
-          checked={showArchived}
-          onChange={(event) => {
-            setShowArchived(event.target.checked);
-          }}
-        />
-        {t("servicePointsShowArchived")}
-      </Label>
-
-      <ul className="divide-border divide-y">
-        {points?.map((point) => (
-          <li key={point.id} className="flex items-center justify-between py-2">
-            <span>
-              <span className="font-medium">{point.name}</span>{" "}
-              <span className="text-muted-foreground">{floorLabel(point.floor_id)}</span>
-            </span>
-            {point.point_type === "OCCASIONAL" && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  promote.mutate(point.id);
+        }
+        form={
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="point-floor">{t("servicePointsFieldFloor")}</Label>
+              <NativeSelect
+                id="point-floor"
+                value={floorId}
+                onChange={(event) => {
+                  setFloorId(event.target.value);
                 }}
               >
-                {t("servicePointsPromote")}
-              </Button>
+                <NativeSelectOption value="" />
+                {floors?.map((floor) => (
+                  <NativeSelectOption key={floor.id} value={floor.id}>
+                    {floor.label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="point-name">{t("servicePointsFieldName")}</Label>
+              <Input
+                id="point-name"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="point-description">{t("servicePointsFieldDescription")}</Label>
+              <Input
+                id="point-description"
+                value={description}
+                onChange={(event) => {
+                  setDescription(event.target.value);
+                }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="point-latitude">{t("servicePointsFieldLatitude")}</Label>
+                <Input
+                  id="point-latitude"
+                  type="number"
+                  step="any"
+                  value={latitude}
+                  onChange={(event) => {
+                    setLatitude(Number(event.target.value));
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="point-longitude">{t("servicePointsFieldLongitude")}</Label>
+                <Input
+                  id="point-longitude"
+                  type="number"
+                  step="any"
+                  value={longitude}
+                  onChange={(event) => {
+                    setLongitude(Number(event.target.value));
+                  }}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="point-type">{t("servicePointsFieldType")}</Label>
+              <NativeSelect
+                id="point-type"
+                value={pointType}
+                onChange={(event) => {
+                  setPointType(event.target.value as PointType);
+                }}
+              >
+                <NativeSelectOption value="REGULAR">
+                  {t("servicePointsTypeRegular")}
+                </NativeSelectOption>
+                <NativeSelectOption value="OCCASIONAL">
+                  {t("servicePointsTypeOccasional")}
+                </NativeSelectOption>
+              </NativeSelect>
+            </div>
+            {pointType === "OCCASIONAL" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="point-event">{t("servicePointsFieldEvent")}</Label>
+                <NativeSelect
+                  id="point-event"
+                  value={eventId}
+                  onChange={(event) => {
+                    setEventId(event.target.value);
+                  }}
+                >
+                  <NativeSelectOption value="" />
+                  {events?.map((event) => (
+                    <NativeSelectOption key={event.id} value={event.id}>
+                      {event.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </div>
             )}
-          </li>
-        ))}
-      </ul>
-    </main>
+            <Button type="submit" className="w-full">
+              {t("servicePointsSubmitCreate")}
+            </Button>
+          </form>
+        }
+      />
+    </Page>
   );
 }

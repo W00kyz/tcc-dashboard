@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -91,8 +91,10 @@ describe("NotificationsPage", () => {
 
     expect(await screen.findByText("Ponto atrasado")).toBeInTheDocument();
     expect(screen.getByText("Nova rota")).toBeInTheDocument();
-    expect(screen.getByTestId("notification-n1")).toHaveAttribute("data-unread", "true");
-    expect(screen.getByTestId("notification-n2")).toHaveAttribute("data-unread", "false");
+    const unread = screen.getByRole("button", { name: /Ponto atrasado/ });
+    const read = screen.getByRole("button", { name: /Nova rota/ });
+    expect(within(unread).getByText("Não lida")).toBeInTheDocument();
+    expect(within(read).queryByText("Não lida")).not.toBeInTheDocument();
   });
 
   it("marks an unread notification read when it is clicked", async () => {
@@ -100,7 +102,7 @@ describe("NotificationsPage", () => {
     const user = userEvent.setup();
     renderPage(fetchImpl);
 
-    await user.click(await screen.findByTestId("notification-n1"));
+    await user.click(await screen.findByRole("button", { name: /Ponto atrasado/ }));
 
     await waitFor(() => {
       expect(
@@ -148,7 +150,7 @@ describe("NotificationsPage", () => {
     );
 
     expect(await screen.findByText("Impossibilidade")).toBeInTheDocument();
-    await user.click(screen.getByTestId("notification-n3"));
+    await user.click(screen.getByRole("button", { name: /Impossibilidade sinalizada/ }));
 
     expect(await screen.findByText("fila de reatribuição")).toBeInTheDocument();
   });
