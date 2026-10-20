@@ -137,14 +137,12 @@ describe("AppShell navigation", () => {
     await openModule("Cadastros");
     await openModule("Planejamento");
 
-    for (const name of [
-      "Prédios e pontos",
-      "Profissionais",
-      "Empresas",
-      "Tipos de serviço",
-      "Formulários",
-    ]) {
+    for (const name of ["Prédios e pontos", "Profissionais", "Empresas", "Formulários"]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
+    }
+    // Service types live inside their company now; planning by hand is gone (§8.1).
+    for (const name of ["Tipos de serviço", "Templates de rota", "Reatribuições"]) {
+      expect(screen.queryByRole("link", { name })).not.toBeInTheDocument();
     }
     // The events feature was removed; its registry entry must not come back.
     expect(screen.queryByRole("link", { name: "Eventos" })).not.toBeInTheDocument();

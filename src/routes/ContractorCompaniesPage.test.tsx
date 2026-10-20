@@ -75,6 +75,7 @@ describe("ContractorCompaniesPage", () => {
       );
     }
     const body = (await (submitCall[0] as Request).clone().json()) as Record<string, unknown>;
-    expect(body).toEqual({ name: "Verde Jardins Ltda", cnpj: "98765432000188" });
+    // A new company starts with no service types until the dialog edits them (task D2).
+    expect(body).toEqual({ name: "Verde Jardins Ltda", cnpj: "98765432000188", service_types: [] });
   });
 });

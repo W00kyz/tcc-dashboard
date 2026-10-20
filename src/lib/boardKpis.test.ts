@@ -1,125 +1,104 @@
 import { describe, expect, it } from "vitest";
 
-import type { components } from "@/api/generated/schema";
 import type { BoardSnapshot } from "@/api/monitoringStream";
 import { computeBoardKpis } from "@/lib/boardKpis";
 
-type RouteOut = components["schemas"]["RouteOut"];
 type BoardRoute = BoardSnapshot["routes"][number];
 type BoardAlert = BoardSnapshot["open_alerts"][number];
 
-function route(status: string, stopStatuses: string[]): RouteOut {
+function liveRoute(workerId: string, status: string): BoardRoute {
   return {
-    id: `${status}-${String(stopStatuses.length)}`,
-    field_worker_id: "w",
+    route_id: `${workerId}-${status}`,
+    field_worker_id: workerId,
     field_worker_name: "Ana",
-    route_date: "2026-10-11",
-    route_type: "REGULAR",
+    company_name: "Limpa Campus",
+    route_date: "2026-10-20",
     status,
-    scheduled_start_at: null,
-    started_at: null,
-    routing_degraded: false,
-    stops: stopStatuses.map((stopStatus, index) => ({
-      id: String(index),
-      order_index: index + 1,
-      status: stopStatus,
-      service_point_name: "Sala",
-    })),
-  } as RouteOut;
-}
-
-function liveRoute(overrides: Partial<BoardRoute>): BoardRoute {
-  return {
-    route_id: "r",
-    field_worker_id: "w",
-    field_worker_name: "Ana",
-    route_date: "2026-10-11",
-    status: "IN_PROGRESS",
-    is_delayed: false,
     open_alert_count: 0,
-    stop_total: 4,
-    stop_done: 0,
-    ...overrides,
+    current_batch: 1,
+    stops: [],
+    done_today: 0,
   };
 }
 
 function alert(severity: string): BoardAlert {
   return {
     id: severity,
-    kind: "LATE_STOP",
+    kind: "BATCH_RELEASED",
     severity,
     description: "",
-    route_id: "r",
+    route_id: null,
     route_stop_id: null,
-    field_worker_id: "w",
+    field_worker_id: null,
     status: "OPEN",
-    created_at: "2026-10-11T12:00:00Z",
+    created_at: "2026-10-20T12:00:00Z",
   };
 }
 
-function snapshot(routes: BoardRoute[], alerts: BoardAlert[] = []): BoardSnapshot {
+function snapshot(patch: Partial<BoardSnapshot>): BoardSnapshot {
   return {
-    generated_at: "2026-10-11T12:00:00Z",
-    routes,
-    open_alerts: alerts,
+    generated_at: "2026-10-20T12:00:00Z",
+    service_day: true,
+    routes: [],
+    pool: [],
+    not_started: [],
+    released_today: 0,
+    open_alerts: [],
     worker_positions: [],
+    ...patch,
   };
 }
 
 describe("computeBoardKpis", () => {
-  it("counts the day's routes by state from the route list, finished ones included", () => {
-    const kpis = computeBoardKpis({
-      dayRoutes: [
-        route("IN_PROGRESS", ["DONE", "PENDING"]),
-        route("IN_PROGRESS", ["PENDING"]),
-        route("DONE", ["DONE", "DONE"]),
-        route("CANCELLED", ["PENDING"]),
-      ],
-      // The live board never carries DONE / CANCELLED routes; they must still be counted.
-      snapshot: snapshot([liveRoute({ is_delayed: true }), liveRoute({})]),
-    });
+  it("counts each worker with an in-progress route once, paused and done ones left out", () => {
+    const kpis = computeBoardKpis(
+      snapshot({
+        routes: [
+          liveRoute("w1", "IN_PROGRESS"),
+          liveRoute("w2", "IN_PROGRESS"),
+          liveRoute("w2", "IN_PROGRESS"),
+          liveRoute("w3", "PAUSED"),
+          liveRoute("w4", "DONE"),
+        ],
+      }),
+    );
 
-    expect(kpis).toMatchObject({
-      routeTotal: 4,
-      routesInProgress: 2,
-      routesDone: 1,
-      routesCancelled: 1,
-      routesDelayed: 1,
+    expect(kpis.workersOnRoute).toBe(2);
+  });
+
+  it("passes the pool and today's releases through from the snapshot", () => {
+    const pool = [
+      {
+        service_type_id: "t1",
+        service_type_name: "Limpeza",
+        company_name: "Limpa Campus",
+        total: 10,
+        done: 4,
+        in_progress: 2,
+        free: 4,
+      },
+    ];
+
+    expect(computeBoardKpis(snapshot({ pool, released_today: 3 }))).toMatchObject({
+      pool,
+      releasedToday: 3,
     });
   });
 
-  it("measures stop completion over the day's routes, leaving cancelled ones out", () => {
-    const kpis = computeBoardKpis({
-      dayRoutes: [
-        route("IN_PROGRESS", ["DONE", "DONE", "DONE", "PENDING", "PENDING", "PENDING"]),
-        route("DONE", ["DONE", "DONE"]),
-        route(
-          "CANCELLED",
-          Array.from({ length: 10 }, () => "PENDING"),
-        ),
-      ],
-      snapshot: null,
-    });
-
-    expect(kpis.stopsDone).toBe(5);
-    expect(kpis.stopsTotal).toBe(8);
-    expect(kpis.stopCompletionPercent).toBe(63);
-  });
-
-  it("reports no completion percentage when nothing is planned", () => {
-    const kpis = computeBoardKpis({ dayRoutes: [], snapshot: null });
-
-    expect(kpis.stopCompletionPercent).toBeNull();
-    expect(kpis.routeTotal).toBe(0);
-  });
-
-  it("counts open alerts from the live board and singles out the critical ones", () => {
-    const kpis = computeBoardKpis({
-      dayRoutes: [],
-      snapshot: snapshot([], [alert("CRITICAL"), alert("WARNING")]),
-    });
+  it("counts open alerts and singles out the critical ones", () => {
+    const kpis = computeBoardKpis(snapshot({ open_alerts: [alert("CRITICAL"), alert("WARNING")] }));
 
     expect(kpis.alertsOpen).toBe(2);
     expect(kpis.alertsCritical).toBe(1);
+  });
+
+  it("reads as an empty day before the first snapshot arrives", () => {
+    expect(computeBoardKpis(null)).toEqual({
+      pool: [],
+      workersOnRoute: 0,
+      releasedToday: 0,
+      alertsOpen: 0,
+      alertsCritical: 0,
+    });
   });
 });

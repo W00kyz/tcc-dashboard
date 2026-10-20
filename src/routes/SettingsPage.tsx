@@ -1,16 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { Controller, useForm, type UseFormReturn } from "react-hook-form";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { strings, type StringKey } from "@/i18n/strings";
-import { useTranslation } from "@/i18n/useTranslation";
 import { Page, PageHeader } from "@/components/layout/Page";
 import {
   ErrorMessage,
@@ -18,64 +12,160 @@ import {
   LoadingMessage,
   SuccessMessage,
 } from "@/components/layout/StateMessages";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { StringKey } from "@/i18n/strings";
+import { useTranslation } from "@/i18n/useTranslation";
+import {
+  formValuesFrom,
+  NUMERIC_SECTIONS,
+  type NumericFieldDescriptor,
+  settingsBodyFrom,
+  type SettingsFormValues,
+  settingsSchema,
+  WEEKDAY_LABEL_KEYS,
+} from "@/lib/settingsForm";
 
-// Defined at module scope, outside the component, so useTranslation() isn't in scope —
-// the range message comes straight from the dictionary (same choice as LoginPage's schema).
-// RF32: the backend clamps the radius to 1..1000 m; mirror that here so an out-of-range
-// value is caught before the request instead of coming back as a 422.
-// Ruling 8: `system_settings` also holds the alert-scan defaults — the two `_seconds`
-// fields clamp to 1..3600, the four `_min` tolerances to 0..1440, matching the backend.
-function secondsField() {
-  return z
-    .number({ invalid_type_error: strings.settingsSecondsRange })
-    .int(strings.settingsSecondsRange)
-    .min(1, strings.settingsSecondsRange)
-    .max(3600, strings.settingsSecondsRange);
+type SettingsForm = UseFormReturn<SettingsFormValues>;
+
+const LEGEND_CLASS = "text-primary mb-3 text-base font-bold";
+
+interface FieldProps {
+  form: SettingsForm;
+  // A fresh edit invalidates the "saved" banner from the previous submit.
+  onEdit: () => void;
 }
 
-function minutesField() {
-  return z
-    .number({ invalid_type_error: strings.settingsMinutesRange })
-    .int(strings.settingsMinutesRange)
-    .min(0, strings.settingsMinutesRange)
-    .max(1440, strings.settingsMinutesRange);
+function NumericField({ form, onEdit, field }: FieldProps & { field: NumericFieldDescriptor }) {
+  const { t } = useTranslation();
+  const registered = form.register(field.name, { valueAsNumber: true });
+  const fieldError = form.formState.errors[field.name];
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={`settings-${field.name}`}>{t(field.labelKey)}</Label>
+      <Input
+        id={`settings-${field.name}`}
+        type="number"
+        step={field.step}
+        {...registered}
+        onChange={(changeEvent) => {
+          onEdit();
+          void registered.onChange(changeEvent);
+        }}
+      />
+      {field.hintKey && <p className="text-muted-foreground text-sm">{t(field.hintKey)}</p>}
+      {fieldError && <FieldError>{fieldError.message}</FieldError>}
+    </div>
+  );
 }
 
-const settingsSchema = z.object({
-  check_radius_meters: z
-    .number({ invalid_type_error: strings.settingsRadiusRange })
-    .int(strings.settingsRadiusRange)
-    .min(1, strings.settingsRadiusRange)
-    .max(1000, strings.settingsRadiusRange),
-  alert_scan_interval_seconds: secondsField(),
-  position_report_interval_seconds: secondsField(),
-  late_start_tolerance_min: minutesField(),
-  absence_tolerance_min: minutesField(),
-  late_stop_tolerance_min: minutesField(),
-  no_evidence_grace_min: minutesField(),
-});
+function NumericSection({
+  form,
+  onEdit,
+  titleKey,
+  fields,
+}: FieldProps & { titleKey: StringKey; fields: NumericFieldDescriptor[] }) {
+  const { t } = useTranslation();
 
-type SettingsFormValues = z.infer<typeof settingsSchema>;
-
-interface NumericFieldDescriptor {
-  name: keyof SettingsFormValues;
-  labelKey: StringKey;
-  hintKey?: StringKey;
+  return (
+    <fieldset className="space-y-4">
+      <legend className={LEGEND_CLASS}>{t(titleKey)}</legend>
+      {titleKey === "settingsSectionCampus" && (
+        <p className="text-muted-foreground -mt-2 text-sm">{t("settingsCampusHint")}</p>
+      )}
+      {fields.map((field) => (
+        <NumericField key={field.name} form={form} onEdit={onEdit} field={field} />
+      ))}
+    </fieldset>
+  );
 }
 
-const NUMERIC_FIELDS: NumericFieldDescriptor[] = [
-  {
-    name: "check_radius_meters",
-    labelKey: "settingsRadiusLabel",
-    hintKey: "settingsRadiusHint",
-  },
-  { name: "alert_scan_interval_seconds", labelKey: "settingsScanIntervalLabel" },
-  { name: "position_report_interval_seconds", labelKey: "settingsPositionIntervalLabel" },
-  { name: "late_start_tolerance_min", labelKey: "settingsLateStartToleranceLabel" },
-  { name: "absence_tolerance_min", labelKey: "settingsAbsenceToleranceLabel" },
-  { name: "late_stop_tolerance_min", labelKey: "settingsLateStopToleranceLabel" },
-  { name: "no_evidence_grace_min", labelKey: "settingsNoEvidenceGraceLabel" },
-];
+// Seven checkboxes for one `number[]` value (Monday=0), so it goes through a Controller.
+function ServiceWeekdays({ form, onEdit }: FieldProps) {
+  const { t } = useTranslation();
+  const fieldError = form.formState.errors.service_weekdays;
+
+  return (
+    <fieldset className="space-y-1.5">
+      <legend className="mb-1.5 text-sm font-medium">{t("settingsServiceWeekdaysLabel")}</legend>
+      <Controller
+        control={form.control}
+        name="service_weekdays"
+        render={({ field }) => (
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            {WEEKDAY_LABEL_KEYS.map((labelKey, weekday) => (
+              <label key={labelKey} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={field.value.includes(weekday)}
+                  onChange={(event) => {
+                    onEdit();
+                    field.onChange(
+                      event.target.checked
+                        ? [...field.value, weekday]
+                        : field.value.filter((day) => day !== weekday),
+                    );
+                  }}
+                />
+                {t(labelKey)}
+              </label>
+            ))}
+          </div>
+        )}
+      />
+      {fieldError && <FieldError>{fieldError.message}</FieldError>}
+    </fieldset>
+  );
+}
+
+function WorkdaySection({ form, onEdit }: FieldProps) {
+  const { t } = useTranslation();
+  const registered = form.register("workday_end_time");
+  const fieldError = form.formState.errors.workday_end_time;
+
+  return (
+    <fieldset className="space-y-4">
+      <legend className={LEGEND_CLASS}>{t("settingsSectionWorkday")}</legend>
+      <div className="space-y-1.5">
+        <Label htmlFor="settings-workday_end_time">{t("settingsWorkdayEndLabel")}</Label>
+        <Input
+          id="settings-workday_end_time"
+          type="time"
+          className="w-40"
+          {...registered}
+          onChange={(changeEvent) => {
+            onEdit();
+            void registered.onChange(changeEvent);
+          }}
+        />
+        <p className="text-muted-foreground text-sm">{t("settingsWorkdayEndHint")}</p>
+        {fieldError && <FieldError>{fieldError.message}</FieldError>}
+      </div>
+      <ServiceWeekdays form={form} onEdit={onEdit} />
+    </fieldset>
+  );
+}
+
+function AppealSection({ form, onEdit }: FieldProps) {
+  const { t } = useTranslation();
+
+  return (
+    <fieldset className="space-y-4">
+      <legend className={LEGEND_CLASS}>{t("settingsSectionAppeal")}</legend>
+      <NumericField
+        form={form}
+        onEdit={onEdit}
+        field={{
+          name: "appeal_window_hours",
+          labelKey: "settingsAppealWindowLabel",
+          hintKey: "settingsAppealWindowHint",
+        }}
+      />
+    </fieldset>
+  );
+}
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -101,45 +191,33 @@ export function SettingsPage() {
     },
   });
 
-  const form = useForm<SettingsFormValues>({ resolver: zodResolver(settingsSchema) });
-  const { register, handleSubmit, reset, formState } = form;
+  const form = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: { service_weekdays: [] },
+  });
+  const { handleSubmit, reset } = form;
 
   // The query resolves after the first render, so seed the fields once their values arrive.
   useEffect(() => {
     if (settings) {
-      reset({
-        check_radius_meters: settings.check_radius_meters,
-        alert_scan_interval_seconds: settings.alert_scan_interval_seconds,
-        position_report_interval_seconds: settings.position_report_interval_seconds,
-        late_start_tolerance_min: settings.late_start_tolerance_min,
-        absence_tolerance_min: settings.absence_tolerance_min,
-        late_stop_tolerance_min: settings.late_stop_tolerance_min,
-        no_evidence_grace_min: settings.no_evidence_grace_min,
-      });
+      reset(formValuesFrom(settings));
     }
   }, [settings, reset]);
 
   const mutation = useMutation({
     mutationFn: async (values: SettingsFormValues) => {
-      const { response } = await client.PUT("/settings", {
-        body: {
-          check_radius_meters: values.check_radius_meters,
-          alert_scan_interval_seconds: values.alert_scan_interval_seconds,
-          position_report_interval_seconds: values.position_report_interval_seconds,
-          late_start_tolerance_min: values.late_start_tolerance_min,
-          absence_tolerance_min: values.absence_tolerance_min,
-          late_stop_tolerance_min: values.late_stop_tolerance_min,
-          no_evidence_grace_min: values.no_evidence_grace_min,
-        },
-      });
+      const { response } = await client.PUT("/settings", { body: settingsBodyFrom(values) });
       if (!response.ok) {
-        throw new Error("failed-to-save-settings");
+        throw new Error(`PUT /settings failed with status ${String(response.status)}.`);
       }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
   });
+  const onEdit = () => {
+    mutation.reset();
+  };
 
   if (isLoading) {
     return (
@@ -160,7 +238,7 @@ export function SettingsPage() {
     <Page width="narrow">
       <PageHeader title={t("settingsTitle")} />
       <form
-        className="bg-card space-y-5 rounded-md border p-5 sm:p-6"
+        className="bg-card space-y-8 rounded-md border p-5 sm:p-6"
         noValidate
         onSubmit={(event) => {
           void handleSubmit((values) => {
@@ -168,28 +246,11 @@ export function SettingsPage() {
           })(event);
         }}
       >
-        {NUMERIC_FIELDS.map(({ name, labelKey, hintKey }) => {
-          const field = register(name, { valueAsNumber: true });
-          const fieldError = formState.errors[name];
-
-          return (
-            <div key={name} className="space-y-1.5">
-              <Label htmlFor={`settings-${name}`}>{t(labelKey)}</Label>
-              <Input
-                id={`settings-${name}`}
-                type="number"
-                {...field}
-                onChange={(changeEvent) => {
-                  // A fresh edit invalidates the "saved" banner from the previous submit.
-                  mutation.reset();
-                  void field.onChange(changeEvent);
-                }}
-              />
-              {hintKey && <p className="text-muted-foreground text-sm">{t(hintKey)}</p>}
-              {fieldError && <FieldError>{fieldError.message}</FieldError>}
-            </div>
-          );
-        })}
+        {NUMERIC_SECTIONS.map((section) => (
+          <NumericSection key={section.titleKey} form={form} onEdit={onEdit} {...section} />
+        ))}
+        <WorkdaySection form={form} onEdit={onEdit} />
+        <AppealSection form={form} onEdit={onEdit} />
         {mutation.isSuccess && <SuccessMessage>{t("settingsSaved")}</SuccessMessage>}
         <Button type="submit" disabled={mutation.isPending}>
           {t("settingsSave")}

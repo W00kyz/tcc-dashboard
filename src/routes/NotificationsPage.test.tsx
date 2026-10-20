@@ -116,7 +116,7 @@ describe("NotificationsPage", () => {
     });
   });
 
-  it("opens an impediment notification on the reassignment queue (RF17)", async () => {
+  it("opens an impediment notification on the board, where its route is", async () => {
     const impediment = {
       ...UNREAD,
       id: "n3",
@@ -145,7 +145,7 @@ describe("NotificationsPage", () => {
           <AuthProvider>
             <Routes>
               <Route path="/notificacoes" element={<NotificationsPage />} />
-              <Route path="/reatribuicoes" element={<p>fila de reatribuição</p>} />
+              <Route path="/rotas" element={<p>quadro de rotas</p>} />
             </Routes>
           </AuthProvider>
         </QueryClientProvider>
@@ -155,7 +155,7 @@ describe("NotificationsPage", () => {
     expect(await screen.findByText("Impossibilidade")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Impossibilidade sinalizada/ }));
 
-    expect(await screen.findByText("fila de reatribuição")).toBeInTheDocument();
+    expect(await screen.findByText("quadro de rotas")).toBeInTheDocument();
   });
 
   it("marks all notifications read", async () => {

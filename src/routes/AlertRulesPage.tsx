@@ -25,33 +25,35 @@ type Settings = components["schemas"]["SettingsOut"];
 
 const ALERT_RULES_KEY = ["alert-rules"] as const;
 
-// Ruling 8: RF50 ships as these 4 fixed rule kinds, in this order, never a free builder.
-const RULE_ORDER: AlertKind[] = ["LATE_START", "WORKER_ABSENT", "LATE_STOP", "NO_EVIDENCE"];
+// RF50 ships as these fixed rule kinds, in this order, never a free builder (Ruling 8; spec
+// 2026-10-20-alocacao-automatica §8.7 swapped the planned-schedule rules for these).
+const RULE_ORDER: AlertKind[] = [
+  "NO_EVIDENCE",
+  "POINT_IMPEDED",
+  "BATCH_RELEASED",
+  "POINTS_UNSERVED",
+  "APPEAL_FILED",
+];
 
 const RULE_LABEL_KEY: Record<AlertKind, StringKey> = {
-  LATE_START: "alertRuleLateStart",
-  WORKER_ABSENT: "alertRuleWorkerAbsent",
-  LATE_STOP: "alertRuleLateStop",
   NO_EVIDENCE: "alertRuleNoEvidence",
+  POINT_IMPEDED: "alertRulePointImpeded",
+  BATCH_RELEASED: "alertRuleBatchReleased",
+  POINTS_UNSERVED: "alertRulePointsUnserved",
+  APPEAL_FILED: "alertRuleAppealFiled",
 };
 
-// The `system_settings` field each rule falls back to when it has no override (backend
-// `_GLOBAL_THRESHOLD_ATTR`, Ruling 8).
-const GLOBAL_DEFAULT_FIELD: Record<
-  AlertKind,
-  keyof Pick<
-    Settings,
-    | "late_start_tolerance_min"
-    | "absence_tolerance_min"
-    | "late_stop_tolerance_min"
-    | "no_evidence_grace_min"
-  >
-> = {
-  LATE_START: "late_start_tolerance_min",
-  WORKER_ABSENT: "absence_tolerance_min",
-  LATE_STOP: "late_stop_tolerance_min",
-  NO_EVIDENCE: "no_evidence_grace_min",
-};
+// Only a timed rule has a threshold: the `system_settings` field it falls back to when it has no
+// override (backend `_resolve_thresholds`). The others fire on the event itself.
+const GLOBAL_DEFAULT_FIELD: Partial<
+  Record<AlertKind, keyof Pick<Settings, "no_evidence_grace_min">>
+> = { NO_EVIDENCE: "no_evidence_grace_min" };
+
+function thresholdDefault(settings: Settings, kind: AlertKind): number | undefined {
+  const field = GLOBAL_DEFAULT_FIELD[kind];
+
+  return field === undefined ? undefined : settings[field];
+}
 
 function sortRules(rules: AlertRule[]): AlertRule[] {
   return [...rules].sort(
@@ -59,7 +61,7 @@ function sortRules(rules: AlertRule[]): AlertRule[] {
   );
 }
 
-interface AlertRuleRowProps {
+interface ThresholdInputProps {
   rule: AlertRule;
   defaultMinutes: number;
   onPatch: (ruleKind: string, body: AlertRulePatch) => void;
@@ -69,7 +71,7 @@ interface AlertRuleRowProps {
 // The input shows the effective threshold: the rule's override, or the global default from
 // `system_settings` when it has none. It is edited locally and only committed on blur; an
 // emptied input clears the override (sent as `null`, Ruling 8) and shows the default again.
-function AlertRuleRow({ rule, defaultMinutes, onPatch, pending }: AlertRuleRowProps) {
+function ThresholdInput({ rule, defaultMinutes, onPatch, pending }: ThresholdInputProps) {
   const { t } = useTranslation();
   const effective = rule.threshold_minutes ?? defaultMinutes;
   const [draft, setDraft] = useState(String(effective));
@@ -79,6 +81,48 @@ function AlertRuleRow({ rule, defaultMinutes, onPatch, pending }: AlertRuleRowPr
   useEffect(() => {
     setDraft(String(rule.threshold_minutes ?? defaultMinutes));
   }, [rule.threshold_minutes, rule.updated_at, defaultMinutes]);
+
+  return (
+    <div className="flex items-center gap-3">
+      <Input
+        type="number"
+        className="w-40"
+        aria-label={`${t(RULE_LABEL_KEY[rule.rule_kind])} — ${t("alertRulesColumnThreshold")}`}
+        value={draft}
+        disabled={pending}
+        onChange={(event) => {
+          setDraft(event.target.value);
+        }}
+        onBlur={() => {
+          if (draft === "") {
+            setDraft(String(defaultMinutes));
+            if (rule.threshold_minutes !== null) {
+              onPatch(rule.rule_kind, { threshold_minutes: null });
+            }
+          } else if (Number(draft) !== effective) {
+            onPatch(rule.rule_kind, { threshold_minutes: Number(draft) });
+          }
+        }}
+      />
+      <span className="text-muted-foreground text-sm">
+        {rule.threshold_minutes === null
+          ? t("alertRulesUsingDefault")
+          : t("alertRulesDefaultHint").replace("{n}", String(defaultMinutes))}
+      </span>
+    </div>
+  );
+}
+
+interface AlertRuleRowProps {
+  rule: AlertRule;
+  // Undefined for an event rule, which has no threshold to edit.
+  defaultMinutes: number | undefined;
+  onPatch: (ruleKind: string, body: AlertRulePatch) => void;
+  pending: boolean;
+}
+
+function AlertRuleRow({ rule, defaultMinutes, onPatch, pending }: AlertRuleRowProps) {
+  const { t } = useTranslation();
 
   return (
     <TableRow>
@@ -95,33 +139,16 @@ function AlertRuleRow({ rule, defaultMinutes, onPatch, pending }: AlertRuleRowPr
         />
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-3">
-          <Input
-            type="number"
-            className="w-40"
-            aria-label={`${t(RULE_LABEL_KEY[rule.rule_kind])} — ${t("alertRulesColumnThreshold")}`}
-            value={draft}
-            disabled={pending}
-            onChange={(event) => {
-              setDraft(event.target.value);
-            }}
-            onBlur={() => {
-              if (draft === "") {
-                setDraft(String(defaultMinutes));
-                if (rule.threshold_minutes !== null) {
-                  onPatch(rule.rule_kind, { threshold_minutes: null });
-                }
-              } else if (Number(draft) !== effective) {
-                onPatch(rule.rule_kind, { threshold_minutes: Number(draft) });
-              }
-            }}
+        {defaultMinutes === undefined ? (
+          <span className="text-muted-foreground text-sm">{t("alertRulesEventDriven")}</span>
+        ) : (
+          <ThresholdInput
+            rule={rule}
+            defaultMinutes={defaultMinutes}
+            onPatch={onPatch}
+            pending={pending}
           />
-          <span className="text-muted-foreground text-sm">
-            {rule.threshold_minutes === null
-              ? t("alertRulesUsingDefault")
-              : t("alertRulesDefaultHint").replace("{n}", String(defaultMinutes))}
-          </span>
-        </div>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -210,7 +237,7 @@ export function AlertRulesPage() {
               <AlertRuleRow
                 key={rule.rule_kind}
                 rule={rule}
-                defaultMinutes={settings[GLOBAL_DEFAULT_FIELD[rule.rule_kind]]}
+                defaultMinutes={thresholdDefault(settings, rule.rule_kind)}
                 pending={mutation.isPending}
                 onPatch={(ruleKind, body) => {
                   mutation.mutate({ ruleKind, body });

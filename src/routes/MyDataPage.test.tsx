@@ -19,7 +19,6 @@ const FULL_PAYLOAD = {
     id: "w1",
     full_name: "João da Silva",
     contractor_company_id: "c1",
-    service_type_ids: ["st1", "st2"],
   },
   consent_history: [{ notice_version: 2, accepted_at: "2026-02-01T12:00:00Z" }],
   auth_events: [

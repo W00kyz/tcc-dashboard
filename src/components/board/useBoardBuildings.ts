@@ -34,7 +34,6 @@ async function fetchBuildings(client: ApiClient): Promise<BuildingOut[]> {
 
 interface BoardBuildingsInput {
   dayRoutes: RouteOut[];
-  delayedRouteIds: Set<string>;
 }
 
 interface Selection {
@@ -111,15 +110,12 @@ function openBuildingView(
 
 /** Everything the board needs to show buildings: outlines for the map, the open building's panel
  * and the selection state behind both.
- * @example const { mapBuildings, panelProps } = useBoardBuildings({ dayRoutes, delayedRouteIds }); */
-export function useBoardBuildings({ dayRoutes, delayedRouteIds }: BoardBuildingsInput) {
+ * @example const { mapBuildings, panelProps } = useBoardBuildings({ dayRoutes }); */
+export function useBoardBuildings({ dayRoutes }: BoardBuildingsInput) {
   const selection = useBuildingSelection();
   const { buildings, mapBuildings } = useCampusBuildings();
   const interior = useBuildingInterior(selection.buildingId);
-  const statuses = useMemo(
-    () => pointStatusesForToday(dayRoutes, delayedRouteIds),
-    [dayRoutes, delayedRouteIds],
-  );
+  const statuses = useMemo(() => pointStatusesForToday(dayRoutes), [dayRoutes]);
   const open = buildings.find((building) => building.id === selection.buildingId);
 
   return {

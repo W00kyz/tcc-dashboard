@@ -2,17 +2,14 @@ import {
   Bell,
   Building2,
   ClipboardCheck,
-  ClipboardList,
   FileBarChart,
   FileText,
   HardHat,
   Handshake,
   LayoutList,
   type LucideIcon,
-  Repeat,
   Settings,
   ShieldAlert,
-  Tags,
   Users,
 } from "lucide-react";
 
@@ -50,7 +47,6 @@ export const NAV_MODULES: NavModule[] = [
     entries: [
       { to: "/rotas", label: "navRouteBoard", icon: LayoutList },
       { to: "/execucoes", label: "navExecutions", icon: ClipboardCheck, badge: "reviewQueue" },
-      { to: "/reatribuicoes", label: "navReassignments", icon: Repeat },
       { to: "/relatorios", label: "navReports", icon: FileBarChart },
     ],
   },
@@ -60,7 +56,6 @@ export const NAV_MODULES: NavModule[] = [
     defaultOpen: false,
     roles: MANAGEMENT_ROLES,
     entries: [
-      { to: "/templates-de-rota", label: "navRouteTemplates", icon: ClipboardList },
       { to: "/regras-de-alerta", label: "navAlertRules", icon: ShieldAlert },
       { to: "/formularios", label: "navForms", icon: FileText },
     ],
@@ -74,7 +69,6 @@ export const NAV_MODULES: NavModule[] = [
       { to: "/predios", label: "navBuildings", icon: Building2 },
       { to: "/profissionais", label: "navFieldWorkers", icon: HardHat },
       { to: "/empresas-terceirizadas", label: "navContractorCompanies", icon: Handshake },
-      { to: "/tipos-de-servico", label: "navServiceTypes", icon: Tags },
     ],
   },
   {

@@ -38,6 +38,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/auth/register": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Register
+     * @description Public sign-up of a field worker; a manager approves it before it can work.
+     */
+    post: operations["register_auth_register_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/auth/refresh": {
     parameters: {
       query?: never;
@@ -140,6 +160,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/public/contractor-companies": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Public Companies
+     * @description The companies a worker can choose from when signing up; name only, never the CNPJ.
+     */
+    get: operations["list_public_companies_public_contractor_companies_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/routes": {
     parameters: {
       query?: never;
@@ -150,30 +190,7 @@ export interface paths {
     /** List Routes */
     get: operations["list_routes_routes_get"];
     put?: never;
-    /** Create Route Endpoint */
-    post: operations["create_route_endpoint_routes_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/routes/occasional": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Create Occasional Routes
-     * @description RF23 / spec §3.5 Ruling 2 — an occasional route assigned to N workers is N independent
-     *     routes, one per worker, each a copy of the same stops. One transaction: if any worker id
-     *     is unknown, nothing is committed.
-     */
-    post: operations["create_occasional_routes_routes_occasional_post"];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -188,14 +205,56 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * List My Routes
-     * @description RF27 "rota do dia": the mobile feed for the signed-in worker. Same `RouteOut` shape the
-     *     manager endpoints return, so mobile and the dashboard render a route identically. Without
-     *     `?date=` it defaults to today; CANCELLED routes are never shown.
+     * My Day
+     * @description RF27 "rota do dia": the signed-in worker's route of today (or none yet). Same `RouteOut`
+     *     shape the manager endpoints return, so mobile and the dashboard render a route identically.
      */
-    get: operations["list_my_routes_routes_me_get"];
+    get: operations["my_day_routes_me_get"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/routes/start": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start Route
+     * @description The "Iniciar rota" button: create or reopen today's route and hand out a batch; a retry
+     *     while the batch is open returns it unchanged. 409 with a machine code when no batch can be
+     *     given.
+     */
+    post: operations["start_route_routes_start_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/routes/{route_id}/next-batch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Next Route Batch
+     * @description The next batch once the current one has no open stop (unchanged while it has one). An
+     *     empty pool closes the route: `pool_empty=true`, status DONE.
+     */
+    post: operations["next_route_batch_routes__route_id__next_batch_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -213,151 +272,6 @@ export interface paths {
     get: operations["get_route_routes__route_id__get"];
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /** Patch Route */
-    patch: operations["patch_route_routes__route_id__patch"];
-    trace?: never;
-  };
-  "/routes/{route_id}/optimize": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Optimize Route Endpoint */
-    post: operations["optimize_route_endpoint_routes__route_id__optimize_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/routes/{route_id}/reassign": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Reassign Route Endpoint */
-    post: operations["reassign_route_endpoint_routes__route_id__reassign_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/routes/{route_id}/cancel": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Cancel Route Endpoint */
-    post: operations["cancel_route_endpoint_routes__route_id__cancel_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/routes/{route_id}/start": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Start Route Endpoint */
-    post: operations["start_route_endpoint_routes__route_id__start_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/routes/{route_id}/stops/{stop_id}/complete-manually": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Complete Stop Manually
-     * @description RF53 — a manager closes a stop the worker could not reach, with a reason and no
-     *     evidence. `complete_manually` owns and commits its own transaction (the execution module
-     *     exception to "service flushes, never commits"); the audit trail is appended in a second
-     *     transaction afterwards, exactly as `start_route` does.
-     */
-    post: operations["complete_stop_manually_routes__route_id__stops__stop_id__complete_manually_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/route-templates": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** List Route Templates */
-    get: operations["list_route_templates_route_templates_get"];
-    put?: never;
-    /** Create Route Template */
-    post: operations["create_route_template_route_templates_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/route-templates/{template_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Route Template */
-    get: operations["get_route_template_route_templates__template_id__get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /** Update Route Template */
-    patch: operations["update_route_template_route_templates__template_id__patch"];
-    trace?: never;
-  };
-  "/route-templates/{template_id}/materialize": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Materialize Route Template */
-    post: operations["materialize_route_template_route_templates__template_id__materialize_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -593,32 +507,17 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List Service Types */
+    /**
+     * List Service Types
+     * @description Every type, or with `?unassigned=true` only those no company has adopted yet.
+     */
     get: operations["list_service_types_service_types_get"];
-    put?: never;
-    /** Create Service Type */
-    post: operations["create_service_type_service_types_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/service-types/{service_type_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
     put?: never;
     post?: never;
     delete?: never;
     options?: never;
     head?: never;
-    /** Update Service Type */
-    patch: operations["update_service_type_service_types__service_type_id__patch"];
+    patch?: never;
     trace?: never;
   };
   "/contractor-companies": {
@@ -666,32 +565,6 @@ export interface paths {
     /** List Field Workers */
     get: operations["list_field_workers_field_workers_get"];
     put?: never;
-    /** Create Field Worker */
-    post: operations["create_field_worker_field_workers_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/field-workers/linkable-users": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List Linkable Users
-     * @description Finding C2: the dashboard's /profissionais screen needs FIELD_WORKER-role Users not yet
-     *     linked to a FieldWorker, for its link dropdown. GET /users is Admin-only (RF05), so a
-     *     Manager gets 403 there — this router serves its own minimal projection instead. Registered
-     *     before any `/{worker_id}`-shaped route so "linkable-users" is never captured as a path
-     *     parameter (this router currently has no GET "/{worker_id}", so no collision exists today
-     *     either way, but the ordering is kept safe against one being added later).
-     */
-    get: operations["list_linkable_users_field_workers_linkable_users_get"];
-    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -699,7 +572,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/field-workers/{worker_id}": {
+  "/field-workers/{worker_id}/approve": {
     parameters: {
       query?: never;
       header?: never;
@@ -708,12 +581,63 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post?: never;
+    /** Approve Field Worker */
+    post: operations["approve_field_worker_field_workers__worker_id__approve_post"];
     delete?: never;
     options?: never;
     head?: never;
-    /** Update Field Worker */
-    patch: operations["update_field_worker_field_workers__worker_id__patch"];
+    patch?: never;
+    trace?: never;
+  };
+  "/field-workers/{worker_id}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reject Field Worker */
+    post: operations["reject_field_worker_field_workers__worker_id__reject_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/field-workers/{worker_id}/deactivate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Deactivate Field Worker */
+    post: operations["deactivate_field_worker_field_workers__worker_id__deactivate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/field-workers/{worker_id}/reactivate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reactivate Field Worker */
+    post: operations["reactivate_field_worker_field_workers__worker_id__reactivate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/buildings": {
@@ -1049,8 +973,9 @@ export interface paths {
     /**
      * Report Impediment
      * @description RF16-RF17 — the field worker signals they cannot execute this stop (scope=STOP) or the
-     *     rest of the route (scope=ROUTE_REMAINDER). The report is the record; no audit-trail entry
-     *     is appended here (nothing on the assignment chain moved yet).
+     *     rest of the route (scope=ROUTE_REMAINDER); what it covers goes back to the pool and the
+     *     managers are alerted and notified. The report, and the released stops' `release_reason`,
+     *     are the record — no audit-trail entry is appended here.
      */
     post: operations["report_impediment_routes__route_id__impediments_post"];
     delete?: never;
@@ -1068,8 +993,8 @@ export interface paths {
     };
     /**
      * List Impediments
-     * @description The manager's queue. Only the PENDING queue is served — the impediment domain keeps no
-     *     other list — so any other `?status=` value is a client error, not an empty list.
+     * @description The manager's Justificativas tab (spec §8.4): every impediment, PENDING first, or only
+     *     those of `?status=`.
      */
     get: operations["list_impediments_impediments_get"];
     put?: never;
@@ -1080,15 +1005,39 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/impediments/{impediment_id}/candidates": {
+  "/impediments/{impediment_id}/acknowledge": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** List Candidates */
-    get: operations["list_candidates_impediments__impediment_id__candidates_get"];
+    get?: never;
+    put?: never;
+    /**
+     * Acknowledge
+     * @description The manager's "ciente": PENDING → RESOLVED, audited. Idempotent on a RESOLVED one.
+     */
+    post: operations["acknowledge_impediments__impediment_id__acknowledge_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/appeals/eligible": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Appealable Stops
+     * @description The app's "Pontos liberados que você pode contestar": the worker's released stops they
+     *     may still appeal, latest release first.
+     */
+    get: operations["list_appealable_stops_appeals_eligible_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1097,30 +1046,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/impediments/{impediment_id}/reassign": {
+  "/appeals": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /**
+     * List Appeals
+     * @description The manager's Justificativas "Recursos" tab (spec §8.4): every appeal, PENDING first, or
+     *     only those of `?status=`.
+     */
+    get: operations["list_appeals_appeals_get"];
     put?: never;
     /**
-     * Reassign
-     * @description RF18-RF21 — move the impediment's affected stop(s) onto `field_worker_id`'s route for
-     *     the same date and mark the impediment RESOLVED. `reassign_impediment` delegates the move
-     *     to `reassign_stops`, which appends its own stop-assignment rows; this endpoint adds one
-     *     audit-trail entry naming the manager's decision.
+     * Create Appeal
+     * @description The worker declares they executed a released stop (spec §7.5). Idempotent on
+     *     `idempotency_key`; 409 `NOT_APPEALABLE` with a `reason_code` when it is not theirs to
+     *     appeal now.
      */
-    post: operations["reassign_impediments__impediment_id__reassign_post"];
+    post: operations["create_appeal_appeals_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/impediments/{impediment_id}/dismiss": {
+  "/appeals/mine": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List My Appeals
+     * @description The worker's own appeals and their decisions, pending first.
+     */
+    get: operations["list_my_appeals_appeals_mine_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/appeals/{appeal_id}/accept": {
     parameters: {
       query?: never;
       header?: never;
@@ -1130,11 +1103,31 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Dismiss
-     * @description Close the impediment with no reassignment (RF17) — a duplicate report, or one the
-     *     manager resolved off-system.
+     * Accept
+     * @description Accept: the stop gets an `APPEAL` execution by the worker. 409 `ALREADY_REVIEWED` once
+     *     decided.
      */
-    post: operations["dismiss_impediments__impediment_id__dismiss_post"];
+    post: operations["accept_appeals__appeal_id__accept_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/appeals/{appeal_id}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reject
+     * @description Reject: nothing changes besides the record. 409 `ALREADY_REVIEWED` once decided.
+     */
+    post: operations["reject_appeals__appeal_id__reject_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1167,8 +1160,9 @@ export interface paths {
     };
     /**
      * Get Board
-     * @description RF41 — the coloured route board: every open route with its derived `is_delayed` flag and
-     *     OPEN alert count, the board's alert list, and the latest GPS fix per worker.
+     * @description RF41 — the board of the day: per-type pool KPIs, today's routes with their current
+     *     batch and OPEN alert count, who has not started, today's releases, the board's alert list,
+     *     and the latest GPS fix per worker.
      */
     get: operations["get_board_monitoring_board_get"];
     put?: never;
@@ -1398,7 +1392,7 @@ export interface paths {
     };
     /**
      * Get Compliance Report
-     * @description RF45 — the route-compliance read model as JSON: the granularity buckets with the 13
+     * @description RF45 — the compliance read model as JSON: the granularity buckets with the point-day
      *     indicators plus `completion_rate`, a totals row, and the resolved `filters_applied`.
      */
     get: operations["get_compliance_report_reports_compliance_get"];
@@ -1468,7 +1462,8 @@ export interface components {
      * AlertKind
      * @enum {string}
      */
-    AlertKind: "LATE_START" | "WORKER_ABSENT" | "LATE_STOP" | "NO_EVIDENCE";
+    AlertKind:
+      "NO_EVIDENCE" | "POINT_IMPEDED" | "BATCH_RELEASED" | "POINTS_UNSERVED" | "APPEAL_FILED";
     /** AlertOut */
     AlertOut: {
       /**
@@ -1481,11 +1476,8 @@ export interface components {
       severity: string;
       /** Description */
       description: string;
-      /**
-       * Route Id
-       * Format: uuid
-       */
-      route_id: string;
+      /** Route Id */
+      route_id: string | null;
       /** Route Stop Id */
       route_stop_id: string | null;
       /** Field Worker Id */
@@ -1527,6 +1519,28 @@ export interface components {
      * @enum {string}
      */
     AlertStatus: "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
+    /**
+     * AllocationBody
+     * @description Where the worker is when asking for a batch: the nearest free points are measured from
+     *     here, and it must be inside the campus.
+     */
+    AllocationBody: {
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+      /**
+       * Captured At
+       * Format: date-time
+       */
+      captured_at: string;
+    };
+    /** AllocationOut */
+    AllocationOut: {
+      route: components["schemas"]["RouteOut"];
+      /** Pool Empty */
+      pool_empty: boolean;
+    };
     /** AnswerInBody */
     AnswerInBody: {
       /** Stable Key */
@@ -1545,28 +1559,118 @@ export interface components {
       /** Question Type */
       question_type: string | null;
     };
-    /**
-     * AssignmentOut
-     * @description One row of a stop's append-only `stop_assignments` chain (spec §3.4, RF21). Shipped
-     *     in `assignment_history` only when the stop was reassigned at least once; the manager
-     *     panel (Task 8) renders it, the mobile app ignores the field.
-     */
-    AssignmentOut: {
+    /** AppealBody */
+    AppealBody: {
+      /**
+       * Route Stop Id
+       * Format: uuid
+       */
+      route_stop_id: string;
+      reason: components["schemas"]["AppealReason"];
+      /** Note */
+      note?: string | null;
+      /** Claimed Executed At */
+      claimed_executed_at?: string | null;
+      /**
+       * Idempotency Key
+       * Format: uuid
+       */
+      idempotency_key: string;
+    };
+    /** AppealOut */
+    AppealOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Route Stop Id
+       * Format: uuid
+       */
+      route_stop_id: string;
       /**
        * Field Worker Id
        * Format: uuid
        */
       field_worker_id: string;
-      /** Full Name */
-      full_name: string;
-      /** Sequence */
-      sequence: number;
-      /** Assigned By Name */
-      assigned_by_name: string;
-      /** Transfer Reason */
-      transfer_reason: string | null;
-      /** Outcome */
-      outcome: string | null;
+      /** Field Worker Name */
+      field_worker_name: string;
+      /**
+       * Service Point Id
+       * Format: uuid
+       */
+      service_point_id: string;
+      /** Service Point Name */
+      service_point_name: string;
+      /** Building Name */
+      building_name: string;
+      /**
+       * Released At
+       * Format: date-time
+       */
+      released_at: string;
+      release_reason: components["schemas"]["ReleaseReason"];
+      reason: components["schemas"]["AppealReason"];
+      /** Note */
+      note: string | null;
+      /** Claimed Executed At */
+      claimed_executed_at: string | null;
+      status: components["schemas"]["AppealStatus"];
+      /**
+       * Filed At
+       * Format: date-time
+       */
+      filed_at: string;
+      /** Reviewed At */
+      reviewed_at: string | null;
+      /** Review Note */
+      review_note: string | null;
+    };
+    /**
+     * AppealReason
+     * @enum {string}
+     */
+    AppealReason: "NO_SIGNAL" | "LEFT_BRIEFLY" | "APP_CLOSED" | "OTHER";
+    /** AppealReviewBody */
+    AppealReviewBody: {
+      /** Note */
+      note?: string | null;
+    };
+    /**
+     * AppealStatus
+     * @enum {string}
+     */
+    AppealStatus: "PENDING" | "ACCEPTED" | "REJECTED";
+    /** AppealableStopOut */
+    AppealableStopOut: {
+      /**
+       * Route Stop Id
+       * Format: uuid
+       */
+      route_stop_id: string;
+      /**
+       * Service Point Id
+       * Format: uuid
+       */
+      service_point_id: string;
+      /** Service Point Name */
+      service_point_name: string;
+      /** Building Name */
+      building_name: string;
+      /** Floor Label */
+      floor_label: string;
+      /**
+       * Released At
+       * Format: date-time
+       */
+      released_at: string;
+      release_reason: components["schemas"]["ReleaseReason"];
+      /**
+       * Deadline
+       * Format: date-time
+       */
+      deadline: string;
     };
     /** AuthEventOut */
     AuthEventOut: {
@@ -1592,11 +1696,8 @@ export interface components {
       severity: string;
       /** Description */
       description: string;
-      /**
-       * Route Id
-       * Format: uuid
-       */
-      route_id: string;
+      /** Route Id */
+      route_id: string | null;
       /** Route Stop Id */
       route_stop_id: string | null;
       /** Field Worker Id */
@@ -1643,6 +1744,8 @@ export interface components {
       field_worker_id: string;
       /** Field Worker Name */
       field_worker_name: string;
+      /** Company Name */
+      company_name: string;
       /**
        * Route Date
        * Format: date
@@ -1650,14 +1753,14 @@ export interface components {
       route_date: string;
       /** Status */
       status: string;
-      /** Is Delayed */
-      is_delayed: boolean;
       /** Open Alert Count */
       open_alert_count: number;
-      /** Stop Total */
-      stop_total: number;
-      /** Stop Done */
-      stop_done: number;
+      /** Current Batch */
+      current_batch: number;
+      /** Stops */
+      stops: components["schemas"]["BoardStop"][];
+      /** Done Today */
+      done_today: number;
     };
     /** BoardSnapshot */
     BoardSnapshot: {
@@ -1666,12 +1769,36 @@ export interface components {
        * Format: date-time
        */
       generated_at: string;
+      /** Service Day */
+      service_day: boolean;
       /** Routes */
       routes: components["schemas"]["BoardRoute"][];
+      /** Pool */
+      pool: components["schemas"]["PoolKpi"][];
+      /** Not Started */
+      not_started: components["schemas"]["WorkerRef"][];
+      /** Released Today */
+      released_today: number;
       /** Open Alerts */
       open_alerts: components["schemas"]["BoardAlert"][];
       /** Worker Positions */
       worker_positions: components["schemas"]["BoardPosition"][];
+    };
+    /** BoardStop */
+    BoardStop: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Service Point Id
+       * Format: uuid
+       */
+      service_point_id: string;
+      /** Service Point Name */
+      service_point_name: string;
+      status: components["schemas"]["RouteStopStatus"];
     };
     /** Body_upload_photo_executions__execution_id__evidence_photo_post */
     Body_upload_photo_executions__execution_id__evidence_photo_post: {
@@ -1730,11 +1857,6 @@ export interface components {
       name: string;
       /** Campus Area */
       campus_area: string;
-    };
-    /** CancelBody */
-    CancelBody: {
-      /** Reason */
-      reason: string;
     };
     /** CheckInRequest */
     CheckInRequest: {
@@ -1831,10 +1953,17 @@ export interface components {
       /** Review Status */
       review_status: string;
     };
-    /** CompleteManuallyBody */
-    CompleteManuallyBody: {
-      /** Reason */
-      reason: string;
+    /** CompanyServiceTypeOut */
+    CompanyServiceTypeOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Average Duration Minutes */
+      average_duration_minutes: number;
     };
     /**
      * ComplianceReportOut
@@ -1867,10 +1996,39 @@ export interface components {
     };
     /**
      * ComplianceRowOut
-     * @description Mirror of `ComplianceRow` — one granularity bucket with the 13 absolute indicators plus
-     *     the derived `completion_rate`.
+     * @description Mirror of `ComplianceRow` — one granularity bucket: its identity plus the indicators.
      */
     ComplianceRowOut: {
+      /** Points Total */
+      points_total: number;
+      /** Points Done */
+      points_done: number;
+      /** Points Done By Appeal */
+      points_done_by_appeal: number;
+      /** Points Unserved */
+      points_unserved: number;
+      /** Points Released */
+      points_released: number;
+      /** Points Impeded */
+      points_impeded: number;
+      /** Released Route Remainder */
+      released_route_remainder: number;
+      /** Released Left Campus */
+      released_left_campus: number;
+      /** Released Location Silence */
+      released_location_silence: number;
+      /** Released End Of Day */
+      released_end_of_day: number;
+      /** Executions Total */
+      executions_total: number;
+      /** Executions With Evidence */
+      executions_with_evidence: number;
+      /** Executions Flagged */
+      executions_flagged: number;
+      /** Alerts Total */
+      alerts_total: number;
+      /** Completion Rate */
+      completion_rate: number;
       /** Period Label */
       period_label: string;
       /**
@@ -1878,64 +2036,41 @@ export interface components {
        * Format: date
        */
       period_start: string;
-      /** Routes Total */
-      routes_total: number;
-      /** Routes Started */
-      routes_started: number;
-      /** Routes Completed */
-      routes_completed: number;
-      /** Routes Cancelled */
-      routes_cancelled: number;
-      /** Stops Total */
-      stops_total: number;
-      /** Stops Done */
-      stops_done: number;
-      /** Stops Pending */
-      stops_pending: number;
-      /** Stops Reassigned */
-      stops_reassigned: number;
-      /** Executions Total */
-      executions_total: number;
-      /** Executions With Evidence */
-      executions_with_evidence: number;
-      /** Executions Flagged */
-      executions_flagged: number;
-      /** Impediments Total */
-      impediments_total: number;
-      /** Alerts Total */
-      alerts_total: number;
-      /** Completion Rate */
-      completion_rate: number;
     };
     /**
      * ComplianceTotalsOut
-     * @description Mirror of `ComplianceTotals` — the same shape as a row without the period identity.
+     * @description Mirror of `ComplianceCounts` — the point-day indicators (spec 2026-10-20-alocacao-
+     *     automatica §8.7), the linked executions and alerts, and the derived `completion_rate`.
+     *     `points_done` includes the ones done by appeal; `points_impeded` is the release counter of
+     *     the IMPEDIMENT reason.
      */
     ComplianceTotalsOut: {
-      /** Routes Total */
-      routes_total: number;
-      /** Routes Started */
-      routes_started: number;
-      /** Routes Completed */
-      routes_completed: number;
-      /** Routes Cancelled */
-      routes_cancelled: number;
-      /** Stops Total */
-      stops_total: number;
-      /** Stops Done */
-      stops_done: number;
-      /** Stops Pending */
-      stops_pending: number;
-      /** Stops Reassigned */
-      stops_reassigned: number;
+      /** Points Total */
+      points_total: number;
+      /** Points Done */
+      points_done: number;
+      /** Points Done By Appeal */
+      points_done_by_appeal: number;
+      /** Points Unserved */
+      points_unserved: number;
+      /** Points Released */
+      points_released: number;
+      /** Points Impeded */
+      points_impeded: number;
+      /** Released Route Remainder */
+      released_route_remainder: number;
+      /** Released Left Campus */
+      released_left_campus: number;
+      /** Released Location Silence */
+      released_location_silence: number;
+      /** Released End Of Day */
+      released_end_of_day: number;
       /** Executions Total */
       executions_total: number;
       /** Executions With Evidence */
       executions_with_evidence: number;
       /** Executions Flagged */
       executions_flagged: number;
-      /** Impediments Total */
-      impediments_total: number;
       /** Alerts Total */
       alerts_total: number;
       /** Completion Rate */
@@ -1963,6 +2098,8 @@ export interface components {
       name: string;
       /** Cnpj */
       cnpj: string;
+      /** Service Types */
+      service_types: components["schemas"]["ServiceTypeRow"][];
     };
     /** ContractorCompanyOut */
     ContractorCompanyOut: {
@@ -1975,6 +2112,8 @@ export interface components {
       name: string;
       /** Cnpj */
       cnpj: string;
+      /** Service Types */
+      service_types: components["schemas"]["CompanyServiceTypeOut"][];
     };
     /** ContractorCompanyUpdateRequest */
     ContractorCompanyUpdateRequest: {
@@ -1982,6 +2121,8 @@ export interface components {
       name: string;
       /** Cnpj */
       cnpj: string;
+      /** Service Types */
+      service_types: components["schemas"]["ServiceTypeRow"][];
     };
     /**
      * DeletionImpactOut
@@ -2065,31 +2206,6 @@ export interface components {
       /** Total Bytes */
       total_bytes: number;
     };
-    /**
-     * ExecutionAssignmentOut
-     * @description One row of the stop's append-only assignment chain (RF21), surfaced on the execution
-     *     detail so the manager panel (Task 8) can show who was originally designated and why the
-     *     stop moved. Named distinctly from `app.api.route_view.AssignmentOut`: FastAPI dedupes
-     *     OpenAPI component schemas by class name, so two different classes sharing one name would
-     *     silently clobber each other in the contract (Task 5 hit this).
-     */
-    ExecutionAssignmentOut: {
-      /**
-       * Field Worker Id
-       * Format: uuid
-       */
-      field_worker_id: string;
-      /** Full Name */
-      full_name: string;
-      /** Sequence */
-      sequence: number;
-      /** Assigned By Name */
-      assigned_by_name: string;
-      /** Transfer Reason */
-      transfer_reason: string | null;
-      /** Outcome */
-      outcome: string | null;
-    };
     /** ExecutionDetail */
     ExecutionDetail: {
       /**
@@ -2144,19 +2260,16 @@ export interface components {
       route_id: string;
       /** Clock Skew Seconds */
       clock_skew_seconds: number | null;
+      /** Appeal Id */
+      appeal_id: string | null;
       /** Scans */
       scans: components["schemas"]["ExecutionScan"][];
       /** Evidence */
       evidence: components["schemas"]["ExecutionEvidence"][];
-      manual_completion: components["schemas"]["ManualCompletionOut"] | null;
       /** Form Version Id */
       form_version_id: string | null;
       /** Answers */
       answers: components["schemas"]["AnswerOut"][];
-      /** Reassigned */
-      reassigned: boolean;
-      /** Assignment History */
-      assignment_history: components["schemas"]["ExecutionAssignmentOut"][] | null;
     };
     /** ExecutionEvidence */
     ExecutionEvidence: {
@@ -2242,6 +2355,8 @@ export interface components {
       route_id: string;
       /** Clock Skew Seconds */
       clock_skew_seconds: number | null;
+      /** Appeal Id */
+      appeal_id: string | null;
     };
     /** ExecutionScan */
     ExecutionScan: {
@@ -2263,20 +2378,6 @@ export interface components {
        */
       scanned_at: string;
     };
-    /** FieldWorkerCreateRequest */
-    FieldWorkerCreateRequest: {
-      /** Full Name */
-      full_name: string;
-      /**
-       * Contractor Company Id
-       * Format: uuid
-       */
-      contractor_company_id: string;
-      /** Service Type Ids */
-      service_type_ids: string[];
-      /** User Id */
-      user_id?: string | null;
-    };
     /** FieldWorkerOut */
     FieldWorkerOut: {
       /**
@@ -2286,30 +2387,33 @@ export interface components {
       id: string;
       /** Full Name */
       full_name: string;
+      /** Email */
+      email: string;
       /**
        * Contractor Company Id
        * Format: uuid
        */
       contractor_company_id: string;
-      /** Service Type Ids */
-      service_type_ids: string[];
-      /** User Id */
-      user_id: string | null;
-    };
-    /** FieldWorkerUpdateRequest */
-    FieldWorkerUpdateRequest: {
-      /** Full Name */
-      full_name: string;
+      /** Contractor Company Name */
+      contractor_company_name: string;
+      status: components["schemas"]["FieldWorkerStatus"];
+      /** Is Active */
+      is_active: boolean;
+      /** Rejection Reason */
+      rejection_reason: string | null;
       /**
-       * Contractor Company Id
-       * Format: uuid
+       * Created At
+       * Format: date-time
        */
-      contractor_company_id: string;
-      /** Service Type Ids */
-      service_type_ids: string[];
-      /** User Id */
-      user_id?: string | null;
+      created_at: string;
+      /** Done Today */
+      done_today: number;
     };
+    /**
+     * FieldWorkerStatus
+     * @enum {string}
+     */
+    FieldWorkerStatus: "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
     /**
      * FilterAppliedOut
      * @description Mirror of `app.domain.reports.compliance.FilterApplied` — the human-readable echo of the
@@ -2318,12 +2422,14 @@ export interface components {
     FilterAppliedOut: {
       /** Field Worker Name */
       field_worker_name: string | null;
+      /** Company Name */
+      company_name: string | null;
       /** Service Type Name */
       service_type_name: string | null;
       /** Building Name */
       building_name: string | null;
-      /** Route Status */
-      route_status: string | null;
+      /** Outcome */
+      outcome: string | null;
     };
     /** FloorCreateRequest */
     FloorCreateRequest: {
@@ -2483,22 +2589,25 @@ export interface components {
        * Format: date-time
        */
       received_at: string;
+      /**
+       * Field Worker Id
+       * Format: uuid
+       */
+      field_worker_id: string;
+      /** Field Worker Name */
+      field_worker_name: string;
+      /** Service Point Name */
+      service_point_name: string | null;
+      /** Building Name */
+      building_name: string | null;
+      /** Resolved At */
+      resolved_at: string | null;
     };
     /**
      * ImpedimentReason
      * @enum {string}
      */
     ImpedimentReason: "ACCESS_BLOCKED" | "SITE_REFUSAL" | "HEALTH_ISSUE" | "OTHER";
-    /** ImpedimentReassignBody */
-    ImpedimentReassignBody: {
-      /**
-       * Field Worker Id
-       * Format: uuid
-       */
-      field_worker_id: string;
-      /** Reason */
-      reason: string;
-    };
     /** ImpedimentReportBody */
     ImpedimentReportBody: {
       /** Route Stop Id */
@@ -2528,23 +2637,6 @@ export interface components {
       /** Reason */
       reason: string;
     };
-    /**
-     * LinkableUserOut
-     * @description Minimal projection for the dashboard /profissionais link-dropdown (Finding C2) — a
-     *     dedicated model instead of importing UserOut from app/api/users.py, so this router stays
-     *     self-contained per this repo's "no cross-router imports" convention.
-     */
-    LinkableUserOut: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Name */
-      name: string;
-      /** Email */
-      email: string;
-    };
     /** LoginRequest */
     LoginRequest: {
       /**
@@ -2555,35 +2647,26 @@ export interface components {
       /** Password */
       password: string;
     };
-    /** ManualCompletionOut */
-    ManualCompletionOut: {
-      /**
-       * Completed By
-       * Format: uuid
-       */
-      completed_by: string;
-      /** Reason */
-      reason: string;
-      /**
-       * Completed At
-       * Format: date-time
-       */
-      completed_at: string;
-    };
     /** MarkAllReadOut */
     MarkAllReadOut: {
       /** Marked */
       marked: number;
     };
-    /** MaterializeBody */
-    MaterializeBody: {
-      /**
-       * Route Date
-       * Format: date
-       */
-      route_date: string;
-      /** Field Worker Id */
-      field_worker_id?: string | null;
+    /**
+     * MyDayOut
+     * @description The worker's day for the app: today's route, if any, and the location-silence limits it
+     *     warns the worker about (spec §7.3).
+     */
+    MyDayOut: {
+      /** Service Day */
+      service_day: boolean;
+      route: components["schemas"]["RouteOut"] | null;
+      /** Position Report Interval Seconds */
+      position_report_interval_seconds: number;
+      /** Location Silence Warning Minutes */
+      location_silence_warning_minutes: number;
+      /** Location Silence Release Minutes */
+      location_silence_release_minutes: number;
     };
     /** MyFieldWorkerOut */
     MyFieldWorkerOut: {
@@ -2599,8 +2682,6 @@ export interface components {
        * Format: uuid
        */
       contractor_company_id: string;
-      /** Service Type Ids */
-      service_type_ids: string[];
     };
     /** NoticeOut */
     NoticeOut: {
@@ -2642,20 +2723,6 @@ export interface components {
       total: number;
       /** Unread */
       unread: number;
-    };
-    /** OccasionalRouteBody */
-    OccasionalRouteBody: {
-      /** Field Worker Ids */
-      field_worker_ids: string[];
-      /**
-       * Route Date
-       * Format: date
-       */
-      route_date: string;
-      /** Scheduled Start At */
-      scheduled_start_at?: string | null;
-      /** Stops */
-      stops: components["schemas"]["StopBody"][];
     };
     /** PagedExecutions */
     PagedExecutions: {
@@ -2717,6 +2784,30 @@ export interface components {
       /** Coordinates */
       coordinates: number[][][];
     };
+    /**
+     * PoolKpi
+     * @description Today's typed points of one service type: `done` (served, also by appeal) + `in_progress`
+     *     (in somebody's batch) + `free` (in the pool) = `total`.
+     */
+    PoolKpi: {
+      /**
+       * Service Type Id
+       * Format: uuid
+       */
+      service_type_id: string;
+      /** Service Type Name */
+      service_type_name: string;
+      /** Company Name */
+      company_name: string;
+      /** Total */
+      total: number;
+      /** Done */
+      done: number;
+      /** In Progress */
+      in_progress: number;
+      /** Free */
+      free: number;
+    };
     /** ProfileOut */
     ProfileOut: {
       /**
@@ -2737,6 +2828,16 @@ export interface components {
        * Format: date-time
        */
       created_at: string;
+    };
+    /** PublicCompanyOut */
+    PublicCompanyOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
     };
     /** PublishedVersionResponse */
     PublishedVersionResponse: {
@@ -2789,35 +2890,45 @@ export interface components {
      * @enum {string}
      */
     QuestionType: "TEXT" | "NUMBER" | "BOOLEAN" | "SINGLE_CHOICE" | "MULTI_CHOICE" | "MEDIA";
-    /** ReassignBody */
-    ReassignBody: {
-      /**
-       * Field Worker Id
-       * Format: uuid
-       */
-      field_worker_id: string;
-      /** Reason */
-      reason: string;
-    };
-    /** ReassignCandidateOut */
-    ReassignCandidateOut: {
-      /**
-       * Field Worker Id
-       * Format: uuid
-       */
-      field_worker_id: string;
-      /** Full Name */
-      full_name: string;
-      /** Distance M */
-      distance_m: number;
-      /** Pending Stop Count */
-      pending_stop_count: number;
-    };
     /** RefreshRequest */
     RefreshRequest: {
       /** Refresh Token */
       refresh_token: string;
     };
+    /** RegisterRequest */
+    RegisterRequest: {
+      /** Name */
+      name: string;
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+      /** Password */
+      password: string;
+      /**
+       * Contractor Company Id
+       * Format: uuid
+       */
+      contractor_company_id: string;
+      /** Privacy Notice Version */
+      privacy_notice_version: number;
+    };
+    /** RegisterResponse */
+    RegisterResponse: {
+      status: components["schemas"]["FieldWorkerStatus"];
+    };
+    /** RejectRequest */
+    RejectRequest: {
+      /** Reason */
+      reason?: string | null;
+    };
+    /**
+     * ReleaseReason
+     * @enum {string}
+     */
+    ReleaseReason:
+      "IMPEDIMENT" | "ROUTE_REMAINDER" | "LEFT_CAMPUS" | "LOCATION_SILENCE" | "END_OF_DAY";
     /** ReorderBody */
     ReorderBody: {
       /** Stable Keys */
@@ -2838,29 +2949,6 @@ export interface components {
       /** Reason */
       reason: string;
     };
-    /** RouteCreateBody */
-    RouteCreateBody: {
-      /**
-       * Field Worker Id
-       * Format: uuid
-       */
-      field_worker_id: string;
-      /**
-       * Route Date
-       * Format: date
-       */
-      route_date: string;
-      /**
-       * Route Type
-       * @default REGULAR
-       * @enum {string}
-       */
-      route_type: "REGULAR" | "OCCASIONAL";
-      /** Scheduled Start At */
-      scheduled_start_at?: string | null;
-      /** Stops */
-      stops: components["schemas"]["StopBody"][];
-    };
     /** RouteOut */
     RouteOut: {
       /**
@@ -2880,16 +2968,14 @@ export interface components {
        * Format: date
        */
       route_date: string;
-      /** Route Type */
-      route_type: string;
       /** Status */
       status: string;
-      /** Scheduled Start At */
-      scheduled_start_at: string | null;
       /** Started At */
       started_at: string | null;
       /** Routing Degraded */
       routing_degraded: boolean;
+      /** Current Batch */
+      current_batch: number;
       /** Stops */
       stops: components["schemas"]["RouteStopOut"][];
     };
@@ -2902,8 +2988,11 @@ export interface components {
       id: string;
       /** Order Index */
       order_index: number;
+      /** Batch Number */
+      batch_number: number;
       /** Status */
       status: string;
+      release_reason: components["schemas"]["ReleaseReason"] | null;
       /**
        * Service Point Id
        * Format: uuid
@@ -2919,10 +3008,6 @@ export interface components {
       latitude: number;
       /** Longitude */
       longitude: number;
-      /** Expected Arrival From */
-      expected_arrival_from: string | null;
-      /** Expected Arrival To */
-      expected_arrival_to: string | null;
       /** Distance From Prev M */
       distance_from_prev_m: number | null;
       /** Duration From Prev S */
@@ -2934,22 +3019,12 @@ export interface components {
       /** Service Type Name */
       service_type_name: string | null;
       form: components["schemas"]["EmbeddedForm"] | null;
-      /** Reassigned */
-      reassigned: boolean;
-      /** Assignment History */
-      assignment_history: components["schemas"]["AssignmentOut"][] | null;
     };
-    /** RouteUpdateBody */
-    RouteUpdateBody: {
-      /** Field Worker Id */
-      field_worker_id?: string | null;
-      /** Route Date */
-      route_date?: string | null;
-      /** Scheduled Start At */
-      scheduled_start_at?: string | null;
-      /** Stops */
-      stops?: components["schemas"]["StopBody"][] | null;
-    };
+    /**
+     * RouteStopStatus
+     * @enum {string}
+     */
+    RouteStopStatus: "PENDING" | "IN_PROGRESS" | "DONE" | "RELEASED";
     /** ServicePointCreateRequest */
     ServicePointCreateRequest: {
       /**
@@ -2961,6 +3036,11 @@ export interface components {
       name: string;
       /** Description */
       description: string;
+      /**
+       * Service Type Id
+       * Format: uuid
+       */
+      service_type_id: string;
     };
     /** ServicePointOut */
     ServicePointOut: {
@@ -2982,6 +3062,10 @@ export interface components {
       latitude: number;
       /** Longitude */
       longitude: number;
+      /** Service Type Id */
+      service_type_id: string | null;
+      /** Service Type Name */
+      service_type_name: string | null;
     };
     /** ServicePointUpdateRequest */
     ServicePointUpdateRequest: {
@@ -2989,13 +3073,8 @@ export interface components {
       name: string;
       /** Description */
       description: string;
-    };
-    /** ServiceTypeCreateRequest */
-    ServiceTypeCreateRequest: {
-      /** Name */
-      name: string;
-      /** Average Duration Minutes */
-      average_duration_minutes: number;
+      /** Service Type Id */
+      service_type_id?: string | null;
     };
     /** ServiceTypeOut */
     ServiceTypeOut: {
@@ -3008,12 +3087,24 @@ export interface components {
       name: string;
       /** Average Duration Minutes */
       average_duration_minutes: number;
+      /** Contractor Company Id */
+      contractor_company_id: string | null;
+      /** Contractor Company Name */
+      contractor_company_name: string | null;
     };
-    /** ServiceTypeUpdateRequest */
-    ServiceTypeUpdateRequest: {
+    /**
+     * ServiceTypeRow
+     * @description One line of the company dialog: a type to keep (`id` set) or to create (`id` empty).
+     */
+    ServiceTypeRow: {
+      /** Id */
+      id?: string | null;
       /** Name */
       name: string;
-      /** Average Duration Minutes */
+      /**
+       * Average Duration Minutes
+       * @default 30
+       */
       average_duration_minutes: number;
     };
     /** SettingsOut */
@@ -3022,16 +3113,35 @@ export interface components {
       check_radius_meters: number;
       /** Alert Scan Interval Seconds */
       alert_scan_interval_seconds: number;
-      /** Late Start Tolerance Min */
-      late_start_tolerance_min: number;
-      /** Absence Tolerance Min */
-      absence_tolerance_min: number;
-      /** Late Stop Tolerance Min */
-      late_stop_tolerance_min: number;
       /** No Evidence Grace Min */
       no_evidence_grace_min: number;
       /** Position Report Interval Seconds */
       position_report_interval_seconds: number;
+      /** Allocation Batch Size */
+      allocation_batch_size: number;
+      /** Campus Min Lat */
+      campus_min_lat: number;
+      /** Campus Max Lat */
+      campus_max_lat: number;
+      /** Campus Min Lng */
+      campus_min_lng: number;
+      /** Campus Max Lng */
+      campus_max_lng: number;
+      /** Outside Campus Release Minutes */
+      outside_campus_release_minutes: number;
+      /** Location Silence Warning Minutes */
+      location_silence_warning_minutes: number;
+      /** Location Silence Release Minutes */
+      location_silence_release_minutes: number;
+      /**
+       * Workday End Time
+       * Format: time
+       */
+      workday_end_time: string;
+      /** Service Weekdays */
+      service_weekdays: number[];
+      /** Appeal Window Hours */
+      appeal_window_hours: number;
       /** Updated At */
       updated_at: string | null;
     };
@@ -3041,129 +3151,32 @@ export interface components {
       check_radius_meters?: number | null;
       /** Alert Scan Interval Seconds */
       alert_scan_interval_seconds?: number | null;
-      /** Late Start Tolerance Min */
-      late_start_tolerance_min?: number | null;
-      /** Absence Tolerance Min */
-      absence_tolerance_min?: number | null;
-      /** Late Stop Tolerance Min */
-      late_stop_tolerance_min?: number | null;
       /** No Evidence Grace Min */
       no_evidence_grace_min?: number | null;
       /** Position Report Interval Seconds */
       position_report_interval_seconds?: number | null;
-    };
-    /** StartRouteRequest */
-    StartRouteRequest: {
-      /** Latitude */
-      latitude: number;
-      /** Longitude */
-      longitude: number;
-      /**
-       * Started At
-       * Format: date-time
-       */
-      started_at: string;
-    };
-    /** StopBody */
-    StopBody: {
-      /**
-       * Service Point Id
-       * Format: uuid
-       */
-      service_point_id: string;
-      /** Expected Arrival From */
-      expected_arrival_from?: string | null;
-      /** Expected Arrival To */
-      expected_arrival_to?: string | null;
-      /** Service Type Id */
-      service_type_id?: string | null;
-    };
-    /** TemplateCreateBody */
-    TemplateCreateBody: {
-      /** Name */
-      name: string;
-      /** Field Worker Id */
-      field_worker_id?: string | null;
-      /**
-       * Recurrence
-       * @enum {string}
-       */
-      recurrence: "DAILY" | "WEEKLY";
-      /** Weekdays */
-      weekdays?: number[] | null;
-      /**
-       * Route Type
-       * @default REGULAR
-       * @enum {string}
-       */
-      route_type: "REGULAR" | "OCCASIONAL";
-      /** Stops */
-      stops: components["schemas"]["TemplateStopBody"][];
-    };
-    /** TemplateOut */
-    TemplateOut: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Name */
-      name: string;
-      /** Field Worker Id */
-      field_worker_id: string | null;
-      /** Recurrence */
-      recurrence: string;
-      /** Weekdays */
-      weekdays: number[] | null;
-      /** Route Type */
-      route_type: string;
-      /** Is Active */
-      is_active: boolean;
-      /** Stops */
-      stops: components["schemas"]["TemplateStopOut"][];
-    };
-    /** TemplateStopBody */
-    TemplateStopBody: {
-      /**
-       * Service Point Id
-       * Format: uuid
-       */
-      service_point_id: string;
-      /** Expected Arrival From */
-      expected_arrival_from?: string | null;
-      /** Expected Arrival To */
-      expected_arrival_to?: string | null;
-    };
-    /** TemplateStopOut */
-    TemplateStopOut: {
-      /**
-       * Service Point Id
-       * Format: uuid
-       */
-      service_point_id: string;
-      /** Order Index */
-      order_index: number;
-      /** Expected Arrival From */
-      expected_arrival_from: string | null;
-      /** Expected Arrival To */
-      expected_arrival_to: string | null;
-    };
-    /** TemplateUpdateBody */
-    TemplateUpdateBody: {
-      /** Name */
-      name?: string | null;
-      /** Field Worker Id */
-      field_worker_id?: string | null;
-      /** Recurrence */
-      recurrence?: ("DAILY" | "WEEKLY") | null;
-      /** Weekdays */
-      weekdays?: number[] | null;
-      /** Route Type */
-      route_type?: ("REGULAR" | "OCCASIONAL") | null;
-      /** Is Active */
-      is_active?: boolean | null;
-      /** Stops */
-      stops?: components["schemas"]["TemplateStopBody"][] | null;
+      /** Allocation Batch Size */
+      allocation_batch_size?: number | null;
+      /** Campus Min Lat */
+      campus_min_lat?: number | null;
+      /** Campus Max Lat */
+      campus_max_lat?: number | null;
+      /** Campus Min Lng */
+      campus_min_lng?: number | null;
+      /** Campus Max Lng */
+      campus_max_lng?: number | null;
+      /** Outside Campus Release Minutes */
+      outside_campus_release_minutes?: number | null;
+      /** Location Silence Warning Minutes */
+      location_silence_warning_minutes?: number | null;
+      /** Location Silence Release Minutes */
+      location_silence_release_minutes?: number | null;
+      /** Workday End Time */
+      workday_end_time?: string | null;
+      /** Service Weekdays */
+      service_weekdays?: number[] | null;
+      /** Appeal Window Hours */
+      appeal_window_hours?: number | null;
     };
     /** TimeSpanOut */
     TimeSpanOut: {
@@ -3187,6 +3200,9 @@ export interface components {
       token_type: string;
       /** Consent Required */
       consent_required: boolean;
+      worker_status?: components["schemas"]["FieldWorkerStatus"] | null;
+      /** Rejection Reason */
+      rejection_reason?: string | null;
     };
     /** UnreadCountOut */
     UnreadCountOut: {
@@ -3296,6 +3312,18 @@ export interface components {
       /** Accuracy M */
       accuracy_m: number | null;
     };
+    /** WorkerRef */
+    WorkerRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Full Name */
+      full_name: string;
+      /** Company Name */
+      company_name: string;
+    };
   };
   responses: never;
   parameters: never;
@@ -3345,6 +3373,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["TokenResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  register_auth_register_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RegisterRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RegisterResponse"];
         };
       };
       /** @description Validation Error */
@@ -3513,12 +3574,31 @@ export interface operations {
       };
     };
   };
+  list_public_companies_public_contractor_companies_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicCompanyOut"][];
+        };
+      };
+    };
+  };
   list_routes_routes_get: {
     parameters: {
       query?: {
         date?: string | null;
         field_worker_id?: string | null;
-        route_type?: string | null;
         status?: string | null;
       };
       header?: never;
@@ -3547,77 +3627,9 @@ export interface operations {
       };
     };
   };
-  create_route_endpoint_routes_post: {
+  my_day_routes_me_get: {
     parameters: {
       query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RouteCreateBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RouteOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  create_occasional_routes_routes_occasional_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["OccasionalRouteBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RouteOut"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  list_my_routes_routes_me_get: {
-    parameters: {
-      query?: {
-        date?: string | null;
-      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -3630,7 +3642,66 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RouteOut"][];
+          "application/json": components["schemas"]["MyDayOut"];
+        };
+      };
+    };
+  };
+  start_route_routes_start_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AllocationBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AllocationOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  next_route_batch_routes__route_id__next_batch_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        route_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AllocationBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AllocationOut"];
         };
       };
       /** @description Validation Error */
@@ -3657,367 +3728,6 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RouteOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  patch_route_routes__route_id__patch: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        route_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RouteUpdateBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RouteOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  optimize_route_endpoint_routes__route_id__optimize_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        route_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RouteOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  reassign_route_endpoint_routes__route_id__reassign_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        route_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ReassignBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RouteOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  cancel_route_endpoint_routes__route_id__cancel_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        route_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CancelBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RouteOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  start_route_endpoint_routes__route_id__start_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        route_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["StartRouteRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RouteOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  complete_stop_manually_routes__route_id__stops__stop_id__complete_manually_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        route_id: string;
-        stop_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CompleteManuallyBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RouteOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  list_route_templates_route_templates_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TemplateOut"][];
-        };
-      };
-    };
-  };
-  create_route_template_route_templates_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["TemplateCreateBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TemplateOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_route_template_route_templates__template_id__get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        template_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TemplateOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  update_route_template_route_templates__template_id__patch: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        template_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["TemplateUpdateBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TemplateOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  materialize_route_template_route_templates__template_id__materialize_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        template_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["MaterializeBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
         headers: {
           [name: string]: unknown;
         };
@@ -4494,7 +4204,9 @@ export interface operations {
   };
   list_service_types_service_types_get: {
     parameters: {
-      query?: never;
+      query?: {
+        unassigned?: boolean;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -4508,65 +4220,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ServiceTypeOut"][];
-        };
-      };
-    };
-  };
-  create_service_type_service_types_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ServiceTypeCreateRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ServiceTypeOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  update_service_type_service_types__service_type_id__patch: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        service_type_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ServiceTypeUpdateRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ServiceTypeOut"];
         };
       };
       /** @description Validation Error */
@@ -4688,21 +4341,19 @@ export interface operations {
       };
     };
   };
-  create_field_worker_field_workers_post: {
+  approve_field_worker_field_workers__worker_id__approve_post: {
     parameters: {
       query?: never;
       header?: never;
-      path?: never;
+      path: {
+        worker_id: string;
+      };
       cookie?: never;
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["FieldWorkerCreateRequest"];
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description Successful Response */
-      201: {
+      200: {
         headers: {
           [name: string]: unknown;
         };
@@ -4721,27 +4372,7 @@ export interface operations {
       };
     };
   };
-  list_linkable_users_field_workers_linkable_users_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["LinkableUserOut"][];
-        };
-      };
-    };
-  };
-  update_field_worker_field_workers__worker_id__patch: {
+  reject_field_worker_field_workers__worker_id__reject_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -4752,9 +4383,71 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["FieldWorkerUpdateRequest"];
+        "application/json": components["schemas"]["RejectRequest"];
       };
     };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FieldWorkerOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  deactivate_field_worker_field_workers__worker_id__deactivate_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        worker_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FieldWorkerOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  reactivate_field_worker_field_workers__worker_id__reactivate_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        worker_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description Successful Response */
       200: {
@@ -5610,7 +5303,7 @@ export interface operations {
   list_impediments_impediments_get: {
     parameters: {
       query?: {
-        status?: string;
+        status?: components["schemas"]["ImpedimentStatus"] | null;
       };
       header?: never;
       path?: never;
@@ -5638,7 +5331,7 @@ export interface operations {
       };
     };
   };
-  list_candidates_impediments__impediment_id__candidates_get: {
+  acknowledge_impediments__impediment_id__acknowledge_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -5655,7 +5348,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ReassignCandidateOut"][];
+          "application/json": components["schemas"]["ImpedimentOut"];
         };
       };
       /** @description Validation Error */
@@ -5669,18 +5362,122 @@ export interface operations {
       };
     };
   };
-  reassign_impediments__impediment_id__reassign_post: {
+  list_appealable_stops_appeals_eligible_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AppealableStopOut"][];
+        };
+      };
+    };
+  };
+  list_appeals_appeals_get: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["AppealStatus"] | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AppealOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_appeal_appeals_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AppealBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AppealOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_my_appeals_appeals_mine_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AppealOut"][];
+        };
+      };
+    };
+  };
+  accept_appeals__appeal_id__accept_post: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        impediment_id: string;
+        appeal_id: string;
       };
       cookie?: never;
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ImpedimentReassignBody"];
+        "application/json": components["schemas"]["AppealReviewBody"];
       };
     };
     responses: {
@@ -5690,7 +5487,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ImpedimentOut"];
+          "application/json": components["schemas"]["AppealOut"];
         };
       };
       /** @description Validation Error */
@@ -5704,16 +5501,20 @@ export interface operations {
       };
     };
   };
-  dismiss_impediments__impediment_id__dismiss_post: {
+  reject_appeals__appeal_id__reject_post: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        impediment_id: string;
+        appeal_id: string;
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AppealReviewBody"];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
@@ -5721,7 +5522,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ImpedimentOut"];
+          "application/json": components["schemas"]["AppealOut"];
         };
       };
       /** @description Validation Error */
@@ -6088,9 +5889,10 @@ export interface operations {
         date_from: string;
         date_to: string;
         field_worker_id?: string | null;
+        company_id?: string | null;
         service_type_id?: string | null;
         building_id?: string | null;
-        route_status?: string | null;
+        outcome?: ("DONE" | "DONE_BY_APPEAL" | "UNSERVED") | null;
       };
       header?: never;
       path?: never;
@@ -6125,9 +5927,10 @@ export interface operations {
         date_from: string;
         date_to: string;
         field_worker_id?: string | null;
+        company_id?: string | null;
         service_type_id?: string | null;
         building_id?: string | null;
-        route_status?: string | null;
+        outcome?: ("DONE" | "DONE_BY_APPEAL" | "UNSERVED") | null;
       };
       header?: never;
       path?: never;
@@ -6162,9 +5965,10 @@ export interface operations {
         date_from: string;
         date_to: string;
         field_worker_id?: string | null;
+        company_id?: string | null;
         service_type_id?: string | null;
         building_id?: string | null;
-        route_status?: string | null;
+        outcome?: ("DONE" | "DONE_BY_APPEAL" | "UNSERVED") | null;
       };
       header?: never;
       path?: never;

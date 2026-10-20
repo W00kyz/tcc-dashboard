@@ -63,8 +63,10 @@ function useSavePoint(dialog: PointDialog) {
 
         return;
       }
+      // IMPORTANT: a new point needs its service type (spec 2026-10-20 §8.6). The picker comes
+      // with task D2; until then the API answers 422 and the dialog shows its save error.
       const { response } = await client.POST("/service-points", {
-        body: { ...shared, floor_id: form.values.floorId },
+        body: { ...shared, floor_id: form.values.floorId, service_type_id: "" },
       });
       assertSaved(response, "POST /service-points");
     },

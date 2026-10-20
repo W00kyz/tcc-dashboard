@@ -13,7 +13,11 @@ vi.mock("@/api/monitoringStream", () => ({
 
 const EMPTY_SNAPSHOT: BoardSnapshot = {
   generated_at: "2026-08-31T12:00:00Z",
+  service_day: true,
   routes: [],
+  pool: [],
+  not_started: [],
+  released_today: 0,
   open_alerts: [],
   worker_positions: [],
 };
@@ -23,8 +27,7 @@ const WORKERS = [
     id: "w1",
     full_name: "João da Silva",
     contractor_company_id: "c1",
-    service_type_ids: [],
-    user_id: null,
+    contractor_company_name: "Limpa Tudo",
   },
 ];
 
@@ -33,25 +36,18 @@ const ROUTES = Array.from({ length: 50 }, (_, index) => ({
   field_worker_id: "w1",
   field_worker_name: "João da Silva",
   route_date: "2026-08-31",
-  route_type: index % 2 === 0 ? "REGULAR" : "OCCASIONAL",
-  status: "PLANNED",
-  scheduled_start_at: null,
+  status: "IN_PROGRESS",
   started_at: null,
   routing_degraded: false,
-  stops: [
-    {
-      id: `s${String(index)}-1`,
-      order_index: 1,
-      status: "PENDING",
-      service_point_name: "Sala 101",
-    },
-    {
-      id: `s${String(index)}-2`,
-      order_index: 2,
-      status: "PENDING",
-      service_point_name: "Sala 102",
-    },
-  ],
+  current_batch: 1,
+  stops: [1, 2].map((order) => ({
+    id: `s${String(index)}-${String(order)}`,
+    order_index: order,
+    batch_number: 1,
+    status: "PENDING",
+    release_reason: null,
+    service_point_name: `Sala 10${String(order)}`,
+  })),
 }));
 
 function requestUrl(input: RequestInfo | URL): string {

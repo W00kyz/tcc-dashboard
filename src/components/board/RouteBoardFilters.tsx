@@ -1,12 +1,14 @@
 import { Search } from "lucide-react";
 
+import {
+  ROUTE_STATUS_LABEL_KEY,
+  ROUTE_STATUSES,
+  type RouteStatus,
+} from "@/components/board/routeStatus";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { useTranslation } from "@/i18n/useTranslation";
-
-export type RouteType = "REGULAR" | "OCCASIONAL";
-export type RouteStatusFilter = "" | "PLANNED" | "IN_PROGRESS" | "DONE" | "CANCELLED";
 
 export interface RouteFilters {
   date: string;
@@ -14,8 +16,7 @@ export interface RouteFilters {
   workerQuery: string;
   // Client-side: the worker's contractor company (the API has no company filter on /routes).
   companyId: string;
-  routeType: "" | RouteType;
-  status: RouteStatusFilter;
+  status: "" | RouteStatus;
 }
 
 interface RouteBoardFiltersProps {
@@ -31,7 +32,7 @@ export function RouteBoardFilters({ filters, companies, onChange }: RouteBoardFi
   const { t } = useTranslation();
 
   return (
-    <fieldset className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))]">
+    <fieldset className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
       <legend className="sr-only">{t("routeBoardFiltersLabel")}</legend>
       <div className="col-span-2 space-y-1.5 md:col-span-3 xl:col-span-1">
         <Label htmlFor="route-filter-worker">{t("routeBoardFilterWorkerSearch")}</Label>
@@ -81,20 +82,6 @@ export function RouteBoardFilters({ filters, companies, onChange }: RouteBoardFi
         </NativeSelect>
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="route-filter-type">{t("routeBoardFilterType")}</Label>
-        <NativeSelect
-          id="route-filter-type"
-          value={filters.routeType}
-          onChange={(event) => {
-            onChange({ routeType: event.target.value as RouteFilters["routeType"] });
-          }}
-        >
-          <NativeSelectOption value="">{t("routeBoardFilterAll")}</NativeSelectOption>
-          <NativeSelectOption value="REGULAR">{t("routeTypeRegular")}</NativeSelectOption>
-          <NativeSelectOption value="OCCASIONAL">{t("routeTypeOccasional")}</NativeSelectOption>
-        </NativeSelect>
-      </div>
-      <div className="space-y-1.5">
         <Label htmlFor="route-filter-status">{t("routeBoardFilterStatus")}</Label>
         <NativeSelect
           id="route-filter-status"
@@ -104,10 +91,11 @@ export function RouteBoardFilters({ filters, companies, onChange }: RouteBoardFi
           }}
         >
           <NativeSelectOption value="">{t("routeBoardFilterAll")}</NativeSelectOption>
-          <NativeSelectOption value="PLANNED">{t("routeStatusPlanned")}</NativeSelectOption>
-          <NativeSelectOption value="IN_PROGRESS">{t("routeStatusInProgress")}</NativeSelectOption>
-          <NativeSelectOption value="DONE">{t("routeStatusDone")}</NativeSelectOption>
-          <NativeSelectOption value="CANCELLED">{t("routeStatusCancelled")}</NativeSelectOption>
+          {ROUTE_STATUSES.map((status) => (
+            <NativeSelectOption key={status} value={status}>
+              {t(ROUTE_STATUS_LABEL_KEY[status])}
+            </NativeSelectOption>
+          ))}
         </NativeSelect>
       </div>
     </fieldset>

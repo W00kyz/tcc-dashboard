@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
+import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Field, RegistryList, RegistryNewButton } from "@/components/layout/Registry";
@@ -10,11 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
 
-interface ContractorCompanyRow {
-  id: string;
-  name: string;
-  cnpj: string;
-}
+type ContractorCompanyRow = components["schemas"]["ContractorCompanyOut"];
 
 export function ContractorCompaniesPage() {
   const { t } = useTranslation();
@@ -39,7 +36,14 @@ export function ContractorCompaniesPage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      const body = { name: form.values.name.trim(), cnpj: form.values.cnpj.trim() };
+      // The company's service types are edited in this dialog only from D2 on; until then an
+      // edit sends back the types it already has, so saving never drops one.
+      const editing = companies?.find((company) => company.id === form.editingId);
+      const body = {
+        name: form.values.name.trim(),
+        cnpj: form.values.cnpj.trim(),
+        service_types: editing?.service_types ?? [],
+      };
       if (form.editingId !== null) {
         const { response } = await client.PATCH("/contractor-companies/{company_id}", {
           params: { path: { company_id: form.editingId } },

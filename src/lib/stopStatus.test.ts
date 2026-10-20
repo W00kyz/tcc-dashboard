@@ -7,6 +7,7 @@ describe("toStopStatus", () => {
     expect(toStopStatus("IN_PROGRESS")).toBe("IN_PROGRESS");
     expect(toStopStatus("DONE")).toBe("DONE");
     expect(toStopStatus("PENDING")).toBe("PENDING");
+    expect(toStopStatus("RELEASED")).toBe("RELEASED");
   });
 
   it("folds unknown values to PENDING", () => {

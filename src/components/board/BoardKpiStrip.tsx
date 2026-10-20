@@ -66,8 +66,14 @@ function Kpi({ label, value, detail, tone = "default", to, onSelect }: KpiProps)
     );
   }
 
-  return <div className={CELL_CLASS}>{body}</div>;
+  return (
+    <div role="group" aria-label={label} className={CELL_CLASS}>
+      {body}
+    </div>
+  );
 }
+
+type PoolKpi = BoardKpis["pool"][number];
 
 interface BoardKpiStripProps {
   kpis: BoardKpis;
@@ -75,63 +81,73 @@ interface BoardKpiStripProps {
   onShowInProgress: () => void;
 }
 
+// One cell per service type: "feitos / total" big, then what is in a batch and what is free.
+function PoolCell({ pool }: { pool: PoolKpi }) {
+  const { t } = useTranslation();
+
+  return (
+    <Kpi
+      label={`${pool.service_type_name} · ${pool.company_name}`}
+      value={`${String(pool.done)} / ${String(pool.total)}`}
+      detail={`${t("boardPoolInProgress").replace("{n}", String(pool.in_progress))} · ${t(
+        "boardPoolFree",
+      ).replace("{n}", String(pool.free))}`}
+    />
+  );
+}
+
 /**
- * The day at a glance, read from the live snapshot (not the filters below it). One plate of
- * cells split by hairlines; a number only turns red or gets a yellow marker when it is an
- * exception the manager should act on.
+ * The day at a glance, read from the live snapshot (not the filters below it): who is working,
+ * what went back to the pool, the open exceptions, then today's points per service type. One
+ * plate of cells split by hairlines; a number only turns red or gets a yellow marker when it is
+ * an exception the manager should act on.
  */
 export function BoardKpiStrip({ kpis, reviewQueue, onShowInProgress }: BoardKpiStripProps) {
   const { t } = useTranslation();
-  // pt-BR singular vs. plural, never "1 concluídas" or "1 crítico(s)".
+  // pt-BR singular vs. plural, never "1 críticos".
   const count = (n: number, one: StringKey, many: StringKey) =>
     n === 1 ? t(one) : t(many).replace("{n}", String(n));
 
   return (
-    <section
-      aria-label={t("boardKpisLabel")}
-      className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-md border sm:grid-cols-3 xl:grid-cols-6"
-    >
-      <Kpi
-        label={t("boardKpiRoutes")}
-        value={kpis.routeTotal}
-        detail={`${count(kpis.routesDone, "boardKpiRoutesDoneOne", "boardKpiRoutesDone")} · ${count(
-          kpis.routesCancelled,
-          "boardKpiRoutesCancelledOne",
-          "boardKpiRoutesCancelled",
-        )}`}
-      />
-      <Kpi
-        label={t("boardKpiInProgress")}
-        value={kpis.routesInProgress}
-        detail={t("boardKpiInProgressDetail")}
-        onSelect={onShowInProgress}
-      />
-      <Kpi
-        label={t("boardKpiDelayed")}
-        value={kpis.routesDelayed}
-        tone={kpis.routesDelayed > 0 ? "late" : "default"}
-        detail={kpis.routesDelayed > 0 ? t("boardKpiDelayedDetail") : t("boardKpiAllOnTime")}
-      />
-      <Kpi
-        label={t("boardKpiStops")}
-        value={kpis.stopCompletionPercent === null ? "—" : `${String(kpis.stopCompletionPercent)}%`}
-        detail={t("boardKpiStopsDetail")
-          .replace("{done}", String(kpis.stopsDone))
-          .replace("{total}", String(kpis.stopsTotal))}
-      />
-      <Kpi
-        label={t("boardKpiAlerts")}
-        value={kpis.alertsOpen}
-        tone={kpis.alertsCritical > 0 ? "late" : kpis.alertsOpen > 0 ? "signal" : "default"}
-        detail={count(kpis.alertsCritical, "boardKpiAlertsDetailOne", "boardKpiAlertsDetail")}
-      />
-      <Kpi
-        label={t("boardKpiReview")}
-        value={reviewQueue ?? "—"}
-        tone={reviewQueue !== undefined && reviewQueue > 0 ? "signal" : "default"}
-        detail={t("boardKpiReviewDetail")}
-        to="/execucoes?review_status=PENDING_REVIEW"
-      />
+    <section aria-label={t("boardKpisLabel")} className="space-y-3">
+      <div className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-md border xl:grid-cols-4">
+        <Kpi
+          label={t("boardKpiWorkersOnRoute")}
+          value={kpis.workersOnRoute}
+          detail={t("boardKpiWorkersOnRouteDetail")}
+          onSelect={onShowInProgress}
+        />
+        <Kpi
+          label={t("boardKpiReleasedToday")}
+          value={kpis.releasedToday}
+          tone={kpis.releasedToday > 0 ? "signal" : "default"}
+          detail={t("boardKpiReleasedTodayDetail")}
+        />
+        <Kpi
+          label={t("boardKpiAlerts")}
+          value={kpis.alertsOpen}
+          tone={kpis.alertsCritical > 0 ? "late" : kpis.alertsOpen > 0 ? "signal" : "default"}
+          detail={count(kpis.alertsCritical, "boardKpiAlertsDetailOne", "boardKpiAlertsDetail")}
+        />
+        <Kpi
+          label={t("boardKpiReview")}
+          value={reviewQueue ?? "—"}
+          tone={reviewQueue !== undefined && reviewQueue > 0 ? "signal" : "default"}
+          detail={t("boardKpiReviewDetail")}
+          to="/execucoes?review_status=PENDING_REVIEW"
+        />
+      </div>
+      {kpis.pool.length > 0 && (
+        <div
+          role="group"
+          aria-label={t("boardPoolLabel")}
+          className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-md border sm:grid-cols-3 xl:grid-cols-4"
+        >
+          {kpis.pool.map((pool) => (
+            <PoolCell key={pool.service_type_id} pool={pool} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

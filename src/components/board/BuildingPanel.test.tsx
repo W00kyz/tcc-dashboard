@@ -23,7 +23,7 @@ function panelProps(overrides: Partial<Parameters<typeof BuildingPanel>[0]> = {}
     building: { id: "b1", name: "Bloco CD", campusArea: "CEEI" },
     floors: FLOORS,
     pointsByFloor: POINTS,
-    statuses: new Map([["p1", "LATE" as const]]),
+    statuses: new Map([["p1", "IN_PROGRESS" as const]]),
     selectedFloorId: "all" as const,
     onSelectFloor: vi.fn(),
     selectedPointId: null,
@@ -47,9 +47,9 @@ describe("BuildingPanel", () => {
     renderPanel();
 
     expect(screen.getByRole("heading", { name: "Bloco CD" })).toBeInTheDocument();
-    expect(screen.getByText("2 pontos · 0 feitos · 1 atrasado")).toBeInTheDocument();
-    const late = within(screen.getByRole("listitem", { name: /Banheiro térreo/ }));
-    expect(late.getByText("Atrasado")).toBeInTheDocument();
+    expect(screen.getByText("2 pontos · 0 feitos")).toBeInTheDocument();
+    const running = within(screen.getByRole("listitem", { name: /Banheiro térreo/ }));
+    expect(running.getByText("Em andamento")).toBeInTheDocument();
     const idle = within(screen.getByRole("listitem", { name: /Sala 104/ }));
     expect(idle.getByText("Sem visita hoje")).toBeInTheDocument();
   });
@@ -57,7 +57,7 @@ describe("BuildingPanel", () => {
   it("uses the singular forms for one point", () => {
     renderPanel({ floors: FLOORS.slice(0, 1), statuses: new Map([["p1", "DONE" as const]]) });
 
-    expect(screen.getByText("1 ponto · 1 feito · 0 atrasados")).toBeInTheDocument();
+    expect(screen.getByText("1 ponto · 1 feito")).toBeInTheDocument();
   });
 
   it("switches floor and highlights a point", async () => {

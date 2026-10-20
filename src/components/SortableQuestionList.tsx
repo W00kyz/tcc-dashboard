@@ -61,7 +61,7 @@ function SortableQuestionRow({ question, onEdit, onRemove }: SortableQuestionRow
       className="bg-card flex items-start gap-2 py-3"
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      {/* Same dual-sensor handle contract as SortableStopList: PointerSensor for the mouse,
+      {/* Dual-sensor handle contract: PointerSensor for the mouse,
           KeyboardSensor for Space-grab / Arrow-move / Space-drop, dnd-kit owns the keydown. */}
       <button
         type="button"

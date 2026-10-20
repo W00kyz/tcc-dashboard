@@ -6,6 +6,7 @@ import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { EvidenceViewer } from "@/components/EvidenceViewer";
+import { ExecutionAppeal } from "@/components/execution/ExecutionAppeal";
 import { MediaAnswerPhotos } from "@/components/execution/MediaAnswerPhotos";
 import {
   type MediaAnswerPhotos as MediaAnswerPhotosData,
@@ -20,7 +21,6 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 type ExecutionDetail = components["schemas"]["ExecutionDetail"];
 type ExecutionScan = components["schemas"]["ExecutionScan"];
 type AnswerOut = components["schemas"]["AnswerOut"];
-type ExecutionAssignment = components["schemas"]["ExecutionAssignmentOut"];
 
 interface ExecutionDetailDrawerProps {
   executionId: string | null;
@@ -41,14 +41,6 @@ const FLAG_LABEL_KEY: Record<string, StringKey> = {
 const SCAN_KIND_LABEL_KEY: Record<string, StringKey> = {
   CHECK_IN: "executionScanCheckIn",
   CHECK_OUT: "executionScanCheckOut",
-};
-
-// `outcome` is a bare `string` in the schema; an unknown value falls back to its raw text.
-const ASSIGNMENT_OUTCOME_LABEL_KEY: Record<string, StringKey> = {
-  EXECUTED: "executionReassignmentOutcomeExecuted",
-  REASSIGNED: "executionReassignmentOutcomeReassigned",
-  IMPEDED: "executionReassignmentOutcomeImpeded",
-  CANCELLED: "executionReassignmentOutcomeCancelled",
 };
 
 // Same green/amber/grey vocabulary and label keys as ExecutionHistoryPage's GEO_BADGE.
@@ -123,40 +115,6 @@ function AnswerRow({ answer, media, onLightboxOpenChange }: AnswerRowProps) {
         formatAnswerValue(t, answer.value)
       ) : (
         <MediaAnswerPhotos entry={media} onLightboxOpenChange={onLightboxOpenChange} />
-      )}
-    </li>
-  );
-}
-
-function AssignmentRow({ assignment }: { assignment: ExecutionAssignment }) {
-  const { t } = useTranslation();
-  const roleKey: StringKey =
-    assignment.sequence === 1
-      ? "executionReassignmentOriginal"
-      : "executionReassignmentTransferred";
-  const outcomeKey = assignment.outcome
-    ? ASSIGNMENT_OUTCOME_LABEL_KEY[assignment.outcome]
-    : undefined;
-
-  return (
-    <li className="text-sm">
-      <span className="text-muted-foreground">{t(roleKey)}: </span>
-      {assignment.full_name}
-      <span className="text-muted-foreground">
-        {" "}
-        ({t("executionReassignmentAssignedBy")} {assignment.assigned_by_name})
-      </span>
-      {assignment.sequence > 1 && (
-        <span className="text-muted-foreground">
-          {" — "}
-          {t("executionReassignmentReason")}:{" "}
-          {assignment.transfer_reason ?? t("executionReassignmentNoReason")}
-        </span>
-      )}
-      {assignment.outcome && (
-        <span className="bg-status-pending-soft text-status-pending ml-2 rounded-[3px] px-2 py-0.5 text-xs font-semibold">
-          {outcomeKey ? t(outcomeKey) : assignment.outcome}
-        </span>
       )}
     </li>
   );
@@ -279,19 +237,6 @@ function DetailBody({
         </section>
       )}
 
-      {detail.reassigned && detail.assignment_history !== null && (
-        <section>
-          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
-            {t("executionReassignmentHeading")}
-          </h3>
-          <ul className="mt-1 space-y-1">
-            {detail.assignment_history.map((assignment) => (
-              <AssignmentRow key={assignment.sequence} assignment={assignment} />
-            ))}
-          </ul>
-        </section>
-      )}
-
       {detail.scans.length > 0 && (
         <section>
           <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
@@ -305,26 +250,10 @@ function DetailBody({
         </section>
       )}
 
-      {detail.manual_completion !== null && (
-        <section>
-          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
-            {t("executionManualCompletionHeading")}
-          </h3>
-          <p className="text-sm">
-            <span className="text-muted-foreground">{t("executionManualCompletionReason")}: </span>
-            {detail.manual_completion.reason}
-          </p>
-          <p className="text-sm">
-            <span className="text-muted-foreground">{t("executionManualCompletionBy")}: </span>
-            {detail.manual_completion.completed_by}
-          </p>
-          <p className="text-sm">
-            <span className="text-muted-foreground">{t("executionManualCompletionAt")}: </span>
-            <time dateTime={detail.manual_completion.completed_at}>
-              {formatDateTime(detail.manual_completion.completed_at)}
-            </time>
-          </p>
-        </section>
+      {/* An execution created by an accepted appeal (spec 2026-10-20 §7.5) carries no answers
+       * or evidence of its own: the appeal is its record. */}
+      {detail.source === "APPEAL" && detail.appeal_id !== null && (
+        <ExecutionAppeal appealId={detail.appeal_id} />
       )}
 
       <section>

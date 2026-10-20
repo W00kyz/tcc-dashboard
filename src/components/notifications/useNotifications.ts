@@ -27,12 +27,10 @@ export function formatNotificationTime(iso: string): string {
 }
 
 // Best-effort deep link: the route board is the only place that renders alerts and route
-// context, so both `alert_id` and `route_id` point there. No useful target → just mark read.
+// context, so both `alert_id` and `route_id` point there (an impediment carries its route: the
+// reassignment queue it used to open is gone with automatic allocation). No useful target →
+// just mark read.
 export function notificationTarget(data: Notification["data"]): string | null {
-  // RF17: an impediment is worked from the reassignment queue, not the board.
-  if (typeof data.impediment_id === "string") {
-    return "/reatribuicoes";
-  }
   if (typeof data.route_id === "string" || typeof data.alert_id === "string") {
     return "/rotas";
   }

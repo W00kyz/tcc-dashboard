@@ -9,17 +9,12 @@ type BoardPosition = components["schemas"]["BoardPosition"];
 
 const LEGEND: { key: StringKey; swatch: string }[] = [
   { key: "boardMapLegendLive", swatch: "bg-primary" },
-  {
-    key: "boardMapLegendLate",
-    swatch: "bg-status-late ring-2 ring-white outline outline-status-late",
-  },
   { key: "boardMapLegendStale", swatch: "bg-muted border-status-pending border-2" },
   { key: "boardMapLegendBuilding", swatch: "bg-primary/15 border-primary rounded-[2px] border" },
 ];
 
 interface OperationsMapPanelProps {
   positions: BoardPosition[];
-  delayedWorkerIds: Set<string>;
   selectedWorkerId: string | null;
   onSelectWorker: (workerId: string) => void;
   buildings?: MapBuilding[];
@@ -27,10 +22,9 @@ interface OperationsMapPanelProps {
   onSelectBuilding?: (buildingId: string | null) => void;
 }
 
-/** The board's centrepiece: where every worker is right now, with late routes marked red. */
+/** The board's centrepiece: where every worker is right now, and the campus buildings. */
 export function OperationsMapPanel({
   positions,
-  delayedWorkerIds,
   selectedWorkerId,
   onSelectWorker,
   buildings,
@@ -38,7 +32,6 @@ export function OperationsMapPanel({
   onSelectBuilding,
 }: OperationsMapPanelProps) {
   const { t } = useTranslation();
-  const lateCount = positions.filter((p) => delayedWorkerIds.has(p.field_worker_id)).length;
 
   return (
     <section aria-labelledby="operations-map-heading" className="bg-card rounded-md border">
@@ -54,12 +47,6 @@ export function OperationsMapPanel({
             {positions.length === 1
               ? t("boardMapWorkersInFieldOne")
               : t("boardMapWorkersInField").replace("{n}", String(positions.length))}
-            {lateCount > 0 && (
-              <span className="text-status-late font-semibold">
-                {" · "}
-                {t("boardMapWorkersLate").replace("{n}", String(lateCount))}
-              </span>
-            )}
           </span>
         </div>
         <ul aria-label={t("boardMapLegendLabel")} className="flex flex-wrap gap-x-4 gap-y-1">
@@ -74,7 +61,6 @@ export function OperationsMapPanel({
       <div className="p-2">
         <WorkerPositionsMap
           positions={positions}
-          delayedWorkerIds={delayedWorkerIds}
           selectedWorkerId={selectedWorkerId}
           onSelectWorker={onSelectWorker}
           buildings={buildings}

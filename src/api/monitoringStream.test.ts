@@ -11,7 +11,11 @@ import {
 
 const SNAPSHOT: BoardSnapshot = {
   generated_at: "2026-09-07T12:00:00Z",
+  service_day: true,
   routes: [],
+  pool: [],
+  not_started: [],
+  released_today: 0,
   open_alerts: [],
   worker_positions: [],
 };

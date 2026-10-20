@@ -175,6 +175,8 @@ describe("BuildingsPage", () => {
         floor_id: "f2",
         name: "Banheiro",
         description: "Masculino",
+        // No picker yet: task D2 adds the point's service type to this dialog.
+        service_type_id: "",
       });
     });
     await waitFor(() => {

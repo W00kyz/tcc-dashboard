@@ -86,28 +86,12 @@ describe("WorkerPositionsMap (RF42)", () => {
     const region = screen.getByRole("region", { name: /mapa das posições/i });
     expect(region.querySelectorAll(".leaflet-interactive")).toHaveLength(0);
   });
-
-  it("labels a worker whose route is delayed as late on the map", () => {
-    render(
-      <WorkerPositionsMap
-        positions={[position("João", 30), position("Maria", 30)]}
-        delayedWorkerIds={new Set(["Maria"])}
-      />,
-    );
-
-    expect(screen.getByText("Maria · atrasada")).toBeInTheDocument();
-    expect(screen.queryByText("João")).not.toBeInTheDocument();
-  });
 });
 
 describe("markerState", () => {
-  it("puts a delayed route ahead of a stale fix", () => {
-    expect(markerState(position("Ana", 3600), new Set(["Ana"]))).toBe("late");
-  });
-
   it("greys out a fix older than the stale threshold", () => {
-    expect(markerState(position("Ana", 3600), new Set())).toBe("stale");
-    expect(markerState(position("Ana", 60), new Set())).toBe("live");
+    expect(markerState(position("Ana", 3600))).toBe("stale");
+    expect(markerState(position("Ana", 60))).toBe("live");
   });
 
   const BUILDING = {

@@ -138,14 +138,6 @@ export function MyDataPage() {
                   label={t("myDataFieldWorkerCompany")}
                   value={data.field_worker.contractor_company_id}
                 />
-                <DataRow
-                  label={t("myDataFieldWorkerServiceTypes")}
-                  value={
-                    data.field_worker.service_type_ids.length > 0
-                      ? data.field_worker.service_type_ids.join(", ")
-                      : t("myDataEmpty")
-                  }
-                />
               </dl>
             )}
           </Section>
