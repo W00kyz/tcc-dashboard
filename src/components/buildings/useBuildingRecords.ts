@@ -7,6 +7,7 @@ import { useAuth } from "@/auth/AuthContext";
 type BuildingOut = components["schemas"]["BuildingOut"];
 type FloorOut = components["schemas"]["FloorOut"];
 type ServicePointOut = components["schemas"]["ServicePointOut"];
+type ServiceTypeOut = components["schemas"]["ServiceTypeOut"];
 
 /** The API client for the signed-in manager. Falls back to an empty token instead of asserting
  * a session, so a page renders (and its requests fail cleanly) before the session hydrates. */
@@ -101,6 +102,24 @@ export function useAllPoints() {
       const { data, response } = await client.GET("/service-points");
 
       return listOrThrow(data, response, "GET /service-points");
+    },
+  });
+}
+
+/** Every service type with its company, or only the ones no company has adopted yet. The key
+ * starts with "service-types" so a company save refreshes both lists. */
+export function useServiceTypes({ unassigned = false, enabled = true } = {}) {
+  const client = useApiClient();
+
+  return useQuery({
+    queryKey: ["service-types", { unassigned }],
+    enabled,
+    queryFn: async (): Promise<ServiceTypeOut[]> => {
+      const { data, response } = await client.GET("/service-types", {
+        params: { query: unassigned ? { unassigned: true } : {} },
+      });
+
+      return listOrThrow(data, response, "GET /service-types");
     },
   });
 }

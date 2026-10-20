@@ -11,6 +11,7 @@ import {
   useApiClient,
   useBuildingFloors,
   useBuildingPoints,
+  useServiceTypes,
 } from "@/components/buildings/useBuildingRecords";
 import { Panel } from "@/components/layout/Page";
 import { Field, RegistryList } from "@/components/layout/Registry";
@@ -21,17 +22,23 @@ import {
 } from "@/components/layout/RegistryDialog";
 import { assertSaved, RegistryEditButton } from "@/components/layout/registryForm";
 import { EmptyState } from "@/components/layout/StateMessages";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import {
+  NativeSelect,
+  NativeSelectOptGroup,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 import { useTranslation } from "@/i18n/useTranslation";
 
 type BuildingOut = components["schemas"]["BuildingOut"];
 type FloorOut = components["schemas"]["FloorOut"];
 type ServicePointOut = components["schemas"]["ServicePointOut"];
+type ServiceTypeOut = components["schemas"]["ServiceTypeOut"];
 
-const EMPTY_POINT = { floorId: "", name: "", description: "" };
+const EMPTY_POINT = { floorId: "", name: "", description: "", serviceTypeId: "" };
 type PointValues = typeof EMPTY_POINT;
 type PointDialog = RegistryDialogState<PointValues>;
 
@@ -51,7 +58,11 @@ function useSavePoint(dialog: PointDialog) {
   return useMutation({
     mutationFn: async () => {
       const { form } = dialog;
-      const shared = { name: form.values.name.trim(), description: form.values.description.trim() };
+      const shared = {
+        name: form.values.name.trim(),
+        description: form.values.description.trim(),
+        service_type_id: form.values.serviceTypeId,
+      };
       // A point has no location of its own (it is where its building is); the floor is fixed
       // once created.
       if (form.editingId !== null) {
@@ -63,10 +74,8 @@ function useSavePoint(dialog: PointDialog) {
 
         return;
       }
-      // IMPORTANT: a new point needs its service type (spec 2026-10-20 §8.6). The picker comes
-      // with task D2; until then the API answers 422 and the dialog shows its save error.
       const { response } = await client.POST("/service-points", {
-        body: { ...shared, floor_id: form.values.floorId, service_type_id: "" },
+        body: { ...shared, floor_id: form.values.floorId },
       });
       assertSaved(response, "POST /service-points");
     },
@@ -77,7 +86,30 @@ function useSavePoint(dialog: PointDialog) {
   });
 }
 
-function PointFields({ dialog, floors }: { dialog: PointDialog; floors: FloorOut[] }) {
+/** The types that can be picked, grouped by company; a type without a company cannot take
+ * points (the API refuses it), so it is not offered. */
+function groupByCompany(types: ServiceTypeOut[]): [string, ServiceTypeOut[]][] {
+  const groups = new Map<string, ServiceTypeOut[]>();
+  types.forEach((type) => {
+    if (type.contractor_company_name === null) {
+      return;
+    }
+    groups.set(type.contractor_company_name, [
+      ...(groups.get(type.contractor_company_name) ?? []),
+      type,
+    ]);
+  });
+
+  return [...groups];
+}
+
+interface PointFieldsProps {
+  dialog: PointDialog;
+  floors: FloorOut[];
+  serviceTypes: ServiceTypeOut[];
+}
+
+function PointFields({ dialog, floors, serviceTypes }: PointFieldsProps) {
   const { t } = useTranslation();
   const { form } = dialog;
 
@@ -117,6 +149,28 @@ function PointFields({ dialog, floors }: { dialog: PointDialog; floors: FloorOut
           />
         </Field>
       ))}
+      <Field>
+        <Label htmlFor="point-service-type">{t("servicePointsFieldServiceType")}</Label>
+        <NativeSelect
+          id="point-service-type"
+          value={form.values.serviceTypeId}
+          aria-invalid={form.isInvalid("serviceTypeId")}
+          onChange={(event) => {
+            form.setField("serviceTypeId", event.target.value);
+          }}
+        >
+          <NativeSelectOption value="" />
+          {groupByCompany(serviceTypes).map(([company, types]) => (
+            <NativeSelectOptGroup key={company} label={company}>
+              {types.map((type) => (
+                <NativeSelectOption key={type.id} value={type.id}>
+                  {type.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelectOptGroup>
+          ))}
+        </NativeSelect>
+      </Field>
     </>
   );
 }
@@ -138,6 +192,13 @@ function PointRow({ point, floorLabel, onEdit, onRemove }: PointRowProps) {
         <span className="text-muted-foreground text-sm">
           {[floorLabel, point.description].filter((part) => part !== "").join(" · ")}
         </span>
+        {point.service_type_name === null ? (
+          <Badge variant="outline" className="ml-2">
+            {t("servicePointWithoutType")}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground ml-2 text-sm">{point.service_type_name}</span>
+        )}
       </span>
       <RegistryEditButton itemName={point.name} onEdit={onEdit} />
       <Button
@@ -193,14 +254,15 @@ interface BuildingPointsPanelProps {
 }
 
 /** The selected building's service points, under the map: list, "Novo ponto", and per point
- * edit and remove, all in Dialogs. A point is only floor, name and description — it is where
- * its building is (spec 2026-10-20 §3.3).
+ * edit and remove, all in Dialogs. A point is floor, name, description and service type — it is
+ * where its building is (spec 2026-10-20 §3.3).
  * @example <BuildingPointsPanel building={selected} /> */
 export function BuildingPointsPanel({ building, onEditBuilding }: BuildingPointsPanelProps) {
   const { t } = useTranslation();
   const floors = useBuildingFloors(building.id);
   const points = useBuildingPoints(building.id);
-  const dialog = useRegistryDialog(EMPTY_POINT, ["floorId", "name"]);
+  const serviceTypes = useServiceTypes();
+  const dialog = useRegistryDialog(EMPTY_POINT, ["floorId", "name", "serviceTypeId"]);
   const save = useSavePoint(dialog);
   const removal = useRemovePoint();
   const floorList = floors.data ?? [];
@@ -259,6 +321,7 @@ export function BuildingPointsPanel({ building, onEditBuilding }: BuildingPoints
                 floorId: point.floor_id,
                 name: point.name,
                 description: point.description,
+                serviceTypeId: point.service_type_id ?? "",
               });
             }}
             onRemove={() => {
@@ -275,12 +338,16 @@ export function BuildingPointsPanel({ building, onEditBuilding }: BuildingPoints
         }}
         title={t(dialog.form.editingId === null ? "pointNewTitle" : "pointEditTitle")}
         createLabel={t("servicePointsSubmitCreate")}
-        fieldLabels={{ floorId: t("servicePointsFieldFloor"), name: t("servicePointsFieldName") }}
+        fieldLabels={{
+          floorId: t("servicePointsFieldFloor"),
+          name: t("servicePointsFieldName"),
+          serviceTypeId: t("servicePointsFieldServiceType"),
+        }}
       >
         {floorList.length === 0 ? (
           <EmptyState>{t("buildingPointsNeedFloor")}</EmptyState>
         ) : (
-          <PointFields dialog={dialog} floors={floorList} />
+          <PointFields dialog={dialog} floors={floorList} serviceTypes={serviceTypes.data ?? []} />
         )}
       </RegistryDialog>
       {removal.target !== null && (

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
+import { useServiceTypes } from "@/components/buildings/useBuildingRecords";
 import { QuestionEditorDialog } from "@/components/QuestionEditorDialog";
 import { SortableQuestionList } from "@/components/SortableQuestionList";
 import { Button } from "@/components/ui/button";
@@ -15,12 +16,6 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Plus } from "lucide-react";
 import { ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
 import { Badge } from "@/components/ui/badge";
-
-interface ServiceType {
-  id: string;
-  name: string;
-  average_duration_minutes: number;
-}
 
 type FormOverview = components["schemas"]["FormOverviewResponse"];
 type FormQuestion = components["schemas"]["FormQuestionResponse"];
@@ -46,14 +41,7 @@ export function FormBuilderPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
 
-  const { data: serviceTypes, isError: serviceTypesError } = useQuery({
-    queryKey: ["service-types"],
-    queryFn: async () => {
-      const { data } = await client.GET("/service-types");
-
-      return data as ServiceType[];
-    },
-  });
+  const { data: serviceTypes, isError: serviceTypesError } = useServiceTypes();
 
   const formQuery = useQuery({
     queryKey: ["form", serviceTypeId],
@@ -202,7 +190,9 @@ export function FormBuilderPage() {
           </NativeSelectOption>
           {serviceTypes?.map((serviceType) => (
             <NativeSelectOption key={serviceType.id} value={serviceType.id}>
-              {serviceType.name}
+              {serviceType.contractor_company_name === null
+                ? serviceType.name
+                : `${serviceType.name} — ${serviceType.contractor_company_name}`}
             </NativeSelectOption>
           ))}
         </NativeSelect>

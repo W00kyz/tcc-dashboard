@@ -37,7 +37,25 @@ const POINT = {
   description: "Sala de aula",
   latitude: -7.215,
   longitude: -35.905,
+  service_type_id: "t1",
+  service_type_name: "Limpeza",
 };
+const UNTYPED_POINT = {
+  ...POINT,
+  id: "p3",
+  name: "Sala 103",
+  service_type_id: null,
+  service_type_name: null,
+};
+function serviceType(id: string, name: string, company: string | null) {
+  return {
+    id,
+    name,
+    average_duration_minutes: 30,
+    contractor_company_id: company === null ? null : `co-${company}`,
+    contractor_company_name: company,
+  };
+}
 const IMPACT = { points: 1, floors: 2, routes: 1, executions: 3, photos: 2 };
 
 function campusApi() {
@@ -48,6 +66,11 @@ function campusApi() {
       { id: "f2", building_id: "b1", label: "1º andar" },
     ])
     .on("GET", "/service-points", [POINT])
+    .on("GET", "/service-types", [
+      serviceType("t1", "Limpeza", "Limpa Tudo"),
+      serviceType("t2", "Jardinagem", "Verde Jardins"),
+      serviceType("t9", "Pintura", null),
+    ])
     .install();
 }
 
@@ -157,7 +180,7 @@ describe("BuildingsPage", () => {
     });
   });
 
-  it("registers a point in a dialog with floor, name and description only", async () => {
+  it("registers a point in a dialog with floor, name, description and service type", async () => {
     const api = campusApi().on("POST", "/service-points", { ...POINT, id: "p2" }, 201);
 
     renderPage();
@@ -167,6 +190,7 @@ describe("BuildingsPage", () => {
     await userEvent.selectOptions(within(dialog).getByLabelText("Andar"), "f2");
     await userEvent.type(within(dialog).getByLabelText("Nome"), "Banheiro");
     await userEvent.type(within(dialog).getByLabelText("Descrição"), "Masculino");
+    await userEvent.selectOptions(within(dialog).getByLabelText("Tipo de serviço"), "t2");
     expect(within(dialog).queryByLabelText("Latitude")).toBeNull();
     await userEvent.click(within(dialog).getByRole("button", { name: "Cadastrar" }));
 
@@ -175,13 +199,57 @@ describe("BuildingsPage", () => {
         floor_id: "f2",
         name: "Banheiro",
         description: "Masculino",
-        // No picker yet: task D2 adds the point's service type to this dialog.
-        service_type_id: "",
+        service_type_id: "t2",
       });
     });
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
+  });
+
+  it("requires a service type", async () => {
+    const api = campusApi();
+
+    renderPage();
+    await selectBlocoCI();
+    await userEvent.click(within(pointsPanel()).getByRole("button", { name: "Novo ponto" }));
+    const dialog = screen.getByRole("dialog", { name: "Novo ponto de serviço" });
+    await userEvent.selectOptions(within(dialog).getByLabelText("Andar"), "f2");
+    await userEvent.type(within(dialog).getByLabelText("Nome"), "Banheiro");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cadastrar" }));
+
+    expect(
+      await within(dialog).findByText(/Preencha os campos obrigatórios:.*Tipo de serviço/),
+    ).toBeInTheDocument();
+    expect(api.sent("POST", "/service-points")).toHaveLength(0);
+  });
+
+  it("groups the service types by company and leaves out the ones without one", async () => {
+    campusApi();
+
+    renderPage();
+    await selectBlocoCI();
+    await userEvent.click(within(pointsPanel()).getByRole("button", { name: "Novo ponto" }));
+    const picker = within(screen.getByRole("dialog")).getByLabelText("Tipo de serviço");
+
+    expect(await within(picker).findByRole("option", { name: "Limpeza" })).toBeInTheDocument();
+    expect(within(picker).getByRole("group", { name: "Limpa Tudo" })).toContainElement(
+      within(picker).getByRole("option", { name: "Limpeza" }),
+    );
+    expect(within(picker).getByRole("group", { name: "Verde Jardins" })).toBeInTheDocument();
+    expect(within(picker).queryByRole("option", { name: "Pintura" })).toBeNull();
+  });
+
+  it("shows each point's type and flags a point without one", async () => {
+    campusApi().on("GET", "/service-points", [POINT, UNTYPED_POINT]);
+
+    renderPage();
+    await selectBlocoCI();
+
+    expect(await within(pointsPanel()).findByText("Sala 103")).toBeInTheDocument();
+    expect(listItemWithText("Sala 101")).toHaveTextContent("Limpeza");
+    expect(listItemWithText("Sala 103")).toHaveTextContent("Sem tipo de serviço");
+    expect(listItemWithText("Sala 101")).not.toHaveTextContent("Sem tipo de serviço");
   });
 
   it("edits a point's name and description in a dialog", async () => {
@@ -202,6 +270,7 @@ describe("BuildingsPage", () => {
       expect(api.sent("PATCH", "/service-points/p1")[0]?.body).toEqual({
         name: "Sala 102",
         description: "Sala de aula",
+        service_type_id: "t1",
       });
     });
   });

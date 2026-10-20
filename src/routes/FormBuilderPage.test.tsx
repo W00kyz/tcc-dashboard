@@ -73,7 +73,18 @@ function makeFakeFetch() {
     }
 
     if (url.includes("/service-types") && method === "GET") {
-      return jsonResponse([{ id: "s1", name: "Limpeza", average_duration_minutes: 30 }], 200);
+      return jsonResponse(
+        [
+          {
+            id: "s1",
+            name: "Limpeza",
+            average_duration_minutes: 30,
+            contractor_company_id: "c1",
+            contractor_company_name: "Limpa Tudo",
+          },
+        ],
+        200,
+      );
     }
 
     if (url.includes("/forms/f1/draft/order") && method === "PUT") {
@@ -173,7 +184,7 @@ function renderPage(fetchImpl: typeof fetch) {
 }
 
 async function pickServiceType(user: ReturnType<typeof userEvent.setup>) {
-  await screen.findByRole("option", { name: "Limpeza" });
+  await screen.findByRole("option", { name: "Limpeza — Limpa Tudo" });
   await user.selectOptions(screen.getByLabelText("Tipo de serviço"), "s1");
 }
 

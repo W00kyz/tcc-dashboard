@@ -103,7 +103,10 @@ interface RegistryFormFooterProps<Values extends FormValues> {
 type RegistryFormErrorsProps<Values extends FormValues> = Pick<
   RegistryFormFooterProps<Values>,
   "form" | "save" | "fieldLabels" | "problems"
->;
+> & {
+  /** A page's own sentence for a failure it understands; null falls back to the generic one. */
+  saveErrorMessage?: (error: Error) => string | null;
+};
 
 /** What blocks or failed the save: missing fields, the page's own problems, the server's no. */
 export function RegistryFormErrors<Values extends FormValues>({
@@ -111,15 +114,18 @@ export function RegistryFormErrors<Values extends FormValues>({
   save,
   fieldLabels,
   problems = [],
+  saveErrorMessage,
 }: RegistryFormErrorsProps<Values>) {
   const { t } = useTranslation();
   const missingLabels = form.missing
     .filter((field) => form.isInvalid(field))
     .map((field) => fieldLabels[field] ?? String(field));
-  const saveFailure =
+  const ownMessage = save.error === null ? null : (saveErrorMessage?.(save.error) ?? null);
+  const genericFailure =
     save.error instanceof RegistrySaveError && save.error.status === 409
       ? t("registrySaveConflict")
       : t("registrySaveError");
+  const saveFailure = ownMessage ?? genericFailure;
 
   return (
     <>
