@@ -529,6 +529,7 @@ export const strings = {
   executionAppealClaimedAt: "Horário declarado",
   executionAppealReleased: "Liberado em",
   executionAppealReviewedAt: "Aceito em",
+  appealAcceptedBy: "Aceito por {name}",
   executionAppealReviewNote: "Nota do gestor",
   executionAppealLoading: "Carregando o recurso…",
   executionAppealError: "Não foi possível carregar o recurso.",

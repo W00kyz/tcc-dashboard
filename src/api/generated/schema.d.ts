@@ -1624,6 +1624,8 @@ export interface components {
       filed_at: string;
       /** Reviewed At */
       reviewed_at: string | null;
+      /** Reviewed By Name */
+      reviewed_by_name: string | null;
       /** Review Note */
       review_note: string | null;
     };

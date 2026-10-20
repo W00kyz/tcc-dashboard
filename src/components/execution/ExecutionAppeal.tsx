@@ -83,6 +83,12 @@ export function ExecutionAppeal({ appealId }: { appealId: string }) {
               <When iso={appeal.reviewed_at} />
             </Line>
           )}
+          {appeal.reviewed_by_name && (
+            // Accepted by whom: an appeal execution has no evidence, so this is its audit trail.
+            <p className="text-sm font-semibold">
+              {t("appealAcceptedBy").replace("{name}", appeal.reviewed_by_name)}
+            </p>
+          )}
           {appeal.review_note && (
             <Line label="executionAppealReviewNote">{appeal.review_note}</Line>
           )}

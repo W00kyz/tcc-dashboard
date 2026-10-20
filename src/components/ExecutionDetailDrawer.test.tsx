@@ -69,6 +69,7 @@ const APPEAL = {
   status: "ACCEPTED",
   filed_at: "2026-08-30T15:00:00Z",
   reviewed_at: "2026-08-30T16:00:00Z",
+  reviewed_by_name: "Larissa Andrade",
   review_note: "Confirmado com o fiscal do prédio",
 };
 
@@ -317,6 +318,7 @@ describe("ExecutionDetailDrawer", () => {
     expect(within(appeal).getByText("Fiquei no subsolo sem sinal")).toBeInTheDocument();
     expect(within(appeal).getByText(/Sem localização/)).toBeInTheDocument();
     expect(within(appeal).getByText(formatDateTime(APPEAL.reviewed_at))).toBeInTheDocument();
+    expect(within(appeal).getByText("Aceito por Larissa Andrade")).toBeInTheDocument();
     expect(within(appeal).getByText("Confirmado com o fiscal do prédio")).toBeInTheDocument();
     expect(
       fakeFetch.mock.calls.some(([input]) =>
