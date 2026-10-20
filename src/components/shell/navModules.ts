@@ -7,6 +7,7 @@ import {
   HardHat,
   Handshake,
   LayoutList,
+  MessageSquareWarning,
   type LucideIcon,
   Settings,
   ShieldAlert,
@@ -16,7 +17,7 @@ import {
 import type { Session } from "@/auth/AuthContext";
 import type { StringKey } from "@/i18n/strings";
 
-export type NavBadgeKind = "reviewQueue";
+export type NavBadgeKind = "reviewQueue" | "justifications";
 
 export interface NavEntry {
   to: string;
@@ -47,6 +48,12 @@ export const NAV_MODULES: NavModule[] = [
     entries: [
       { to: "/rotas", label: "navRouteBoard", icon: LayoutList },
       { to: "/execucoes", label: "navExecutions", icon: ClipboardCheck, badge: "reviewQueue" },
+      {
+        to: "/justificativas",
+        label: "navJustifications",
+        icon: MessageSquareWarning,
+        badge: "justifications",
+      },
       { to: "/relatorios", label: "navReports", icon: FileBarChart },
     ],
   },

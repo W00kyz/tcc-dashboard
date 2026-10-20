@@ -20,9 +20,23 @@ function requestUrl(input: RequestInfo | URL): string {
   return input instanceof URL ? input.toString() : input.url;
 }
 
-function makeFakeFetch(total = 0, unreadCount = 0) {
+function makeFakeFetch(total = 0, unreadCount = 0, pendingImpediments = 0, pendingAppeals = 0) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = requestUrl(input);
+    if (url.includes("/impediments")) {
+      return Promise.resolve(
+        new Response(JSON.stringify(Array.from({ length: pendingImpediments }, () => ({}))), {
+          status: 200,
+        }),
+      );
+    }
+    if (url.includes("/appeals")) {
+      return Promise.resolve(
+        new Response(JSON.stringify(Array.from({ length: pendingAppeals }, () => ({}))), {
+          status: 200,
+        }),
+      );
+    }
     if (url.includes("/executions")) {
       return Promise.resolve(
         new Response(JSON.stringify({ items: [], total, page: 1, page_size: 1 }), { status: 200 }),
@@ -103,6 +117,20 @@ describe("AppShell navigation", () => {
     const badge = await screen.findByRole("link", { name: /fila de revisão/i });
     expect(badge).toHaveTextContent("4");
     expect(badge).toHaveAttribute("href", "/execucoes?review_status=PENDING_REVIEW");
+  });
+
+  it("nav badge counts pending impediments and appeals", async () => {
+    const fetchImpl = makeFakeFetch(0, 0, 2, 3);
+    renderNav("MANAGER", fetchImpl);
+
+    const badge = await screen.findByRole("link", { name: /justificativas pendentes/i });
+    await waitFor(() => {
+      expect(badge).toHaveTextContent("5");
+    });
+    expect(badge).toHaveAttribute("href", "/justificativas");
+    const urls = fetchImpl.mock.calls.map(([input]) => requestUrl(input));
+    expect(urls.some((url) => url.includes("/impediments?status=PENDING"))).toBe(true);
+    expect(urls.some((url) => url.includes("/appeals?status=PENDING"))).toBe(true);
   });
 
   it("renders no badge when the review queue is empty", async () => {

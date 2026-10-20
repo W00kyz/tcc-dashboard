@@ -14,6 +14,7 @@ import { ExecutionHistoryPage } from "@/routes/ExecutionHistoryPage";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { ForgotPasswordPage } from "@/routes/ForgotPasswordPage";
 import { FormBuilderPage } from "@/routes/FormBuilderPage";
+import { JustificationsPage } from "@/routes/JustificationsPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { MyDataPage } from "@/routes/MyDataPage";
 import { NotFoundPage } from "@/routes/NotFoundPage";
@@ -60,6 +61,7 @@ export const appRoutes: RouteObject[] = [
       { path: "/regras-de-alerta", element: <AlertRulesPage /> },
       { path: "/notificacoes", element: <NotificationsPage /> },
       { path: "/execucoes", element: <ExecutionHistoryPage /> },
+      { path: "/justificativas", element: <JustificationsPage /> },
       { path: "/relatorios", element: <ReportsPage /> },
       // Routes are allocated automatically now (spec 2026-10-20-alocacao-automatica §8.1):
       // nothing is planned, reassigned or built by hand, so the old pages land on the board.
