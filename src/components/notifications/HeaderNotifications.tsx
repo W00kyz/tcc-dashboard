@@ -9,7 +9,7 @@ import {
   formatNotificationTime,
   NOTIFICATION_KIND_LABEL_KEY,
   type Notification,
-  UNREAD_COUNT_KEY,
+  useUnreadCount,
   useNotificationActions,
 } from "@/components/notifications/useNotifications";
 import { Badge } from "@/components/ui/badge";
@@ -75,16 +75,7 @@ export function HeaderNotifications() {
   const { client, markAllRead, openNotification } = useNotificationActions();
   const [open, setOpen] = useState(false);
 
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: UNREAD_COUNT_KEY,
-    queryFn: async () => {
-      const { data } = await client.GET("/notifications/me/unread-count");
-
-      return data?.count ?? 0;
-    },
-    // SSE stand-in: poll so the badge tracks new notifications without a manual refresh.
-    refetchInterval: 30_000,
-  });
+  const { data: unreadCount = 0 } = useUnreadCount(client);
 
   // Only fetched while the menu is open: the bell itself needs nothing but the count.
   const recent = useQuery({

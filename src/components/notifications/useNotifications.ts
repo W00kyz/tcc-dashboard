@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
@@ -105,4 +105,19 @@ export function useNotificationActions() {
   }
 
   return { client, markRead, markAllRead, openNotification };
+}
+
+/** Unread notifications for the signed-in user. One query (one cache entry) for the header
+ * bell and the Notificações page. @example const { data: unread = 0 } = useUnreadCount(client); */
+export function useUnreadCount(client: ApiClient) {
+  return useQuery({
+    queryKey: UNREAD_COUNT_KEY,
+    queryFn: async () => {
+      const { data } = await client.GET("/notifications/me/unread-count");
+
+      return data?.count ?? 0;
+    },
+    // SSE stand-in: poll so the badge tracks new notifications without a manual refresh.
+    refetchInterval: 30_000,
+  });
 }

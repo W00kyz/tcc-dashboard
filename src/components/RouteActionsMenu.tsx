@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, type Location, useLocation } from "react-router-dom";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
@@ -59,7 +59,16 @@ interface RouteActionsMenuProps {
   compact?: boolean;
 }
 
+// Editing opens the route builder Dialog over the board, keeping the board's own filters.
+function editLink(location: Location, routeId: string): string {
+  const params = new URLSearchParams(location.search);
+  params.delete("nova");
+  params.set("editar", routeId);
+
+  return `/rotas?${params.toString()}`;
+}
 export function RouteActionsMenu({ route, compact = false }: RouteActionsMenuProps) {
+  const location = useLocation();
   const { t } = useTranslation();
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -75,6 +84,7 @@ export function RouteActionsMenu({ route, compact = false }: RouteActionsMenuPro
   const [reassignOpen, setReassignOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [completeManuallyOpen, setCompleteManuallyOpen] = useState(false);
+  const [optimizeOpen, setOptimizeOpen] = useState(false);
   const [workerId, setWorkerId] = useState("");
   const [reassignReason, setReassignReason] = useState("");
   const [cancelReason, setCancelReason] = useState("");
@@ -164,10 +174,25 @@ export function RouteActionsMenu({ route, compact = false }: RouteActionsMenuPro
     }
   }
 
-  // Any other optimize failure stays in `optimize.error` without extra UI; the 503 the
-  // degraded routing service returns is the one case the manager gets told about.
+  // The 503 the degraded routing service returns gets its own explanation; any other failure
+  // the generic one. (Before, success and every non-503 failure showed nothing at all, so
+  // "Otimizar" looked like a dead menu item.)
   const optimizeUnavailable =
     optimize.error instanceof RouteOptimizeError && optimize.error.status === 503;
+  const optimizeOutcome: StringKey = optimize.isPending
+    ? "routeActionOptimizePending"
+    : optimize.isSuccess
+      ? "routeActionOptimizeDone"
+      : optimizeUnavailable
+        ? "routeActionOptimizeUnavailable"
+        : "routeActionError";
+
+  function handleOptimizeOpenChange(open: boolean) {
+    setOptimizeOpen(open);
+    if (!open) {
+      optimize.reset();
+    }
+  }
 
   const buttonSize = compact ? "icon-sm" : "sm";
   // Icon-only buttons keep the visible label as their accessible name and as a hover title.
@@ -187,7 +212,7 @@ export function RouteActionsMenu({ route, compact = false }: RouteActionsMenuPro
         </Button>
       ) : (
         <Button variant="ghost" size={buttonSize} asChild>
-          <Link to={`/rotas/${route.id}/editar`} {...labelIfCompact("routeActionEdit")}>
+          <Link to={editLink(location, route.id)} {...labelIfCompact("routeActionEdit")}>
             <Pencil aria-hidden="true" />
             {!compact && t("routeActionEdit")}
           </Link>
@@ -225,11 +250,14 @@ export function RouteActionsMenu({ route, compact = false }: RouteActionsMenuPro
                 }}
               >
                 <NativeSelectOption value="" />
-                {workers.data?.map((worker) => (
-                  <NativeSelectOption key={worker.id} value={worker.id}>
-                    {worker.full_name}
-                  </NativeSelectOption>
-                ))}
+                {/* Reassigning to the worker who already has the route is not a reassignment. */}
+                {workers.data
+                  ?.filter((worker) => worker.id !== route.field_worker_id)
+                  .map((worker) => (
+                    <NativeSelectOption key={worker.id} value={worker.id}>
+                      {worker.full_name}
+                    </NativeSelectOption>
+                  ))}
               </NativeSelect>
             </div>
             <div className="space-y-1.5">
@@ -314,6 +342,7 @@ export function RouteActionsMenu({ route, compact = false }: RouteActionsMenuPro
           <DropdownMenuItem
             disabled={optimize.isPending}
             onSelect={() => {
+              setOptimizeOpen(true);
               optimize.mutate();
             }}
           >
@@ -343,9 +372,29 @@ export function RouteActionsMenu({ route, compact = false }: RouteActionsMenuPro
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {optimizeUnavailable && (
-        <ErrorMessage className="w-full">{t("routeActionOptimizeUnavailable")}</ErrorMessage>
-      )}
+      {/* A dialog, not an inline line: the board row's action cell is too narrow to hold a
+       * message, and the outcome has to be read before the manager moves on. */}
+      <Dialog open={optimizeOpen} onOpenChange={handleOptimizeOpenChange}>
+        <DialogContent>
+          <DialogTitle>{t("routeActionOptimizeTitle")}</DialogTitle>
+          {optimize.isError ? (
+            <ErrorMessage>{t(optimizeOutcome)}</ErrorMessage>
+          ) : (
+            <DialogDescription role="status">{t(optimizeOutcome)}</DialogDescription>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            className="self-end"
+            disabled={optimize.isPending}
+            onClick={() => {
+              handleOptimizeOpenChange(false);
+            }}
+          >
+            {t("routeActionOptimizeClose")}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

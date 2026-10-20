@@ -6,6 +6,7 @@ import {
   formatNotificationTime,
   NOTIFICATION_KIND_LABEL_KEY,
   useNotificationActions,
+  useUnreadCount,
 } from "@/components/notifications/useNotifications";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -21,6 +22,7 @@ export function NotificationsPage() {
   const { t } = useTranslation();
   const { client, markRead, markAllRead, openNotification } = useNotificationActions();
 
+  const { data: unreadCount = 0 } = useUnreadCount(client);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [page, setPage] = useState(1);
 
@@ -41,7 +43,7 @@ export function NotificationsPage() {
         actions={
           <Button
             variant="outline"
-            disabled={markAllRead.isPending}
+            disabled={unreadCount === 0 || markAllRead.isPending}
             onClick={() => {
               markAllRead.mutate();
             }}

@@ -1,5 +1,6 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect } from "react";
+import { Link } from "react-router-dom";
 
 import type { components } from "@/api/generated/schema";
 import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
@@ -14,7 +15,7 @@ type FloorOut = components["schemas"]["FloorOut"];
 type PanelPoint = Pick<
   components["schemas"]["ServicePointOut"],
   "id" | "floor_id" | "name" | "latitude" | "longitude"
->;
+> & { description?: string };
 // A floor id, or "all" for every floor of the building.
 type FloorChoice = string;
 type Translate = (key: StringKey) => string;
@@ -115,17 +116,29 @@ function FloorTab(props: {
   );
 }
 
+// Under "Todos" the floor says where the point is; the description says what it is.
+function pointDetails(point: PanelPoint, props: BuildingPanelProps): string {
+  const floor = props.floors?.find((candidate) => candidate.id === point.floor_id)?.label;
+  const parts = [props.selectedFloorId === "all" ? floor : undefined, point.description];
+
+  return parts.filter((part) => part !== undefined && part !== "").join(" · ");
+}
+
 function PointItem({ point, ...props }: { point: PanelPoint } & BuildingPanelProps) {
   const { t } = useTranslation();
   const badge = STATUS_BADGE[statusOf(props.statuses, point.id)];
   const selected = props.selectedPointId === point.id;
+  const details = pointDetails(point, props);
 
   return (
     <li
       aria-labelledby={`building-point-${point.id}`}
       className={cn("flex items-center justify-between gap-2 px-4 py-2", selected && "bg-muted")}
     >
-      <PointButton point={point} onSelect={props.onSelectPoint} />
+      <span className="min-w-0">
+        <PointButton point={point} onSelect={props.onSelectPoint} />
+        {details !== "" && <span className="text-muted-foreground block text-xs">{details}</span>}
+      </span>
       <Badge variant={badge.tone}>{t(badge.label)}</Badge>
     </li>
   );
@@ -214,6 +227,12 @@ function PanelHeader({ building, statuses, onClose }: PanelHeaderProps) {
       </h2>
       <p className="text-muted-foreground text-sm">{building.campusArea}</p>
       {statuses && <p className="text-sm font-medium">{summaryLine(t, statuses)}</p>}
+      <Button variant="link" size="sm" className="h-auto px-0" asChild>
+        <Link to={`/predios?predio=${building.id}`}>
+          {t("buildingPanelOpenRegistry")}
+          <ChevronRight aria-hidden="true" />
+        </Link>
+      </Button>
     </header>
   );
 }

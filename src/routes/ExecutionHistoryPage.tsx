@@ -89,12 +89,22 @@ function formatDateTime(iso: string): string {
 // badge deep-links here with `?review_status=PENDING_REVIEW`, and `service_point_id` is a
 // URL-only filter with no picker in the bar. A missing `date_from` defaults to a 7-day
 // window; an explicit empty `date_from=` is kept so a cleared input means "every date".
-function filtersFromParams(params: URLSearchParams): ExecutionFilters {
+// IMPORTANT: a review-queue link (`?review_status=…` with no date) gets no default window. The
+// badge and the board KPI count every pending execution, whatever its date; the 7-day window
+// used to hide the older ones, so the badge said "1" and the list it opened was empty.
+function defaultDateFrom(params: URLSearchParams): string {
+  if (params.has("review_status")) {
+    return "";
+  }
   const defaultFrom = new Date();
   defaultFrom.setDate(defaultFrom.getDate() - DEFAULT_WINDOW_DAYS);
 
+  return toLocalIsoDate(defaultFrom);
+}
+
+function filtersFromParams(params: URLSearchParams): ExecutionFilters {
   return {
-    dateFrom: params.get("date_from") ?? toLocalIsoDate(defaultFrom),
+    dateFrom: params.get("date_from") ?? defaultDateFrom(params),
     dateTo: params.get("date_to") ?? "",
     fieldWorkerId: params.get("field_worker_id") ?? "",
     servicePointId: params.get("service_point_id") ?? "",

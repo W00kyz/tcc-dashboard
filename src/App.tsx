@@ -3,27 +3,30 @@ import { createBrowserRouter, Navigate, type RouteObject, RouterProvider } from 
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { ConsentGate } from "@/auth/ConsentGate";
+import { GuestOnly } from "@/auth/GuestOnly";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { AppShell } from "@/components/shell/AppShell";
 import { AlertRulesPage } from "@/routes/AlertRulesPage";
 import { BuildingsPage } from "@/routes/BuildingsPage";
+import {
+  LegacyBuildingRedirect,
+  LegacyEditRouteRedirect,
+  LegacyNewRouteRedirect,
+} from "@/routes/legacyRedirects";
 import { ContractorCompaniesPage } from "@/routes/ContractorCompaniesPage";
-import { EventsPage } from "@/routes/EventsPage";
 import { ExecutionHistoryPage } from "@/routes/ExecutionHistoryPage";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
-import { FloorsPage } from "@/routes/FloorsPage";
 import { ForgotPasswordPage } from "@/routes/ForgotPasswordPage";
 import { FormBuilderPage } from "@/routes/FormBuilderPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { MyDataPage } from "@/routes/MyDataPage";
+import { NotFoundPage } from "@/routes/NotFoundPage";
 import { NotificationsPage } from "@/routes/NotificationsPage";
 import { ReassignmentsPage } from "@/routes/ReassignmentsPage";
 import { ReportsPage } from "@/routes/ReportsPage";
 import { ResetPasswordPage } from "@/routes/ResetPasswordPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
-import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
 import { RouteTemplatesPage } from "@/routes/RouteTemplatesPage";
-import { ServicePointsPage } from "@/routes/ServicePointsPage";
 import { ServiceTypesPage } from "@/routes/ServiceTypesPage";
 import { SettingsPage } from "@/routes/SettingsPage";
 import { UsersPage } from "@/routes/UsersPage";
@@ -33,8 +36,23 @@ const queryClient = new QueryClient();
 // Exported so tests can assert which ProtectedRoute branch a page sits under without
 // standing up the whole browser router.
 export const appRoutes: RouteObject[] = [
-  { path: "/", element: <Navigate to="/entrar" replace /> },
-  { path: "/entrar", element: <LoginPage /> },
+  // Signed in, both land on the user's home; signed out, "/" falls through to the login.
+  {
+    path: "/",
+    element: (
+      <GuestOnly>
+        <Navigate to="/entrar" replace />
+      </GuestOnly>
+    ),
+  },
+  {
+    path: "/entrar",
+    element: (
+      <GuestOnly>
+        <LoginPage />
+      </GuestOnly>
+    ),
+  },
   // Public: reached from the e-mailed links (RF03 recovery, RF05 invite).
   { path: "/esqueci-senha", element: <ForgotPasswordPage /> },
   { path: "/redefinir-senha", element: <ResetPasswordPage /> },
@@ -51,16 +69,18 @@ export const appRoutes: RouteObject[] = [
       { path: "/notificacoes", element: <NotificationsPage /> },
       { path: "/execucoes", element: <ExecutionHistoryPage /> },
       { path: "/relatorios", element: <ReportsPage /> },
-      { path: "/rotas/nova", element: <RouteBuilderPage /> },
-      { path: "/rotas/:routeId/editar", element: <RouteBuilderPage /> },
+      // Creating and editing a route happens in a Dialog over the board; old links open it.
+      { path: "/rotas/nova", element: <LegacyNewRouteRedirect /> },
+      { path: "/rotas/:routeId/editar", element: <LegacyEditRouteRedirect /> },
       { path: "/templates-de-rota", element: <RouteTemplatesPage /> },
       { path: "/tipos-de-servico", element: <ServiceTypesPage /> },
       { path: "/empresas-terceirizadas", element: <ContractorCompaniesPage /> },
       { path: "/profissionais", element: <FieldWorkersPage /> },
       { path: "/predios", element: <BuildingsPage /> },
-      { path: "/predios/:buildingId/andares", element: <FloorsPage /> },
-      { path: "/eventos", element: <EventsPage /> },
-      { path: "/pontos-de-servico", element: <ServicePointsPage /> },
+      // Everything about a building opens from the map now; old links land there, selected.
+      { path: "/predios/:buildingId", element: <LegacyBuildingRedirect /> },
+      { path: "/predios/:buildingId/andares", element: <LegacyBuildingRedirect /> },
+      { path: "/pontos-de-servico", element: <Navigate to="/predios" replace /> },
       // RF36: managers maintain the execution forms (the API already allows MANAGER).
       { path: "/formularios", element: <FormBuilderPage /> },
     ],
@@ -85,6 +105,8 @@ export const appRoutes: RouteObject[] = [
       { path: "/configuracoes", element: <SettingsPage /> },
     ],
   },
+  // Without a catch-all React Router shows its developer error screen for unknown URLs.
+  { path: "*", element: <NotFoundPage /> },
 ];
 
 // Pathless layout route: the only nav shell this dashboard has (spec §7.1). AppShell renders

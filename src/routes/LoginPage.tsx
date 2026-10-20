@@ -8,6 +8,7 @@ import { apiBaseUrl, createApiClient } from "@/api/client";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { ErrorMessage } from "@/components/layout/StateMessages";
 import { decodeJwtRole } from "@/auth/decodeJwtRole";
+import { homePathFor } from "@/auth/homePath";
 import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,7 +65,7 @@ export function LoginPage() {
       // useNavigate()'s return type includes Promise<void> for data routers; the login
       // page has nothing useful to do once the redirect is kicked off. A field worker's only
       // page on the panel is "Meus dados" (RNF10) — /rotas would bounce them back here.
-      void navigate(role === "FIELD_WORKER" ? "/meus-dados" : "/rotas", { replace: true });
+      void navigate(homePathFor(role), { replace: true });
     },
   });
 

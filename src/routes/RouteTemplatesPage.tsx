@@ -5,7 +5,15 @@ import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import { SortableStopList, type StopDraft } from "@/components/SortableStopList";
+import { RegistryNewButton } from "@/components/layout/Registry";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -21,7 +29,8 @@ type Recurrence = "DAILY" | "WEEKLY";
 type RouteType = "REGULAR" | "OCCASIONAL";
 type TemplateCreateBody = components["schemas"]["TemplateCreateBody"];
 
-function TemplateCreateForm({ client }: { client: ApiClient }) {
+// A fresh form per opening: the Dialog mounts it, so closing it discards what was typed.
+function TemplateCreateForm({ client, onDone }: { client: ApiClient; onDone: () => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -33,7 +42,19 @@ function TemplateCreateForm({ client }: { client: ApiClient }) {
   const [floorId, setFloorId] = useState("");
   const [servicePointId, setServicePointId] = useState("");
   const [stops, setStops] = useState<StopDraft[]>([]);
+  // Optional default worker. Without one, every materialisation has to name a worker (the
+  // backend 422s otherwise) — MaterializeDialog makes the field required in that case.
+  const [fieldWorkerId, setFieldWorkerId] = useState("");
+  const [showMissing, setShowMissing] = useState(false);
 
+  const { data: workers } = useQuery({
+    queryKey: ["field-workers"],
+    queryFn: async () => {
+      const { data } = await client.GET("/field-workers");
+
+      return data ?? [];
+    },
+  });
   const { data: buildings } = useQuery({
     queryKey: ["buildings"],
     queryFn: async () => {
@@ -68,7 +89,8 @@ function TemplateCreateForm({ client }: { client: ApiClient }) {
   const create = useMutation({
     mutationFn: async () => {
       const body: TemplateCreateBody = {
-        name,
+        name: name.trim(),
+        field_worker_id: fieldWorkerId === "" ? null : fieldWorkerId,
         recurrence,
         route_type: routeType,
         // DAILY ignores `weekdays`; the backend nulls it anyway (route_templates.py).
@@ -85,12 +107,8 @@ function TemplateCreateForm({ client }: { client: ApiClient }) {
       }
     },
     onSuccess: () => {
-      setName("");
-      setRecurrence("DAILY");
-      setWeekdays([]);
-      setRouteType("REGULAR");
-      setStops([]);
       void queryClient.invalidateQueries({ queryKey: ["route-templates"] });
+      onDone();
     },
   });
 
@@ -134,28 +152,34 @@ function TemplateCreateForm({ client }: { client: ApiClient }) {
   // The one submit guard the spec mandates: a WEEKLY template with no weekday checked has
   // nothing to recur on and the backend 422s it.
   const weekdayMissing = recurrence === "WEEKLY" && weekdays.length === 0;
+  // The backend accepts a nameless template with no points — the list then showed a blank
+  // row that materialised into an empty route. Both are required here.
+  const missingFields = [
+    ...(name.trim() === "" ? [t("routeTemplateNameLabel")] : []),
+    ...(stops.length === 0 ? [t("routeBuilderStopsHeading")] : []),
+  ];
 
   return (
     <form
-      aria-labelledby="template-form-heading"
-      className="bg-card rounded-md border"
       onSubmit={(event) => {
         event.preventDefault();
         if (weekdayMissing) {
           return;
         }
+        setShowMissing(missingFields.length > 0);
+        if (missingFields.length > 0) {
+          return;
+        }
         create.mutate();
       }}
     >
-      <h2
-        id="template-form-heading"
-        className="text-primary border-b px-4 py-3 text-base font-bold"
-      >
-        {t("routeTemplateNew")}
-      </h2>
-
-      <div className="space-y-4 p-4">
+      <div className="space-y-4">
         {create.isError && <ErrorMessage>{t("routeTemplateError")}</ErrorMessage>}
+        {showMissing && missingFields.length > 0 && (
+          <ErrorMessage>
+            {t("registryMissingFields").replace("{fields}", missingFields.join(", "))}
+          </ErrorMessage>
+        )}
 
         <div className="grid items-start gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
           <div className="space-y-4">
@@ -164,10 +188,29 @@ function TemplateCreateForm({ client }: { client: ApiClient }) {
               <Input
                 id="template-name"
                 value={name}
+                aria-invalid={showMissing && name.trim() === ""}
                 onChange={(event) => {
                   setName(event.target.value);
                 }}
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="template-worker">{t("routeTemplateWorkerLabel")}</Label>
+              <NativeSelect
+                id="template-worker"
+                value={fieldWorkerId}
+                onChange={(event) => {
+                  setFieldWorkerId(event.target.value);
+                }}
+              >
+                <NativeSelectOption value="">{t("routeTemplateWorkerNone")}</NativeSelectOption>
+                {workers?.map((worker) => (
+                  <NativeSelectOption key={worker.id} value={worker.id}>
+                    {worker.full_name}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
             </div>
 
             <div className="space-y-1.5">
@@ -307,11 +350,14 @@ function TemplateCreateForm({ client }: { client: ApiClient }) {
         </div>
       </div>
 
-      <div className="flex justify-end border-t px-4 py-3">
+      <DialogFooter className="mt-4 border-t pt-4">
+        <Button type="button" variant="outline" onClick={onDone}>
+          {t("registryDialogCancel")}
+        </Button>
         <Button type="submit" disabled={weekdayMissing || create.isPending}>
           {t("routeTemplateSave")}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }
@@ -322,6 +368,7 @@ export function RouteTemplatesPage() {
   // Mirrors the other pages' convention: fall back to an empty token instead of asserting a
   // non-null session, so the page renders (and its requests fail cleanly) before hydration.
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
+  const [creating, setCreating] = useState(false);
 
   const { data: templates } = useQuery({
     queryKey: ["route-templates"],
@@ -334,7 +381,17 @@ export function RouteTemplatesPage() {
 
   return (
     <Page width="wide">
-      <PageHeader title={t("routeTemplatePageTitle")} />
+      <PageHeader
+        title={t("routeTemplatePageTitle")}
+        actions={
+          <RegistryNewButton
+            label={t("routeTemplatesNew")}
+            onClick={() => {
+              setCreating(true);
+            }}
+          />
+        }
+      />
 
       {templates?.length === 0 && <EmptyState>{t("registryListEmpty")}</EmptyState>}
       {templates !== undefined && templates.length > 0 && (
@@ -345,7 +402,22 @@ export function RouteTemplatesPage() {
         </ul>
       )}
 
-      <TemplateCreateForm client={client} />
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent
+          aria-describedby={undefined}
+          className="max-h-[90vh] overflow-y-auto sm:max-w-5xl"
+        >
+          <DialogHeader>
+            <DialogTitle>{t("routeTemplateNew")}</DialogTitle>
+          </DialogHeader>
+          <TemplateCreateForm
+            client={client}
+            onDone={() => {
+              setCreating(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </Page>
   );
 }

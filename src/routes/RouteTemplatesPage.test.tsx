@@ -162,6 +162,7 @@ describe("RouteTemplatesPage", () => {
     const user = userEvent.setup();
     renderPage(fakeFetch);
 
+    await user.click(screen.getByRole("button", { name: "Novo template" }));
     await user.type(screen.getByLabelText("Nome"), "Ronda matinal");
     await pickBuildingFloor(user);
     await addPoint(user, "sp1");
@@ -200,6 +201,7 @@ describe("RouteTemplatesPage", () => {
     const user = userEvent.setup();
     renderPage(fakeFetch);
 
+    await user.click(screen.getByRole("button", { name: "Novo template" }));
     await user.selectOptions(screen.getByLabelText("Recorrência"), "WEEKLY");
     const submit = screen.getByRole("button", { name: "Salvar template" });
     expect(submit).toBeDisabled();
@@ -209,6 +211,8 @@ describe("RouteTemplatesPage", () => {
     expect(submit).toBeEnabled();
 
     await user.type(screen.getByLabelText("Nome"), "Ronda de terça");
+    await pickBuildingFloor(user);
+    await addPoint(user, "sp1");
     await user.click(submit);
 
     const postCall = await findRequest(fakeFetch, "POST", "/route-templates");
@@ -231,11 +235,15 @@ describe("RouteTemplatesPage", () => {
     fireEvent.change(within(dialog).getByLabelText("Data da rota"), {
       target: { value: "2026-09-15" },
     });
-    await user.click(within(dialog).getByRole("button", { name: "Materializar rota" }));
+    // DAILY_TEMPLATE has no default worker, so one must be picked (the backend 422s otherwise).
+    const submit = within(dialog).getByRole("button", { name: "Materializar rota" });
+    expect(submit).toBeDisabled();
+    await user.selectOptions(await within(dialog).findByLabelText("Profissional"), "w1");
+    await user.click(submit);
 
     const call = await findRequest(fakeFetch, "POST", "/route-templates/t1/materialize");
     const body = (await (call[0] as Request).clone().json()) as Record<string, unknown>;
-    expect(body).toEqual({ route_date: "2026-09-15" });
+    expect(body).toEqual({ route_date: "2026-09-15", field_worker_id: "w1" });
 
     expect(await screen.findByTestId("location")).toHaveTextContent("/rotas?date=2026-09-15");
   });

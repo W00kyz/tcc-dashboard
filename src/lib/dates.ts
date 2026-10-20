@@ -45,3 +45,26 @@ export function formatIsoDateLongBr(isoDate: string): string {
     year: "numeric",
   });
 }
+
+/**
+ * A compliance-report period as the manager reads it, from its first day (`period_start`) and
+ * the report granularity. The API's own `period_label` ("2026-W41", "2026-10") is a sortable
+ * code meant for the PDF/XLSX exports, not for the screen.
+ *
+ * @example formatReportPeriodBr("WEEKLY", "2026-10-05") // "Semana de 05/10/2026"
+ */
+export function formatReportPeriodBr(granularity: string, periodStart: string): string {
+  if (granularity === "WEEKLY") {
+    return `Semana de ${formatIsoDateBr(periodStart)}`;
+  }
+  if (granularity === "MONTHLY" && /^\d{4}-\d{2}-\d{2}$/.test(periodStart)) {
+    const month = new Date(`${periodStart}T12:00:00`).toLocaleDateString("pt-BR", {
+      month: "long",
+      year: "numeric",
+    });
+
+    return month.charAt(0).toUpperCase() + month.slice(1);
+  }
+
+  return formatIsoDateBr(periodStart);
+}

@@ -119,3 +119,30 @@
     cursor: pointer;
   }
 }
+
+/* IMPORTANT: Leaflet stacks its panes and controls with z-index 200-1000 but its container
+ * opens no stacking context, so those values competed with the whole page: the map painted
+ * over the sticky header and over every dialog, and its interactive layers swallowed the
+ * dialog's clicks (e.g. "Confirmar reatribuição" on the board). Isolating the container keeps
+ * Leaflet's z-indexes local to the map. Regression: e2e/board-map-layering.spec.ts. */
+.leaflet-container {
+  isolation: isolate;
+}
+
+/* Maps where a click places something (a building corner, a service point) show a crosshair
+ * instead of Leaflet's grab hand. */
+.leaflet-container.map-placing.leaflet-grab {
+  cursor: crosshair;
+}
+
+/* The rectangle tool owns the mouse drag while it is on (src/components/map/rectangleTool.ts). */
+.leaflet-container.map-drawing,
+.leaflet-container.map-drawing .leaflet-interactive {
+  cursor: crosshair;
+}
+
+/* A building form flipped below its drawing (CampusBuildingsMap placeBesideDrawing): Leaflet's
+ * tip only points down, so it goes. */
+.leaflet-popup.popup-below .leaflet-popup-tip-container {
+  display: none;
+}

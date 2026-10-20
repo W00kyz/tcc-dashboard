@@ -87,8 +87,10 @@ describe("FieldWorkersPage", () => {
       linkableUsers: [{ id: "u2", name: "Maria Souza", email: "u2@example.com" }],
     });
 
+    const { default: userEvent } = await import("@testing-library/user-event");
     renderPage(fakeFetch);
 
+    await userEvent.click(await screen.findByRole("button", { name: "Novo profissional" }));
     const linkedUserSelect = await screen.findByLabelText("Vincular usuário de login (opcional)");
     await waitFor(() => {
       expect(within(linkedUserSelect).getByText(/Maria Souza/)).toBeInTheDocument();
@@ -139,9 +141,11 @@ describe("FieldWorkersPage", () => {
       expect(fakeFetch).toHaveBeenCalledTimes(4);
     });
 
+    await userEvent.click(screen.getByRole("button", { name: "Novo profissional" }));
     await userEvent.type(screen.getByLabelText("Nome completo"), "Pedro Alves");
     await userEvent.selectOptions(screen.getByLabelText("Empresa terceirizada"), "c1");
-    await userEvent.selectOptions(screen.getByLabelText("Tipos de serviço"), "s1");
+    // Service types are checkboxes now, not a Ctrl-click <select multiple>.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Limpeza" }));
     await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
     await waitFor(() => {
@@ -162,5 +166,25 @@ describe("FieldWorkersPage", () => {
       service_type_ids: ["s1"],
       user_id: null,
     });
+  });
+
+  it("does not post a worker without a service type, and says which field is missing", async () => {
+    const fakeFetch = mockListResponses({
+      companies: [{ id: "c1", name: "Limpa Tudo", cnpj: "12345678000199" }],
+      serviceTypes: [{ id: "s1", name: "Limpeza", average_duration_minutes: 30 }],
+    });
+    const { default: userEvent } = await import("@testing-library/user-event");
+
+    renderPage(fakeFetch);
+    await waitFor(() => {
+      expect(fakeFetch).toHaveBeenCalledTimes(4);
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Novo profissional" }));
+    await userEvent.type(screen.getByLabelText("Nome completo"), "Pedro Alves");
+    await userEvent.selectOptions(screen.getByLabelText("Empresa terceirizada"), "c1");
+    await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Tipos de serviço");
+    expect(fakeFetch).toHaveBeenCalledTimes(4);
   });
 });

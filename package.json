@@ -13,9 +13,10 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p e2e",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "generate:api": "openapi-typescript ../docs/api/openapi.json -o src/api/generated/schema.d.ts && prettier --write src/api/generated/schema.d.ts"
   },
   "dependencies": {
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.62.1",
     "@testing-library/dom": "10.4.0",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.2",

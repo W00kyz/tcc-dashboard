@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Page, PageHeader } from "@/components/layout/Page";
-import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
+import { RegistryList, RegistryNewButton } from "@/components/layout/Registry";
+import { RegistryDialog, useRegistryDialog } from "@/components/layout/RegistryDialog";
+import { assertSaved, RegistryEditButton } from "@/components/layout/registryForm";
 import { Badge } from "@/components/ui/badge";
 
 interface ServiceTypeRow {
@@ -35,70 +35,106 @@ export function ServiceTypesPage() {
     },
   });
 
-  const [name, setName] = useState("");
-  const [duration, setDuration] = useState(30);
+  const dialog = useRegistryDialog({ name: "", duration: "30" }, ["name", "duration"]);
+  const { form } = dialog;
+  const duration = Number(form.values.duration);
+  const durationInvalid =
+    form.values.duration.trim() !== "" && (!Number.isInteger(duration) || duration < 1);
 
-  const create = useMutation({
+  const save = useMutation({
     mutationFn: async () => {
-      await client.POST("/service-types", { body: { name, average_duration_minutes: duration } });
+      const body = { name: form.values.name.trim(), average_duration_minutes: duration };
+      if (form.editingId !== null) {
+        const { response } = await client.PATCH("/service-types/{service_type_id}", {
+          params: { path: { service_type_id: form.editingId } },
+          body,
+        });
+        assertSaved(response, `PATCH /service-types/${form.editingId}`);
+
+        return;
+      }
+      const { response } = await client.POST("/service-types", { body });
+      assertSaved(response, "POST /service-types");
     },
     onSuccess: () => {
-      setName("");
+      dialog.close();
       void queryClient.invalidateQueries({ queryKey: ["service-types"] });
     },
   });
 
   return (
     <Page>
-      <PageHeader title={t("serviceTypesPageTitle")} />
-      <RegistryLayout
-        list={
-          <RegistryList
-            items={serviceTypes}
-            getKey={(item) => item.id}
-            renderItem={(item) => (
-              <>
-                <span className="text-foreground min-w-0 flex-1 font-semibold">{item.name}</span>
-                <Badge variant="pending">{item.average_duration_minutes} min</Badge>
-              </>
-            )}
+      <PageHeader
+        title={t("serviceTypesPageTitle")}
+        actions={
+          <RegistryNewButton
+            label={t("serviceTypesNew")}
+            onClick={() => {
+              save.reset();
+              dialog.openNew();
+            }}
           />
         }
-        form={
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              create.mutate();
-            }}
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="service-type-name">{t("serviceTypesFieldName")}</Label>
-              <Input
-                id="service-type-name"
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="service-type-duration">{t("serviceTypesFieldDuration")}</Label>
-              <Input
-                id="service-type-duration"
-                type="number"
-                value={duration}
-                onChange={(event) => {
-                  setDuration(Number(event.target.value));
-                }}
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              {t("serviceTypesSubmitCreate")}
-            </Button>
-          </form>
-        }
       />
+      <RegistryList
+        items={serviceTypes}
+        getKey={(item) => item.id}
+        renderItem={(item) => (
+          <>
+            <span className="text-foreground min-w-0 flex-1 font-semibold">{item.name}</span>
+            <Badge variant="pending">{item.average_duration_minutes} min</Badge>
+            <RegistryEditButton
+              itemName={item.name}
+              onEdit={() => {
+                save.reset();
+                dialog.openEdit(item.id, {
+                  name: item.name,
+                  duration: String(item.average_duration_minutes),
+                });
+              }}
+            />
+          </>
+        )}
+      />
+      <RegistryDialog
+        dialog={dialog}
+        save={save}
+        createLabel={t("serviceTypesSubmitCreate")}
+        fieldLabels={{
+          name: t("serviceTypesFieldName"),
+          duration: t("serviceTypesFieldDuration"),
+        }}
+        problems={durationInvalid ? [t("serviceTypesDurationInvalid")] : []}
+        onSubmit={() => {
+          save.mutate();
+        }}
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="service-type-name">{t("serviceTypesFieldName")}</Label>
+          <Input
+            id="service-type-name"
+            value={form.values.name}
+            aria-invalid={form.isInvalid("name")}
+            onChange={(event) => {
+              form.setField("name", event.target.value);
+            }}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="service-type-duration">{t("serviceTypesFieldDuration")}</Label>
+          <Input
+            id="service-type-duration"
+            type="number"
+            min={1}
+            step={1}
+            value={form.values.duration}
+            aria-invalid={form.isInvalid("duration") || durationInvalid}
+            onChange={(event) => {
+              form.setField("duration", event.target.value);
+            }}
+          />
+        </div>
+      </RegistryDialog>
     </Page>
   );
 }

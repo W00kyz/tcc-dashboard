@@ -148,7 +148,8 @@ describe("ReportsPage", () => {
     setRange();
     fireEvent.click(screen.getByRole("button", { name: "Gerar relatório" }));
 
-    expect(await screen.findByRole("cell", { name: "01/08" })).toBeInTheDocument();
+    // The period reads as a pt-BR date built from period_start, not the API's period_label.
+    expect(await screen.findByRole("cell", { name: "01/08/2026" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "TOTAIS" })).toBeInTheDocument();
     expect(screen.getAllByRole("cell", { name: "50,0%" }).length).toBeGreaterThanOrEqual(2);
   });

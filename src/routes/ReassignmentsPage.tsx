@@ -108,7 +108,9 @@ function AffectedTarget({ impediment }: { impediment: Impediment }) {
 
     return (
       <p className="text-sm">
-        {t("reassignmentsAffectedRemainder").replace("{n}", String(remaining))}
+        {remaining === 1
+          ? t("reassignmentsAffectedRemainderOne")
+          : t("reassignmentsAffectedRemainder").replace("{n}", String(remaining))}
       </p>
     );
   }

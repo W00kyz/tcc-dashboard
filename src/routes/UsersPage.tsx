@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
+import { decodeJwtSubject } from "@/auth/decodeJwtRole";
+import { ROLE_LABEL_KEY } from "@/auth/roleLabel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +11,9 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Badge } from "@/components/ui/badge";
-import { RegistryLayout, RegistryList } from "@/components/layout/Registry";
-import type { StringKey } from "@/i18n/strings";
+import { RegistryList, RegistryNewButton } from "@/components/layout/Registry";
+import { RegistryDialog, useRegistryDialog } from "@/components/layout/RegistryDialog";
+import { assertSaved, RegistryEditButton } from "@/components/layout/registryForm";
 
 type UserRole = "ADMIN" | "MANAGER" | "FIELD_WORKER";
 interface UserRow {
@@ -21,12 +23,6 @@ interface UserRow {
   role: UserRole;
   is_active: boolean;
 }
-
-const USER_ROLE_LABEL: Record<UserRole, StringKey> = {
-  ADMIN: "usersRoleAdmin",
-  MANAGER: "usersRoleManager",
-  FIELD_WORKER: "usersRoleFieldWorker",
-};
 
 export function UsersPage() {
   const { t } = useTranslation();
@@ -46,21 +42,39 @@ export function UsersPage() {
     },
   });
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<UserRole>("FIELD_WORKER");
+  const dialog = useRegistryDialog({ name: "", email: "", role: "FIELD_WORKER" }, [
+    "name",
+    "email",
+  ]);
+  const { form } = dialog;
+  // An admin deactivating (or demoting) their own account would lock themselves out of this
+  // very page, so their own row offers neither.
+  const ownUserId = session === null ? null : decodeJwtSubject(session.accessToken);
 
-  const createUser = useMutation({
+  const save = useMutation({
     mutationFn: async () => {
-      await client.POST("/users", { body: { name, email, role } });
+      const body = {
+        name: form.values.name.trim(),
+        email: form.values.email.trim(),
+        role: form.values.role as UserRole,
+      };
+      if (form.editingId !== null) {
+        const { response } = await client.PATCH("/users/{user_id}", {
+          params: { path: { user_id: form.editingId } },
+          body,
+        });
+        assertSaved(response, `PATCH /users/${form.editingId}`);
+
+        return;
+      }
+      const { response } = await client.POST("/users", { body });
+      assertSaved(response, "POST /users");
     },
     // Reset every field the form owns, not just name/email (the same partial-reset bug
     // Tasks 12/14/15 each found and fixed in this etapa's other create forms) — leaving
     // role behind would keep the selector on, e.g., "Administrador" for the next entry.
     onSuccess: () => {
-      setName("");
-      setEmail("");
-      setRole("FIELD_WORKER");
+      dialog.close();
       void queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
@@ -76,87 +90,110 @@ export function UsersPage() {
 
   return (
     <Page>
-      <PageHeader title={t("usersPageTitle")} />
-
-      <RegistryLayout
-        list={
-          <RegistryList
-            items={users}
-            getKey={(user) => user.id}
-            renderItem={(user) => (
-              <>
-                <span className="min-w-0 flex-1">
-                  <span className="text-foreground block font-semibold">{user.name}</span>
-                  <span className="text-muted-foreground text-sm break-all">{user.email}</span>
-                </span>
-                <Badge variant="outline">{t(USER_ROLE_LABEL[user.role])}</Badge>
-                <Badge variant={user.is_active ? "done" : "pending"}>
-                  {user.is_active ? t("usersStatusActive") : t("usersStatusInactive")}
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    toggleActive.mutate({ id: user.id, activate: !user.is_active });
-                  }}
-                >
-                  {user.is_active ? t("usersDeactivate") : t("usersActivate")}
-                </Button>
-              </>
-            )}
+      <PageHeader
+        title={t("usersPageTitle")}
+        actions={
+          <RegistryNewButton
+            label={t("usersNew")}
+            onClick={() => {
+              save.reset();
+              dialog.openNew();
+            }}
           />
         }
-        form={
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              createUser.mutate();
-            }}
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="user-name">{t("usersFieldName")}</Label>
-              <Input
-                id="user-name"
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="user-email">{t("usersFieldEmail")}</Label>
-              <Input
-                id="user-email"
-                type="email"
-                value={email}
-                onChange={(event) => {
-                  setEmail(event.target.value);
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="user-role">{t("usersFieldRole")}</Label>
-              <NativeSelect
-                id="user-role"
-                value={role}
-                onChange={(event) => {
-                  setRole(event.target.value as UserRole);
+      />
+
+      <RegistryList
+        items={users}
+        getKey={(user) => user.id}
+        renderItem={(user) => (
+          <>
+            <span className="min-w-0 flex-1">
+              <span className="text-foreground block font-semibold">{user.name}</span>
+              <span className="text-muted-foreground text-sm break-all">{user.email}</span>
+            </span>
+            <Badge variant="outline">{t(ROLE_LABEL_KEY[user.role])}</Badge>
+            <Badge variant={user.is_active ? "done" : "pending"}>
+              {user.is_active ? t("usersStatusActive") : t("usersStatusInactive")}
+            </Badge>
+            <RegistryEditButton
+              itemName={user.name}
+              onEdit={() => {
+                save.reset();
+                dialog.openEdit(user.id, {
+                  name: user.name,
+                  email: user.email,
+                  role: user.role,
+                });
+              }}
+            />
+            {user.id === ownUserId ? (
+              <Badge variant="outline">{t("usersYou")}</Badge>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={toggleActive.isPending}
+                onClick={() => {
+                  toggleActive.mutate({ id: user.id, activate: !user.is_active });
                 }}
               >
-                <NativeSelectOption value="ADMIN">{t("usersRoleAdmin")}</NativeSelectOption>
-                <NativeSelectOption value="MANAGER">{t("usersRoleManager")}</NativeSelectOption>
-                <NativeSelectOption value="FIELD_WORKER">
-                  {t("usersRoleFieldWorker")}
-                </NativeSelectOption>
-              </NativeSelect>
-            </div>
-            <Button type="submit" className="w-full">
-              {t("usersSubmitCreate")}
-            </Button>
-          </form>
-        }
+                {user.is_active ? t("usersDeactivate") : t("usersActivate")}
+              </Button>
+            )}
+          </>
+        )}
       />
+      <RegistryDialog
+        dialog={dialog}
+        save={save}
+        createLabel={t("usersSubmitCreate")}
+        fieldLabels={{ name: t("usersFieldName"), email: t("usersFieldEmail") }}
+        onSubmit={() => {
+          save.mutate();
+        }}
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="user-name">{t("usersFieldName")}</Label>
+          <Input
+            id="user-name"
+            value={form.values.name}
+            aria-invalid={form.isInvalid("name")}
+            onChange={(event) => {
+              form.setField("name", event.target.value);
+            }}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="user-email">{t("usersFieldEmail")}</Label>
+          <Input
+            id="user-email"
+            type="email"
+            value={form.values.email}
+            aria-invalid={form.isInvalid("email")}
+            onChange={(event) => {
+              form.setField("email", event.target.value);
+            }}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="user-role">{t("usersFieldRole")}</Label>
+          <NativeSelect
+            id="user-role"
+            value={form.values.role}
+            disabled={form.editingId !== null && form.editingId === ownUserId}
+            onChange={(event) => {
+              form.setField("role", event.target.value);
+            }}
+          >
+            <NativeSelectOption value="ADMIN">{t("roleLabelAdmin")}</NativeSelectOption>
+            <NativeSelectOption value="MANAGER">{t("roleLabelManager")}</NativeSelectOption>
+            <NativeSelectOption value="FIELD_WORKER">
+              {t("roleLabelFieldWorker")}
+            </NativeSelectOption>
+          </NativeSelect>
+        </div>
+      </RegistryDialog>
     </Page>
   );
 }

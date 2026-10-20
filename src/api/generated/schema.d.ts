@@ -744,7 +744,12 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    delete?: never;
+    /**
+     * Delete Building Endpoint
+     * @description Removes the building with its floors, QR codes, points and their history — decided by
+     *     the product owner (spec 2026-10-20-predios-pontos-dialogs-design.md §3.4).
+     */
+    delete: operations["delete_building_endpoint_buildings__building_id__delete"];
     options?: never;
     head?: never;
     /** Update Building */
@@ -762,8 +767,24 @@ export interface paths {
     /** Set Building Footprint */
     put: operations["set_building_footprint_buildings__building_id__footprint_put"];
     post?: never;
-    /** Clear Building Footprint */
-    delete: operations["clear_building_footprint_buildings__building_id__footprint_delete"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/buildings/{building_id}/deletion-impact": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Building Deletion Impact */
+    get: operations["building_deletion_impact_buildings__building_id__deletion_impact_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -804,41 +825,6 @@ export interface paths {
     patch: operations["update_floor_floors__floor_id__patch"];
     trace?: never;
   };
-  "/events": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** List Events */
-    get: operations["list_events_events_get"];
-    put?: never;
-    /** Create Event */
-    post: operations["create_event_events_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/events/{event_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /** Update Event */
-    patch: operations["update_event_events__event_id__patch"];
-    trace?: never;
-  };
   "/service-points": {
     parameters: {
       query?: never;
@@ -846,12 +832,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List Service Points
-     * @description RF25 — an OCCASIONAL point past its event's valid_until is hidden here by default (no
-     *     archived_at column: computed at query time, spec Ruling 1). include_archived=true is what
-     *     the historical-reports view (RF43, later etapa) will pass.
-     */
+    /** List Service Points */
     get: operations["list_service_points_service_points_get"];
     put?: never;
     /** Create Service Point */
@@ -872,24 +853,29 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    delete?: never;
+    /**
+     * Delete Service Point
+     * @description Removes the point and its history (route stops, executions, photos) — decided by the
+     *     product owner (spec 2026-10-20-predios-pontos-dialogs-design.md §3.4).
+     */
+    delete: operations["delete_service_point_service_points__point_id__delete"];
     options?: never;
     head?: never;
     /** Update Service Point */
     patch: operations["update_service_point_service_points__point_id__patch"];
     trace?: never;
   };
-  "/service-points/{point_id}/promote": {
+  "/service-points/{point_id}/deletion-impact": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /** Service Point Deletion Impact */
+    get: operations["service_point_deletion_impact_service_points__point_id__deletion_impact_get"];
     put?: never;
-    /** Promote Service Point */
-    post: operations["promote_service_point_service_points__point_id__promote_post"];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1556,6 +1542,8 @@ export interface components {
       prompt: string | null;
       /** Value */
       value: unknown;
+      /** Question Type */
+      question_type: string | null;
     };
     /**
      * AssignmentOut
@@ -1708,12 +1696,13 @@ export interface components {
       name: string;
       /** Campus Area */
       campus_area: string;
+      footprint: components["schemas"]["PolygonFootprint"];
     };
     /** BuildingFootprintRequest */
     BuildingFootprintRequest: {
       footprint: components["schemas"]["PolygonFootprint"];
       /** Osm Way Id */
-      osm_way_id: number;
+      osm_way_id?: number | null;
     };
     /** BuildingOut */
     BuildingOut: {
@@ -1995,6 +1984,22 @@ export interface components {
       cnpj: string;
     };
     /**
+     * DeletionImpactOut
+     * @description What a removal takes with it — shown before the manager confirms.
+     */
+    DeletionImpactOut: {
+      /** Points */
+      points: number;
+      /** Floors */
+      floors: number;
+      /** Routes */
+      routes: number;
+      /** Executions */
+      executions: number;
+      /** Photos */
+      photos: number;
+    };
+    /**
      * EmbeddedForm
      * @description The stop's active PUBLISHED execution form, shipped inside `GET /routes/me` so the app
      *     has the schema (with hashes) before it goes offline (spec §5.2, Etapa 7).
@@ -2007,56 +2012,6 @@ export interface components {
       form_version_id: string;
       /** Questions */
       questions: components["schemas"]["FormQuestionField"][];
-    };
-    /** EventCreateRequest */
-    EventCreateRequest: {
-      /** Name */
-      name: string;
-      /**
-       * Valid From
-       * Format: date
-       */
-      valid_from: string;
-      /**
-       * Valid Until
-       * Format: date
-       */
-      valid_until: string;
-    };
-    /** EventOut */
-    EventOut: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Name */
-      name: string;
-      /**
-       * Valid From
-       * Format: date
-       */
-      valid_from: string;
-      /**
-       * Valid Until
-       * Format: date
-       */
-      valid_until: string;
-    };
-    /** EventUpdateRequest */
-    EventUpdateRequest: {
-      /** Name */
-      name: string;
-      /**
-       * Valid From
-       * Format: date
-       */
-      valid_from: string;
-      /**
-       * Valid Until
-       * Format: date
-       */
-      valid_until: string;
     };
     /** EvidenceItemOut */
     EvidenceItemOut: {
@@ -2085,6 +2040,8 @@ export interface components {
       created_at: string;
       /** Content Url */
       content_url: string | null;
+      /** Idempotency Key */
+      idempotency_key: string | null;
     };
     /** EvidenceNoteRequest */
     EvidenceNoteRequest: {
@@ -2228,6 +2185,8 @@ export interface components {
       created_at: string;
       /** Content Url */
       content_url: string | null;
+      /** Idempotency Key */
+      idempotency_key: string | null;
     };
     /** ExecutionListItem */
     ExecutionListItem: {
@@ -2748,11 +2707,6 @@ export interface components {
       positions_summary: components["schemas"]["TimeSpanOut"];
       notifications_summary: components["schemas"]["NotificationsSummaryOut"];
     };
-    /**
-     * PointType
-     * @enum {string}
-     */
-    PointType: "REGULAR" | "OCCASIONAL";
     /** PolygonFootprint */
     PolygonFootprint: {
       /**
@@ -2834,7 +2788,7 @@ export interface components {
      * QuestionType
      * @enum {string}
      */
-    QuestionType: "TEXT" | "NUMBER" | "BOOLEAN" | "SINGLE_CHOICE" | "MULTI_CHOICE";
+    QuestionType: "TEXT" | "NUMBER" | "BOOLEAN" | "SINGLE_CHOICE" | "MULTI_CHOICE" | "MEDIA";
     /** ReassignBody */
     ReassignBody: {
       /**
@@ -2965,8 +2919,6 @@ export interface components {
       latitude: number;
       /** Longitude */
       longitude: number;
-      /** Point Type */
-      point_type: string;
       /** Expected Arrival From */
       expected_arrival_from: string | null;
       /** Expected Arrival To */
@@ -3009,14 +2961,6 @@ export interface components {
       name: string;
       /** Description */
       description: string;
-      /** Latitude */
-      latitude: number;
-      /** Longitude */
-      longitude: number;
-      /** @default REGULAR */
-      point_type: components["schemas"]["PointType"];
-      /** Event Id */
-      event_id?: string | null;
     };
     /** ServicePointOut */
     ServicePointOut: {
@@ -3038,9 +2982,6 @@ export interface components {
       latitude: number;
       /** Longitude */
       longitude: number;
-      point_type: components["schemas"]["PointType"];
-      /** Event Id */
-      event_id: string | null;
     };
     /** ServicePointUpdateRequest */
     ServicePointUpdateRequest: {
@@ -3048,10 +2989,6 @@ export interface components {
       name: string;
       /** Description */
       description: string;
-      /** Latitude */
-      latitude: number;
-      /** Longitude */
-      longitude: number;
     };
     /** ServiceTypeCreateRequest */
     ServiceTypeCreateRequest: {
@@ -4892,6 +4829,35 @@ export interface operations {
       };
     };
   };
+  delete_building_endpoint_buildings__building_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        building_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   update_building_buildings__building_id__patch: {
     parameters: {
       query?: never;
@@ -4962,7 +4928,7 @@ export interface operations {
       };
     };
   };
-  clear_building_footprint_buildings__building_id__footprint_delete: {
+  building_deletion_impact_buildings__building_id__deletion_impact_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -4979,7 +4945,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["BuildingOut"];
+          "application/json": components["schemas"]["DeletionImpactOut"];
         };
       };
       /** @description Validation Error */
@@ -5092,99 +5058,11 @@ export interface operations {
       };
     };
   };
-  list_events_events_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["EventOut"][];
-        };
-      };
-    };
-  };
-  create_event_events_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["EventCreateRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["EventOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  update_event_events__event_id__patch: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        event_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["EventUpdateRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["EventOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   list_service_points_service_points_get: {
     parameters: {
       query?: {
         floor_id?: string | null;
-        include_archived?: boolean;
+        building_id?: string | null;
       };
       header?: never;
       path?: never;
@@ -5245,6 +5123,35 @@ export interface operations {
       };
     };
   };
+  delete_service_point_service_points__point_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        point_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   update_service_point_service_points__point_id__patch: {
     parameters: {
       query?: never;
@@ -5280,7 +5187,7 @@ export interface operations {
       };
     };
   };
-  promote_service_point_service_points__point_id__promote_post: {
+  service_point_deletion_impact_service_points__point_id__deletion_impact_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -5297,7 +5204,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ServicePointOut"];
+          "application/json": components["schemas"]["DeletionImpactOut"];
         };
       };
       /** @description Validation Error */

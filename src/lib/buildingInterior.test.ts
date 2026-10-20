@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { components } from "@/api/generated/schema";
-import { convexHull, pointStatusesForToday, summarisePoints } from "@/lib/buildingInterior";
+import { pointStatusesForToday, summarisePoints } from "@/lib/buildingInterior";
 
 type RouteOut = components["schemas"]["RouteOut"];
 
@@ -18,32 +18,6 @@ function route(id: string, stops: [string, string][]): RouteOut {
     })),
   } as unknown as RouteOut;
 }
-
-describe("convexHull", () => {
-  it("wraps the outer points in a closed ring and ignores the inner ones", () => {
-    const ring = convexHull([
-      [0, 0],
-      [2, 0],
-      [2, 2],
-      [0, 2],
-      [1, 1],
-    ]);
-
-    expect(ring).toHaveLength(5);
-    expect(ring?.[0]).toEqual(ring?.[4]);
-    expect(ring).not.toContainEqual([1, 1]);
-  });
-
-  it("returns null with fewer than three distinct points", () => {
-    expect(
-      convexHull([
-        [0, 0],
-        [0, 0],
-        [1, 1],
-      ]),
-    ).toBeNull();
-  });
-});
 
 describe("pointStatusesForToday", () => {
   it("marks the current stop of a delayed route as late", () => {

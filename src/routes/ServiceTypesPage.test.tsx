@@ -54,6 +54,7 @@ describe("ServiceTypesPage", () => {
       expect(fakeFetch).toHaveBeenCalledTimes(1);
     });
 
+    await userEvent.click(screen.getByRole("button", { name: "Novo tipo de serviço" }));
     await userEvent.type(screen.getByLabelText("Nome"), "Poda de árvores");
     await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 

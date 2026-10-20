@@ -2,11 +2,14 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-// Three measures, picked by content: tables and boards need width, single-column forms do not.
+// Working pages (boards, maps, registries, reports) use the whole width of the window: capped at
+// 5xl/7xl they left a wide empty band on the right of a desktop screen. Only running text
+// (privacy notice, not-found message) keeps a readable measure. `wide` is kept as an alias so
+// the pages that asked for room keep saying so.
 const PAGE_WIDTH = {
   narrow: "max-w-3xl",
-  default: "max-w-5xl",
-  wide: "max-w-7xl",
+  default: "max-w-none",
+  wide: "max-w-none",
 } as const;
 
 interface PageProps {

@@ -56,6 +56,7 @@ describe("ContractorCompaniesPage", () => {
       expect(fakeFetch).toHaveBeenCalledTimes(1);
     });
 
+    await userEvent.click(screen.getByRole("button", { name: "Nova empresa" }));
     await userEvent.type(screen.getByLabelText("Nome"), "Verde Jardins Ltda");
     await userEvent.type(screen.getByLabelText("CNPJ"), "98765432000188");
     await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));

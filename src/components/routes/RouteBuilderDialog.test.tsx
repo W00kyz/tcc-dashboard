@@ -1,7 +1,7 @@
 import { isValidElement, type ReactNode } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +11,7 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { ConsentGate } from "@/auth/ConsentGate";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
-import { RouteBuilderPage } from "@/routes/RouteBuilderPage";
+import { LegacyEditRouteRedirect, LegacyNewRouteRedirect } from "@/routes/legacyRedirects";
 
 const BUILDINGS = [{ id: "b1", name: "Bloco CI", campus_area: "CCT" }];
 const FLOORS = [{ id: "f1", building_id: "b1", label: "Térreo" }];
@@ -129,8 +129,9 @@ function renderBuilder(path: string, fetchImpl: typeof fetch) {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Routes>
-            <Route path="/rotas/nova" element={<RouteBuilderPage />} />
-            <Route path="/rotas/:routeId/editar" element={<RouteBuilderPage />} />
+            {/* The builder is a Dialog over the board; the old addresses open it. */}
+            <Route path="/rotas/nova" element={<LegacyNewRouteRedirect />} />
+            <Route path="/rotas/:routeId/editar" element={<LegacyEditRouteRedirect />} />
             <Route path="/rotas" element={<RouteBoardPage />} />
           </Routes>
         </AuthProvider>
@@ -179,7 +180,7 @@ async function findWriteCall(fakeFetch: ReturnType<typeof makeFakeFetch>, method
   });
 }
 
-describe("RouteBuilderPage", () => {
+describe("RouteBuilderDialog", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -200,7 +201,10 @@ describe("RouteBuilderPage", () => {
     await keyboardReorder(user, firstHandle, "{ArrowDown}");
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Profissional" }), "w1");
-    fireEvent.change(screen.getByLabelText("Data"), { target: { value: "2026-09-01" } });
+    // The board's own date filter is labelled "Data" too: the route's date is the dialog's.
+    fireEvent.change(within(screen.getByRole("dialog")).getByLabelText("Data"), {
+      target: { value: "2026-09-01" },
+    });
     await user.click(screen.getByRole("button", { name: "Salvar" }));
 
     const postCall = await findWriteCall(fakeFetch, "POST");
@@ -232,7 +236,10 @@ describe("RouteBuilderPage", () => {
     // The second stop is left on the blank "— nenhum —" option deliberately.
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Profissional" }), "w1");
-    fireEvent.change(screen.getByLabelText("Data"), { target: { value: "2026-09-01" } });
+    // The board's own date filter is labelled "Data" too: the route's date is the dialog's.
+    fireEvent.change(within(screen.getByRole("dialog")).getByLabelText("Data"), {
+      target: { value: "2026-09-01" },
+    });
     await user.click(screen.getByRole("button", { name: "Salvar" }));
 
     const postCall = await findWriteCall(fakeFetch, "POST");
@@ -258,7 +265,10 @@ describe("RouteBuilderPage", () => {
       target: { value: "09:00" },
     });
     await user.selectOptions(screen.getByRole("combobox", { name: "Profissional" }), "w1");
-    fireEvent.change(screen.getByLabelText("Data"), { target: { value: "2026-09-01" } });
+    // The board's own date filter is labelled "Data" too: the route's date is the dialog's.
+    fireEvent.change(within(screen.getByRole("dialog")).getByLabelText("Data"), {
+      target: { value: "2026-09-01" },
+    });
     await user.click(screen.getByRole("button", { name: "Salvar" }));
 
     const postCall = await findWriteCall(fakeFetch, "POST");
@@ -341,9 +351,25 @@ describe("RouteBuilderPage", () => {
     const user = userEvent.setup();
     renderBuilder("/rotas/nova?type=REGULAR", fakeFetch);
 
-    await user.click(await screen.findByRole("button", { name: "Salvar" }));
+    await pickBuildingFloor(user);
+    await addPoint(user, "sp1");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Profissional" }), "w1");
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível salvar a rota.");
+  });
+
+  it("names the missing worker and points instead of posting an empty route", async () => {
+    const fakeFetch = makeFakeFetch();
+    const user = userEvent.setup();
+    renderBuilder("/rotas/nova?type=REGULAR", fakeFetch);
+
+    await user.click(await screen.findByRole("button", { name: "Salvar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Profissional, Pontos da rota");
+    expect(fakeFetch.mock.calls.some(([request]) => (request as Request).method === "POST")).toBe(
+      false,
+    );
   });
 
   it("shows an error instead of an empty form when the route fails to load in edit mode", async () => {
@@ -354,7 +380,7 @@ describe("RouteBuilderPage", () => {
     expect(screen.queryByRole("button", { name: "Salvar" })).not.toBeInTheDocument();
   });
 
-  it("registers both builder routes under the MANAGER/ADMIN ProtectedRoute", () => {
+  it("keeps both old builder addresses (now redirects) under the MANAGER/ADMIN ProtectedRoute", () => {
     const managerBranch = appRoutes.find((branch) =>
       branch.children?.some((child) => child.path === "/rotas"),
     );
@@ -391,7 +417,10 @@ describe("RouteBuilderPage", () => {
 
     await pickBuildingFloor(user);
     await addPoint(user, "sp1");
-    fireEvent.change(screen.getByLabelText("Data"), { target: { value: "2026-09-01" } });
+    // The board's own date filter is labelled "Data" too: the route's date is the dialog's.
+    fireEvent.change(within(screen.getByRole("dialog")).getByLabelText("Data"), {
+      target: { value: "2026-09-01" },
+    });
     await user.click(screen.getByRole("button", { name: "Salvar" }));
 
     const postCall = await findWriteCall(fakeFetch, "POST");

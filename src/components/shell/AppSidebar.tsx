@@ -28,18 +28,13 @@ import {
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
 import { useReviewQueueCount } from "@/hooks/useReviewQueueCount";
+import { ROLE_LABEL_KEY } from "@/auth/roleLabel";
 
 const PENDING_REVIEW_QUERY = "review_status=PENDING_REVIEW";
 
 // The active page reads as a white sign plate on the blue rail.
 const ACTIVE_ITEM_CLASS =
   "data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:font-semibold";
-
-const ROLE_LABEL: Record<Session["role"], StringKey> = {
-  MANAGER: "roleLabelManager",
-  ADMIN: "roleLabelAdmin",
-  FIELD_WORKER: "roleLabelFieldWorker",
-};
 
 type BadgeCounts = Record<NavBadgeKind, number | undefined>;
 
@@ -192,7 +187,7 @@ function AccountMenu({ role }: { role: Session["role"] }) {
     <>
       <p className="text-sidebar-muted flex items-center gap-2 px-2 pt-1 text-xs">
         <UserRound aria-hidden="true" className="size-3.5" />
-        {t(ROLE_LABEL[role])}
+        {t(ROLE_LABEL_KEY[role])}
       </p>
       <SidebarMenu>
         <NavItem entry={MY_DATA_ENTRY} counts={counts} />

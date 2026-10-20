@@ -34,6 +34,7 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   BOOLEAN: strings.formQuestionTypeBoolean,
   SINGLE_CHOICE: strings.formQuestionTypeSingleChoice,
   MULTI_CHOICE: strings.formQuestionTypeMultiChoice,
+  MEDIA: strings.formQuestionTypeMedia,
 };
 
 interface SortableQuestionListProps {

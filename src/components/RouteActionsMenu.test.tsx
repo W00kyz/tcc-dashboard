@@ -34,7 +34,6 @@ function makeStop(overrides: Partial<RouteStopOut>): RouteStopOut {
     building_name: "Bloco CG",
     latitude: -7.2,
     longitude: -35.9,
-    point_type: "REGULAR",
     expected_arrival_from: null,
     expected_arrival_to: null,
     distance_from_prev_m: null,

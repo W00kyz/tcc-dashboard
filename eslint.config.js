@@ -14,6 +14,9 @@ export default tseslint.config(
     ignores: [
       "dist/**",
       "coverage/**",
+      // Playwright's HTML report and failure artifacts (generated, gitignored).
+      "playwright-report/**",
+      "test-results/**",
       "node_modules/**",
       "eslint.config.js",
       "src/api/generated/**",

@@ -138,9 +138,7 @@ describe("AppShell navigation", () => {
     await openModule("Planejamento");
 
     for (const name of [
-      "Pontos de serviço",
-      "Prédios",
-      "Eventos",
+      "Prédios e pontos",
       "Profissionais",
       "Empresas",
       "Tipos de serviço",
@@ -148,6 +146,10 @@ describe("AppShell navigation", () => {
     ]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
+    // The events feature was removed; its registry entry must not come back.
+    expect(screen.queryByRole("link", { name: "Eventos" })).not.toBeInTheDocument();
+    // Service points are registered inside their building now, not on a page of their own.
+    expect(screen.queryByRole("link", { name: "Pontos de serviço" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Administração" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Usuários" })).not.toBeInTheDocument();
   });
@@ -156,25 +158,28 @@ describe("AppShell navigation", () => {
     renderNav("MANAGER", makeFakeFetch(0));
 
     expect(screen.getByRole("link", { name: "Quadro de rotas" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Prédios" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Prédios e pontos" })).not.toBeInTheDocument();
 
     await openModule("Cadastros");
 
-    expect(screen.getByRole("link", { name: "Prédios" })).toHaveAttribute("href", "/predios");
-  });
-
-  it("opens the module of the current page and walks the breadcrumb down to it", () => {
-    renderNav("MANAGER", makeFakeFetch(0), "/predios/b1/andares");
-
-    const breadcrumb = screen.getByRole("navigation", { name: "Você está em" });
-    expect(breadcrumb).toHaveTextContent("Cadastros");
-    expect(within(breadcrumb).getByRole("link", { name: "Prédios" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Prédios e pontos" })).toHaveAttribute(
       "href",
       "/predios",
     );
-    expect(within(breadcrumb).getByText("Andares")).toHaveAttribute("aria-current", "page");
+  });
+
+  it("opens the module of the current page and names it in the breadcrumb", () => {
+    // A building opens on the map (?predio=), not on a page of its own.
+    renderNav("MANAGER", makeFakeFetch(0), "/predios?predio=b1");
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Você está em" });
+    expect(breadcrumb).toHaveTextContent("Cadastros");
+    expect(within(breadcrumb).getByText("Prédios e pontos")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     const sidebarLink = screen
-      .getAllByRole("link", { name: "Prédios" })
+      .getAllByRole("link", { name: "Prédios e pontos" })
       .find((link) => !breadcrumb.contains(link));
     expect(sidebarLink).toHaveAttribute("aria-current", "page");
   });

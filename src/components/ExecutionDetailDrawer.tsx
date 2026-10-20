@@ -6,6 +6,11 @@ import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { EvidenceViewer } from "@/components/EvidenceViewer";
+import { MediaAnswerPhotos } from "@/components/execution/MediaAnswerPhotos";
+import {
+  type MediaAnswerPhotos as MediaAnswerPhotosData,
+  splitEvidenceByAnswers,
+} from "@/components/execution/mediaAnswers";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
 import { X } from "lucide-react";
@@ -86,8 +91,9 @@ function formatDistance(distanceM: number | null): string {
   return distanceM === null ? "—" : `${String(Math.round(distanceM))} m`;
 }
 
-// `value` is `unknown` on the wire (AnswerOut) — the 5 form question types collapse to
-// three renderable shapes: BOOLEAN, MULTI_CHOICE (array), and everything else as text.
+// `value` is `unknown` on the wire (AnswerOut) — the text-like question types collapse to
+// three renderable shapes: BOOLEAN, MULTI_CHOICE (array), and everything else as text. MEDIA
+// renders its photos instead (MediaAnswerPhotos).
 function formatAnswerValue(t: Translate, value: unknown): string {
   if (typeof value === "boolean") {
     return value ? t("executionFormYes") : t("executionFormNo");
@@ -99,14 +105,25 @@ function formatAnswerValue(t: Translate, value: unknown): string {
   return String(value);
 }
 
-function AnswerRow({ answer }: { answer: AnswerOut }) {
+interface AnswerRowProps {
+  answer: AnswerOut;
+  /** Set for a MEDIA answer: its photos, shown instead of the raw list of keys. */
+  media: MediaAnswerPhotosData | undefined;
+  onLightboxOpenChange: (open: boolean) => void;
+}
+
+function AnswerRow({ answer, media, onLightboxOpenChange }: AnswerRowProps) {
   const { t } = useTranslation();
   const prompt = answer.prompt ?? t("executionFormAnswerRemovedQuestion");
 
   return (
     <li className="text-sm">
       <span className="text-muted-foreground">{prompt}: </span>
-      {formatAnswerValue(t, answer.value)}
+      {media === undefined ? (
+        formatAnswerValue(t, answer.value)
+      ) : (
+        <MediaAnswerPhotos entry={media} onLightboxOpenChange={onLightboxOpenChange} />
+      )}
     </li>
   );
 }
@@ -173,6 +190,8 @@ function DetailBody({
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
+  // Photos a MEDIA answer lists show under that question, not again among the loose evidence.
+  const evidence = splitEvidenceByAnswers(detail.answers, detail.evidence);
 
   const resolveReview = useMutation({
     mutationFn: async () => {
@@ -249,7 +268,12 @@ function DetailBody({
           </h3>
           <ul className="mt-1 space-y-1">
             {detail.answers.map((answer) => (
-              <AnswerRow key={answer.question_stable_key} answer={answer} />
+              <AnswerRow
+                key={answer.question_stable_key}
+                answer={answer}
+                media={evidence.byQuestion.get(answer.question_stable_key)}
+                onLightboxOpenChange={onLightboxOpenChange}
+              />
             ))}
           </ul>
         </section>
@@ -307,11 +331,11 @@ function DetailBody({
         <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
           {t("executionEvidenceHeading")}
         </h3>
-        {detail.evidence.length === 0 ? (
+        {evidence.loose.length === 0 ? (
           <p className="text-muted-foreground mt-1 text-sm">{t("executionNoEvidence")}</p>
         ) : (
           <div className="mt-1">
-            <EvidenceViewer items={detail.evidence} onLightboxOpenChange={onLightboxOpenChange} />
+            <EvidenceViewer items={evidence.loose} onLightboxOpenChange={onLightboxOpenChange} />
           </div>
         )}
       </section>

@@ -3,6 +3,7 @@ import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { configDefaults } from "vitest/config";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -20,6 +21,9 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // e2e/ is the Playwright suite (`npm run test:e2e`); its *.spec.ts would otherwise match
+    // Vitest's default include and run without a browser.
+    exclude: [...configDefaults.exclude, "e2e/**"],
     // No .env file exists for tests (infra/docker-compose.yml injects the real value at
     // build time — Task 8). Without this, apiBaseUrl is undefined and openapi-fetch's
     // Request construction throws "Failed to parse URL from /auth/login" before the

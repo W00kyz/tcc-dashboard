@@ -66,6 +66,7 @@ describe("UsersPage", () => {
       expect(fakeFetch).toHaveBeenCalledTimes(1);
     });
 
+    await userEvent.click(screen.getByRole("button", { name: "Novo usuário" }));
     await userEvent.type(screen.getByLabelText("Nome"), "João Silva");
     await userEvent.type(screen.getByLabelText("E-mail"), "joao@pu.ufcg.edu.br");
     await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
@@ -99,6 +100,7 @@ describe("UsersPage", () => {
       expect(fakeFetch).toHaveBeenCalledTimes(1);
     });
 
+    await userEvent.click(screen.getByRole("button", { name: "Novo usuário" }));
     const roleSelect = screen.getByLabelText<HTMLSelectElement>("Perfil");
     await userEvent.type(screen.getByLabelText("Nome"), "Ana Souza");
     await userEvent.type(screen.getByLabelText("E-mail"), "ana@pu.ufcg.edu.br");
@@ -108,6 +110,11 @@ describe("UsersPage", () => {
     await waitFor(() => {
       expect(fakeFetch).toHaveBeenCalledTimes(3);
     });
-    expect(roleSelect.value).toBe("FIELD_WORKER");
+    // The dialog closes on save; the next new user starts as a field worker again.
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Novo usuário" }));
+    expect(screen.getByLabelText<HTMLSelectElement>("Perfil").value).toBe("FIELD_WORKER");
   });
 });

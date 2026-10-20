@@ -8,6 +8,12 @@ package-lock.json
 src/components/ui
 src/lib/utils.ts
 .impeccable/mocks/
+.impeccable/hook.cache.json
 
 # Agent working notes (specs, review reports), not project source.
 .superpowers/
+
+# Playwright output
+test-results/
+playwright-report/
+e2e/.auth/

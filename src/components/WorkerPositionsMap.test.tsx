@@ -176,38 +176,4 @@ describe("markerState", () => {
 
     expect(picked).toEqual([null]);
   });
-
-  it("labels only the selected service point and reports clicks on points", () => {
-    const picked: string[] = [];
-    const points = [
-      {
-        id: "p1",
-        name: "Bebedouro 1",
-        latitude: -7.2145,
-        longitude: -35.9085,
-        status: "DONE" as const,
-      },
-      {
-        id: "p2",
-        name: "Bebedouro 2",
-        latitude: -7.2146,
-        longitude: -35.9086,
-        status: "LATE" as const,
-      },
-    ];
-    render(
-      <WorkerPositionsMap
-        positions={[]}
-        servicePoints={points}
-        selectedPointId="p2"
-        onSelectPoint={(id) => picked.push(id)}
-      />,
-    );
-
-    expect(screen.getByText("Bebedouro 2")).toBeInTheDocument();
-    expect(screen.queryByText("Bebedouro 1")).not.toBeInTheDocument();
-    const region = screen.getByRole("region", { name: /mapa das posições/i });
-    fireEvent.click(pick(region.querySelectorAll(".leaflet-marker-icon"), 0));
-    expect(picked).toEqual(["p1"]);
-  });
 });

@@ -5,7 +5,6 @@ import { useEffect, useRef } from "react";
 
 import type { components } from "@/api/generated/schema";
 import { drawBuildings, type MapBuilding } from "@/components/board/BuildingsLayer";
-import { drawServicePoints, type MapServicePoint } from "@/components/board/ServicePointsLayer";
 import { nextViewAction, type ViewAction } from "@/components/board/viewMemory";
 import { createCampusMap } from "@/components/map/campusMap";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -45,9 +44,6 @@ interface WorkerPositionsMapProps {
   buildings?: MapBuilding[];
   selectedBuildingId?: string | null;
   onSelectBuilding?: (buildingId: string | null) => void;
-  servicePoints?: MapServicePoint[];
-  selectedPointId?: string | null;
-  onSelectPoint?: (pointId: string) => void;
   className?: string;
 }
 
@@ -60,7 +56,6 @@ function keepsPermanentLabel(state: MarkerState, selected: boolean): boolean {
 
 const NO_DELAYED_WORKERS = new Set<string>();
 const NO_BUILDINGS: MapBuilding[] = [];
-const NO_SERVICE_POINTS: MapServicePoint[] = [];
 
 // Close enough to tell one building from the next; a manager already zoomed in further keeps
 // their zoom.
@@ -147,7 +142,6 @@ function drawWorkers(drawing: WorkerDrawing): void {
 
 interface MapLayers {
   buildings: L.LayerGroup;
-  points: L.LayerGroup;
   workers: L.LayerGroup;
 }
 
@@ -164,11 +158,10 @@ function useLatest<T>(value: T): React.RefObject<T> {
   return ref;
 }
 
-// Added bottom-up: buildings, then points, then workers, so workers stay clickable on top.
+// Added bottom-up: buildings, then workers, so workers stay clickable on top.
 function createLayers(map: L.Map): MapLayers {
   return {
     buildings: L.layerGroup().addTo(map),
-    points: L.layerGroup().addTo(map),
     workers: L.layerGroup().addTo(map),
   };
 }
@@ -289,20 +282,6 @@ function useBuildingsLayer(handle: CampusMapHandle, props: WorkerPositionsMapPro
   useGlideToBuilding(handle.mapRef, polygonsRef, selectedBuildingId);
 }
 
-function useServicePointsLayer(handle: CampusMapHandle, props: WorkerPositionsMapProps): void {
-  const { servicePoints = NO_SERVICE_POINTS, selectedPointId = null } = props;
-  const onSelectRef = useLatest(props.onSelectPoint);
-
-  useEffect(() => {
-    if (handle.layersRef.current === null) {
-      return;
-    }
-    drawServicePoints(handle.layersRef.current.points, servicePoints, selectedPointId, (id) => {
-      onSelectRef.current?.(id);
-    });
-  }, [handle.layersRef, servicePoints, selectedPointId, onSelectRef]);
-}
-
 function useWorkersLayer(handle: CampusMapHandle, props: WorkerPositionsMapProps): void {
   const { t } = useTranslation();
   const { positions, delayedWorkerIds = NO_DELAYED_WORKERS, selectedWorkerId = null } = props;
@@ -325,7 +304,7 @@ function useWorkersLayer(handle: CampusMapHandle, props: WorkerPositionsMapProps
 }
 
 /** RF42: the latest position each field worker reported, on a map, with the campus buildings
- * (and the open building's service points) under them. Leaflet is driven imperatively from
+ * under them. Leaflet is driven imperatively from
  * effects — the component owns one map for its lifetime and only redraws the layer whose
  * input changed. */
 export function WorkerPositionsMap(props: WorkerPositionsMapProps) {
@@ -333,7 +312,6 @@ export function WorkerPositionsMap(props: WorkerPositionsMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const handle = useCampusMapLayers(containerRef, () => props.onSelectBuilding?.(null));
   useBuildingsLayer(handle, props);
-  useServicePointsLayer(handle, props);
   useWorkersLayer(handle, props);
 
   return (

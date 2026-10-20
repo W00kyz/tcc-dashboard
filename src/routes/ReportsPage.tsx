@@ -5,6 +5,7 @@ import { authAwareFetch } from "@/api/authFetch";
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
+import { formatReportPeriodBr } from "@/lib/dates";
 import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -163,7 +164,9 @@ function ReportTable({ report }: { report: ComplianceReport }) {
         <TableBody>
           {report.periods.map((period) => (
             <TableRow key={period.period_start}>
-              <TableCell className="font-semibold">{period.period_label}</TableCell>
+              <TableCell className="font-semibold whitespace-nowrap">
+                {formatReportPeriodBr(report.granularity, period.period_start)}
+              </TableCell>
               {METRIC_COLUMNS.map((column) => (
                 <TableCell className="text-right" key={column.field}>
                   {period[column.field]}

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
@@ -215,6 +215,62 @@ describe("ExecutionDetailDrawer", () => {
     expect(screen.getByText("Sim")).toBeInTheDocument();
     expect(screen.getByText("Nível:")).toBeInTheDocument();
     expect(screen.getByText("baixo, médio")).toBeInTheDocument();
+  });
+
+  it("shows each MEDIA question's photos under its prompt, and not again as loose evidence", async () => {
+    const photo = (id: string, key: string) => ({
+      id,
+      kind: "PHOTO",
+      text_body: null,
+      content_type: "image/jpeg",
+      byte_size: 10,
+      captured_at: "2026-08-30T13:10:00Z",
+      created_at: "2026-08-30T13:10:01Z",
+      content_url: `/evidence/${id}/content`,
+      idempotency_key: key,
+    });
+    renderDrawer(
+      makeFakeFetch({
+        form_version_id: "fv1",
+        // "gone" never arrived; "other" belongs to another execution, so it is not here either.
+        answers: [
+          {
+            question_stable_key: "k1",
+            prompt: "Foto do piso",
+            value: ["kp1", "gone", "other"],
+            question_type: "MEDIA",
+          },
+        ],
+        evidence: [photo("ev1", "kp1"), photo("ev2", "loose")],
+        evidence_count: 2,
+      }),
+    );
+
+    const answer = (await screen.findByText("Foto do piso:")).closest("li");
+    if (answer === null) {
+      throw new Error("expected the MEDIA answer to render as a list item");
+    }
+    expect(within(answer).getAllByRole("button")).toHaveLength(1);
+    expect(within(answer).getByText("2 fotos ainda não recebidas")).toBeInTheDocument();
+    const loose = screen.getByRole("heading", { name: "Evidências" }).closest("section");
+    if (loose === null) {
+      throw new Error("expected the evidence section");
+    }
+    expect(within(loose).getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("says when a MEDIA question was answered with no photo", async () => {
+    renderDrawer(
+      makeFakeFetch({
+        form_version_id: "fv1",
+        answers: [
+          { question_stable_key: "k1", prompt: "Foto extra", value: [], question_type: "MEDIA" },
+        ],
+      }),
+    );
+
+    expect(await screen.findByText("Foto extra:")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma foto")).toBeInTheDocument();
   });
 
   it("falls back to the removed-question label when an answer's prompt is null", async () => {

@@ -24,6 +24,7 @@ const QUESTION_TYPES: QuestionType[] = [
   "BOOLEAN",
   "SINGLE_CHOICE",
   "MULTI_CHOICE",
+  "MEDIA",
 ];
 
 function isChoiceType(questionType: QuestionType): boolean {
@@ -37,7 +38,7 @@ function isChoiceType(questionType: QuestionType): boolean {
 const questionSchema = z
   .object({
     prompt: z.string().trim().min(1, strings.formQuestionPromptRequired),
-    question_type: z.enum(["TEXT", "NUMBER", "BOOLEAN", "SINGLE_CHOICE", "MULTI_CHOICE"]),
+    question_type: z.enum(["TEXT", "NUMBER", "BOOLEAN", "SINGLE_CHOICE", "MULTI_CHOICE", "MEDIA"]),
     required: z.boolean(),
     options: z.array(z.object({ value: z.string() })),
   })

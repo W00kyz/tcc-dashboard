@@ -15,6 +15,7 @@ const ITEMS = [
     captured_at: "2026-08-30T13:05:00Z",
     created_at: "2026-08-30T13:05:10Z",
     content_url: "/evidence/p1/content",
+    idempotency_key: null,
   },
   {
     id: "n1",
@@ -25,6 +26,7 @@ const ITEMS = [
     captured_at: "2026-08-30T13:06:00Z",
     created_at: "2026-08-30T13:06:10Z",
     content_url: null,
+    idempotency_key: null,
   },
   {
     id: "p2",
@@ -35,6 +37,7 @@ const ITEMS = [
     captured_at: "2026-08-30T13:07:00Z",
     created_at: "2026-08-30T13:07:10Z",
     content_url: "/evidence/p2/content",
+    idempotency_key: null,
   },
 ];
 

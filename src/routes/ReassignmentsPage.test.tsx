@@ -100,7 +100,7 @@ function requestMethod(input: RequestInfo | URL, init?: RequestInit): string {
   return input instanceof Request ? input.method : "GET";
 }
 
-function makeFakeFetch() {
+function makeFakeFetch(route: typeof ROUTE = ROUTE) {
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = requestUrl(input);
     const method = init?.method ?? "GET";
@@ -117,7 +117,7 @@ function makeFakeFetch() {
       );
     }
     if (url.includes("/routes/")) {
-      return Promise.resolve(new Response(JSON.stringify(ROUTE), { status: 200 }));
+      return Promise.resolve(new Response(JSON.stringify(route), { status: 200 }));
     }
 
     return Promise.resolve(new Response(JSON.stringify({ method }), { status: 200 }));
@@ -161,6 +161,17 @@ describe("ReassignmentsPage", () => {
     // `_affected_stops` reassigns PENDING + IN_PROGRESS, so the tally is "3", not "2".
     const remainderCard = screen.getByRole("article", { name: "Problema de saúde" });
     await within(remainderCard).findByText("3 pontos restantes na rota");
+  });
+
+  it("uses the singular when a single stop is left on the route", async () => {
+    const oneLeft = {
+      ...ROUTE,
+      stops: ROUTE.stops.map((stop) => (stop.id === "s2" ? stop : { ...stop, status: "DONE" })),
+    };
+    renderPage(makeFakeFetch(oneLeft));
+
+    const remainderCard = await screen.findByRole("article", { name: "Problema de saúde" });
+    await within(remainderCard).findByText("1 ponto restante na rota");
   });
 
   it("expands an impediment to show ranked candidates with distance and load", async () => {

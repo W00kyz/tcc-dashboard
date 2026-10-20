@@ -93,7 +93,10 @@ describe("MyDataPage", () => {
     expect(screen.getByText("7")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText(/Versão do aviso\s*2/)).toBeInTheDocument();
-    expect(screen.getByText("LOGIN_SUCCESS")).toBeInTheDocument();
+    // Auth events and the role read in Portuguese, not as API codes.
+    expect(screen.getByText("Login realizado")).toBeInTheDocument();
+    expect(screen.getByText("Profissional de campo")).toBeInTheDocument();
+    expect(screen.queryByText("LOGIN_SUCCESS")).not.toBeInTheDocument();
   });
 
   it("shows the empty-state string and never renders undefined/NaN", async () => {

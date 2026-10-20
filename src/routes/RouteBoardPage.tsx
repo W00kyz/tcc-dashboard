@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { BoardSnapshot } from "@/api/monitoringStream";
@@ -16,6 +16,10 @@ import { RouteBoardTable } from "@/components/board/RouteBoardTable";
 import { useBoardBuildings } from "@/components/board/useBoardBuildings";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
+import {
+  type RouteBuilderRequest,
+  RouteBuilderDialog,
+} from "@/components/routes/RouteBuilderDialog";
 import { Button } from "@/components/ui/button";
 import { useReviewQueueCount } from "@/hooks/useReviewQueueCount";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -67,6 +71,19 @@ function paramsFromFilters(filters: RouteFilters): URLSearchParams {
   }
 
   return params;
+}
+
+function builderRequestFrom(params: URLSearchParams): RouteBuilderRequest | null {
+  const editing = params.get("editar");
+  if (editing !== null && editing !== "") {
+    return { kind: "edit", routeId: editing };
+  }
+  const creating = params.get("nova");
+  if (creating === null) {
+    return null;
+  }
+
+  return { kind: "new", routeType: creating === "OCCASIONAL" ? "OCCASIONAL" : "REGULAR" };
 }
 
 type BoardAlert = BoardSnapshot["open_alerts"][number];
@@ -205,6 +222,18 @@ export function RouteBoardPage() {
     setSearchParams(paramsFromFilters({ ...filters, ...patch }), { replace: true });
   }
 
+  // The route builder Dialog lives in the address too (`?nova=REGULAR|OCCASIONAL`,
+  // `?editar=<id>`), so the old /rotas/nova and /rotas/:id/editar links still open it.
+  const builder = builderRequestFrom(searchParams);
+  function openBuilder(param: "nova" | "editar", value: string) {
+    const next = paramsFromFilters(filters);
+    next.set(param, value);
+    setSearchParams(next);
+  }
+  function closeBuilder() {
+    setSearchParams(paramsFromFilters(filters));
+  }
+
   const apiFilters: ApiRouteFilters = {
     date: filters.date,
     routeType: filters.routeType,
@@ -284,27 +313,51 @@ export function RouteBoardPage() {
     routesSectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
+  // The KPIs, the map and the alerts are always today's live picture; only the table follows
+  // the date filter. Viewing another day (a materialised template lands here with ?date=) used
+  // to keep "Rotas de hoje · Ao vivo" in the header over a list for some other date.
+  const viewingToday = filters.date === today;
+
   return (
     <Page width="wide">
       <PageHeader
-        title={t("routeBoardTitle")}
-        description={<BoardLiveStatus fallback={fallback} date={filters.date} />}
+        title={viewingToday ? t("routeBoardTitle") : t("routeBoardTitleOtherDay")}
+        description={
+          viewingToday ? (
+            <BoardLiveStatus fallback={fallback} date={filters.date} />
+          ) : (
+            <OtherDayStatus
+              date={filters.date}
+              onBackToToday={() => {
+                updateFilters({ date: today });
+              }}
+            />
+          )
+        }
         actions={
           <>
-            <Button variant="outline" asChild>
-              <Link to={{ pathname: "/rotas/nova", search: "?type=OCCASIONAL" }}>
-                {t("routeBoardNewOccasionalRoute")}
-              </Link>
+            <Button
+              variant="outline"
+              onClick={() => {
+                openBuilder("nova", "OCCASIONAL");
+              }}
+            >
+              {t("routeBoardNewOccasionalRoute")}
             </Button>
-            <Button asChild>
-              <Link to={{ pathname: "/rotas/nova", search: "?type=REGULAR" }}>
-                {t("routeBoardNewRoute")}
-              </Link>
+            <Button
+              onClick={() => {
+                openBuilder("nova", "REGULAR");
+              }}
+            >
+              {t("routeBoardNewRoute")}
             </Button>
           </>
         }
       />
 
+      {!viewingToday && (
+        <p className="text-muted-foreground -mb-3 text-sm">{t("boardLiveTodayCaption")}</p>
+      )}
       <BoardKpiStrip
         kpis={kpis}
         reviewQueue={reviewQueue}
@@ -326,9 +379,6 @@ export function RouteBoardPage() {
           buildings={board.mapBuildings}
           selectedBuildingId={board.selectedBuildingId}
           onSelectBuilding={board.selectBuilding}
-          servicePoints={board.mapPoints}
-          selectedPointId={board.selectedPointId}
-          onSelectPoint={board.selectPoint}
         />
         <aside className="space-y-6">
           {board.panelProps !== null && <BuildingPanel {...board.panelProps} />}
@@ -360,7 +410,9 @@ export function RouteBoardPage() {
         {isLoading && <LoadingMessage>{t("routeBoardLoading")}</LoadingMessage>}
         {error && <ErrorMessage>{t("routeBoardError")}</ErrorMessage>}
         {!isLoading && !error && routes?.length === 0 && (
-          <EmptyState>{t("routeBoardEmpty")}</EmptyState>
+          <EmptyState>
+            {viewingToday ? t("routeBoardEmpty") : t("routeBoardEmptyOtherDay")}
+          </EmptyState>
         )}
         {routes !== undefined && routes.length > 0 && groups.length === 0 && (
           <EmptyState>{t("routeBoardNoMatch")}</EmptyState>
@@ -376,6 +428,22 @@ export function RouteBoardPage() {
           </>
         )}
       </section>
+      {builder !== null && (
+        <RouteBuilderDialog
+          key={builder.kind === "edit" ? builder.routeId : builder.routeType}
+          request={builder}
+          onClose={closeBuilder}
+          onSaved={({ date, routeType }) => {
+            setSearchParams(
+              paramsFromFilters({
+                ...filters,
+                date,
+                routeType: routeType === "OCCASIONAL" ? "OCCASIONAL" : filters.routeType,
+              }),
+            );
+          }}
+        />
+      )}
     </Page>
   );
 }
@@ -397,6 +465,21 @@ function BoardLiveStatus({ fallback, date }: { fallback: boolean; date: string }
         )}
       />
       {fallback ? t("boardLivePolling") : t("boardLiveStream")}
+    </span>
+  );
+}
+
+function OtherDayStatus({ date, onBackToToday }: { date: string; onBackToToday: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span className="text-foreground font-semibold first-letter:uppercase">
+        {formatIsoDateLongBr(date)}
+      </span>
+      <Button variant="link" size="sm" className="h-auto p-0" onClick={onBackToToday}>
+        {t("routeBoardBackToToday")}
+      </Button>
     </span>
   );
 }

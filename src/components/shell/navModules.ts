@@ -1,7 +1,6 @@
 import {
   Bell,
   Building2,
-  CalendarDays,
   ClipboardCheck,
   ClipboardList,
   FileBarChart,
@@ -10,7 +9,6 @@ import {
   Handshake,
   LayoutList,
   type LucideIcon,
-  MapPin,
   Repeat,
   Settings,
   ShieldAlert,
@@ -73,9 +71,7 @@ export const NAV_MODULES: NavModule[] = [
     defaultOpen: false,
     roles: MANAGEMENT_ROLES,
     entries: [
-      { to: "/pontos-de-servico", label: "navServicePoints", icon: MapPin },
       { to: "/predios", label: "navBuildings", icon: Building2 },
-      { to: "/eventos", label: "navEvents", icon: CalendarDays },
       { to: "/profissionais", label: "navFieldWorkers", icon: HardHat },
       { to: "/empresas-terceirizadas", label: "navContractorCompanies", icon: Handshake },
       { to: "/tipos-de-servico", label: "navServiceTypes", icon: Tags },
@@ -114,8 +110,8 @@ function entryMatches(entry: NavEntry, pathname: string): boolean {
 
 /**
  * The module and entry the current path belongs to, for the breadcrumb and for opening the
- * right module. Nested pages (`/predios/:id/andares`, `/rotas/nova`) resolve to their parent
- * entry. Example: `findActiveNav("/predios/b1/andares")` → Cadastros / Prédios.
+ * right module. Nested paths (old links such as `/predios/:id`) resolve to their parent
+ * entry. Example: `findActiveNav("/predios/b1")` → Cadastros / Prédios e pontos.
  */
 export function findActiveNav(
   pathname: string,

@@ -44,6 +44,12 @@ export function MaterializeDialog({
     enabled: open,
   });
 
+  // No default worker on the template: the backend cannot pick one, so the field is required.
+  const workerRequired = template.field_worker_id === null;
+  const defaultWorkerName = workers?.find(
+    (worker) => worker.id === template.field_worker_id,
+  )?.full_name;
+
   const materialize = useMutation({
     mutationFn: async () => {
       const { response } = await client.POST("/route-templates/{template_id}/materialize", {
@@ -112,7 +118,9 @@ export function MaterializeDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`materialize-worker-${template.id}`}>
-              {t("routeTemplateMaterializeWorkerLabel")}
+              {workerRequired
+                ? t("routeTemplateMaterializeWorkerRequiredLabel")
+                : t("routeTemplateMaterializeWorkerLabel")}
             </Label>
             <NativeSelect
               id={`materialize-worker-${template.id}`}
@@ -121,7 +129,11 @@ export function MaterializeDialog({
                 setWorkerId(event.target.value);
               }}
             >
-              <NativeSelectOption value="" />
+              <NativeSelectOption value="">
+                {defaultWorkerName === undefined
+                  ? ""
+                  : t("routeTemplateMaterializeKeepWorker").replace("{name}", defaultWorkerName)}
+              </NativeSelectOption>
               {workers?.map((worker) => (
                 <NativeSelectOption key={worker.id} value={worker.id}>
                   {worker.full_name}
@@ -130,7 +142,17 @@ export function MaterializeDialog({
             </NativeSelect>
           </div>
           {materialize.isError && <ErrorMessage>{t("routeTemplateError")}</ErrorMessage>}
-          <Button type="submit" disabled={routeDate === "" || materialize.isPending}>
+          {workerRequired && (
+            <p className="text-muted-foreground text-sm">
+              {t("routeTemplateMaterializeWorkerRequiredHint")}
+            </p>
+          )}
+          <Button
+            type="submit"
+            disabled={
+              routeDate === "" || (workerRequired && workerId === "") || materialize.isPending
+            }
+          >
             {t("routeTemplateMaterializeSubmit")}
           </Button>
         </form>

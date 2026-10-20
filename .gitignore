@@ -6,3 +6,8 @@ coverage/
 .env
 .env.*
 !.env.sample
+
+# Playwright (npm run test:e2e)
+test-results/
+playwright-report/
+e2e/.auth/

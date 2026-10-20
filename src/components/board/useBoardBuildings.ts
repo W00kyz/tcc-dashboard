@@ -6,77 +6,30 @@ import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import type { BuildingPanelProps } from "@/components/board/BuildingPanel";
 import { type MapBuilding, mapBuildingsFrom } from "@/components/board/BuildingsLayer";
-import type { MapServicePoint } from "@/components/board/ServicePointsLayer";
 import { useBuildingInterior } from "@/components/board/useBuildingInterior";
 import { type PointVisitStatus, pointStatusesForToday } from "@/lib/buildingInterior";
 
 type ApiClient = ReturnType<typeof createApiClient>;
 type BuildingOut = components["schemas"]["BuildingOut"];
-type FloorOut = components["schemas"]["FloorOut"];
-type ServicePointOut = components["schemas"]["ServicePointOut"];
 type RouteOut = components["schemas"]["RouteOut"];
-type LonLat = [number, number];
 
 const NO_BUILDINGS: BuildingOut[] = [];
-const NO_FLOORS: FloorOut[] = [];
-const NO_POINTS: ServicePointOut[] = [];
 
 // The page's fake/real API may answer an unrelated shape; anything but a list counts as empty.
-function listOrEmpty<T>(data: T[] | undefined): T[] {
+// A failed response throws instead: an expired token's 401 read as "no buildings" emptied the
+// map until the next reload; failing lets React Query retry once the session has refreshed.
+function listOrEmpty<T>(data: T[] | undefined, response: Response, request: string): T[] {
+  if (!response.ok) {
+    throw new Error(`${request} failed with status ${String(response.status)}; expected a list.`);
+  }
+
   return Array.isArray(data) ? data : [];
 }
 
 async function fetchBuildings(client: ApiClient): Promise<BuildingOut[]> {
-  const { data } = await client.GET("/buildings");
+  const { data, response } = await client.GET("/buildings");
 
-  return listOrEmpty(data);
-}
-
-async function fetchAllFloors(client: ApiClient): Promise<FloorOut[]> {
-  const { data } = await client.GET("/floors");
-
-  return listOrEmpty(data);
-}
-
-async function fetchAllPoints(client: ApiClient): Promise<ServicePointOut[]> {
-  const { data } = await client.GET("/service-points", {
-    params: { query: { include_archived: false } },
-  });
-
-  return listOrEmpty(data);
-}
-
-// The map needs every building's points to draw hulls for buildings without an OSM footprint.
-function pointsByBuildingFrom(
-  floors: FloorOut[],
-  points: ServicePointOut[],
-): Map<string, LonLat[]> {
-  const buildingOfFloor = new Map(floors.map((floor) => [floor.id, floor.building_id]));
-  const grouped = new Map<string, LonLat[]>();
-  for (const point of points) {
-    const buildingId = buildingOfFloor.get(point.floor_id);
-    if (buildingId !== undefined) {
-      grouped.set(buildingId, [
-        ...(grouped.get(buildingId) ?? []),
-        [point.longitude, point.latitude],
-      ]);
-    }
-  }
-
-  return grouped;
-}
-
-function toMapPoints(
-  points: ServicePointOut[],
-  statuses: Map<string, PointVisitStatus>,
-): MapServicePoint[] {
-  return points.map((point) => ({
-    id: point.id,
-    name: point.name,
-    latitude: point.latitude,
-    longitude: point.longitude,
-    status: statuses.get(point.id) ?? "NOT_SCHEDULED",
-  }));
+  return listOrEmpty(data, response, "GET /buildings");
 }
 
 interface BoardBuildingsInput {
@@ -89,23 +42,13 @@ interface Selection {
   floorId: string;
 }
 
-// Hulls need every building's points, so these three lists are fetched once for the whole campus.
 function useCampusBuildings() {
   const { session } = useAuth();
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
   const buildings = useQuery({ queryKey: ["buildings"], queryFn: () => fetchBuildings(client) });
-  const floors = useQuery({ queryKey: ["floors", "all"], queryFn: () => fetchAllFloors(client) });
-  const points = useQuery({
-    queryKey: ["service-points", "all"],
-    queryFn: () => fetchAllPoints(client),
-  });
   const mapBuildings: MapBuilding[] = useMemo(
-    () =>
-      mapBuildingsFrom(
-        buildings.data ?? NO_BUILDINGS,
-        pointsByBuildingFrom(floors.data ?? NO_FLOORS, points.data ?? NO_POINTS),
-      ),
-    [buildings.data, floors.data, points.data],
+    () => mapBuildingsFrom(buildings.data ?? NO_BUILDINGS),
+    [buildings.data],
   );
 
   return { buildings: buildings.data ?? NO_BUILDINGS, mapBuildings };
@@ -132,12 +75,6 @@ function useBuildingSelection() {
   return { ...selection, selectedPointId, selectPoint, selectBuilding, selectFloor, closeBuilding };
 }
 
-function pointsOnFloor(interior: Interior, floorId: string): ServicePointOut[] {
-  return [...interior.pointsByFloor]
-    .filter(([id]) => floorId === "all" || id === floorId)
-    .flatMap(([, floorPoints]) => floorPoints);
-}
-
 function buildPanelProps(
   building: BuildingOut,
   selection: BuildingSelection,
@@ -158,25 +95,22 @@ function buildPanelProps(
   };
 }
 
-// What changes when a building is open: the side panel and the points drawn on the map.
+// What changes when a building is open: the side panel. Its points are not drawn on the map —
+// they all sit at the building's centre (spec 2026-10-20 §3.3).
 function openBuildingView(
   building: BuildingOut | undefined,
   selection: BuildingSelection,
   interior: Interior,
   statuses: Map<string, PointVisitStatus>,
 ) {
-  if (building === undefined) {
-    return { panelProps: null, mapPoints: [] as MapServicePoint[] };
-  }
-
   return {
-    panelProps: buildPanelProps(building, selection, interior, statuses),
-    mapPoints: toMapPoints(pointsOnFloor(interior, selection.floorId), statuses),
+    panelProps:
+      building === undefined ? null : buildPanelProps(building, selection, interior, statuses),
   };
 }
 
 /** Everything the board needs to show buildings: outlines for the map, the open building's panel
- * and its points on the map, plus the selection state behind both.
+ * and the selection state behind both.
  * @example const { mapBuildings, panelProps } = useBoardBuildings({ dayRoutes, delayedRouteIds }); */
 export function useBoardBuildings({ dayRoutes, delayedRouteIds }: BoardBuildingsInput) {
   const selection = useBuildingSelection();

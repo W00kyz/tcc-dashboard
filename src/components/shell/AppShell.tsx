@@ -1,21 +1,12 @@
 import { ChevronRight } from "lucide-react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "@/auth/AuthContext";
 import { HeaderNotifications } from "@/components/notifications/HeaderNotifications";
 import { AppSidebar } from "@/components/shell/AppSidebar";
 import { findActiveNav } from "@/components/shell/navModules";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
-
-// Pages below a nav entry get a third crumb, so /rotas/nova reads "… › Quadro de rotas ›
-// Nova rota" instead of stopping at its parent.
-const CHILD_CRUMBS: { pattern: RegExp; label: StringKey }[] = [
-  { pattern: /^\/rotas\/nova$/, label: "crumbNewRoute" },
-  { pattern: /^\/rotas\/[^/]+\/editar$/, label: "crumbEditRoute" },
-  { pattern: /^\/predios\/[^/]+\/andares$/, label: "crumbFloors" },
-];
 
 function ShellBreadcrumb() {
   const { t } = useTranslation();
@@ -26,7 +17,6 @@ function ShellBreadcrumb() {
   }
 
   const moduleLabel = active.module ? t(active.module.label) : t("navGroupAccount");
-  const child = CHILD_CRUMBS.find((crumb) => crumb.pattern.test(pathname));
 
   return (
     <nav aria-label={t("navBreadcrumbLabel")} className="min-w-0">
@@ -35,28 +25,11 @@ function ShellBreadcrumb() {
         <li aria-hidden="true" className="hidden sm:block">
           <ChevronRight className="size-3.5" />
         </li>
-        {child ? (
-          <>
-            <li className="hidden sm:block">
-              <Link
-                to={active.entry.to}
-                className="hover:text-foreground underline-offset-4 hover:underline"
-              >
-                {t(active.entry.label)}
-              </Link>
-            </li>
-            <li aria-hidden="true" className="hidden sm:block">
-              <ChevronRight className="size-3.5" />
-            </li>
-            <li aria-current="page" className="text-foreground truncate font-semibold">
-              {t(child.label)}
-            </li>
-          </>
-        ) : (
-          <li aria-current="page" className="text-foreground truncate font-semibold">
-            {t(active.entry.label)}
-          </li>
-        )}
+        {/* Creating and editing happen in Dialogs: every page is a nav entry, so the trail
+            stops at it (spec 2026-10-20 §2). */}
+        <li aria-current="page" className="text-foreground truncate font-semibold">
+          {t(active.entry.label)}
+        </li>
       </ol>
     </nav>
   );

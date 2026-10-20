@@ -1,5 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { BuildingPanel } from "@/components/board/BuildingPanel";
@@ -12,6 +14,9 @@ const POINTS = new Map([
   ["f0", [{ id: "p1", floor_id: "f0", name: "Banheiro térreo", latitude: -7.2, longitude: -35.9 }]],
   ["f1", [{ id: "p2", floor_id: "f1", name: "Sala 104", latitude: -7.2, longitude: -35.9 }]],
 ]);
+
+// The header links to the building's registry page.
+const inRouter = (panel: ReactElement) => <MemoryRouter>{panel}</MemoryRouter>;
 
 function panelProps(overrides: Partial<Parameters<typeof BuildingPanel>[0]> = {}) {
   return {
@@ -32,7 +37,7 @@ function panelProps(overrides: Partial<Parameters<typeof BuildingPanel>[0]> = {}
 
 function renderPanel(overrides: Partial<Parameters<typeof BuildingPanel>[0]> = {}) {
   const props = panelProps(overrides);
-  render(<BuildingPanel {...props} />);
+  render(inRouter(<BuildingPanel {...props} />));
 
   return props;
 }
@@ -108,10 +113,36 @@ describe("BuildingPanel", () => {
   });
 
   it("shows no summary line while floors load or after an error", () => {
-    const { rerender } = render(<BuildingPanel {...panelProps({ floors: undefined })} />);
+    const { rerender } = render(inRouter(<BuildingPanel {...panelProps({ floors: undefined })} />));
     expect(screen.queryByText(/pontos · 0 feitos/)).not.toBeInTheDocument();
 
-    rerender(<BuildingPanel {...panelProps({ isError: true })} />);
+    rerender(inRouter(<BuildingPanel {...panelProps({ isError: true })} />));
     expect(screen.queryByText(/pontos · 0 feitos/)).not.toBeInTheDocument();
+  });
+
+  it("links to the building's page and tells each point's floor and purpose", () => {
+    renderPanel({
+      pointsByFloor: new Map([
+        [
+          "f0",
+          [
+            {
+              id: "p1",
+              floor_id: "f0",
+              name: "Banheiro térreo",
+              description: "Masculino",
+              latitude: -7.2,
+              longitude: -35.9,
+            },
+          ],
+        ],
+      ]),
+    });
+
+    expect(screen.getByRole("link", { name: "Abrir cadastro do prédio" })).toHaveAttribute(
+      "href",
+      "/predios?predio=b1",
+    );
+    expect(screen.getByText("Térreo · Masculino")).toBeInTheDocument();
   });
 });

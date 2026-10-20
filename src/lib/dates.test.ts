@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatIsoDateBr, formatIsoDateLongBr, toLocalIsoDate } from "@/lib/dates";
+import {
+  formatIsoDateBr,
+  formatIsoDateLongBr,
+  toLocalIsoDate,
+  formatReportPeriodBr,
+} from "@/lib/dates";
 
 // The bug this pins only shows in a zone behind UTC, so force one. vitest's stubEnv on TZ
 // resets the process timezone, so the faked clock below is read as São Paulo wall-clock.
@@ -44,5 +49,19 @@ describe("formatIsoDateLongBr", () => {
 
   it("returns an empty string for a cleared date", () => {
     expect(formatIsoDateLongBr("")).toBe("");
+  });
+});
+
+describe("formatReportPeriodBr", () => {
+  it("shows a daily period as a pt-BR date", () => {
+    expect(formatReportPeriodBr("DAILY", "2026-10-10")).toBe("10/10/2026");
+  });
+
+  it("shows a weekly period by its first day", () => {
+    expect(formatReportPeriodBr("WEEKLY", "2026-10-05")).toBe("Semana de 05/10/2026");
+  });
+
+  it("shows a monthly period as month and year", () => {
+    expect(formatReportPeriodBr("MONTHLY", "2026-10-01")).toBe("Outubro de 2026");
   });
 });

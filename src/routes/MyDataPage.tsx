@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
+import { roleLabelKey } from "@/auth/roleLabel";
+import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
@@ -20,6 +22,13 @@ import { cn } from "@/lib/utils";
 type PersonalData = components["schemas"]["PersonalDataOut"];
 
 const NULL_VALUE = "—";
+
+// auth_logs.event codes (backend AuthLogEvent) in the words the user reads.
+const AUTH_EVENT_LABEL_KEY: Partial<Record<string, StringKey>> = {
+  LOGIN_SUCCESS: "authEventLoginSuccess",
+  LOGIN_FAILURE: "authEventLoginFailure",
+  LOGOUT: "authEventLogout",
+};
 
 function formatDateTime(iso: string | null): string {
   if (iso === null) {
@@ -69,6 +78,8 @@ function Section({
 
 export function MyDataPage() {
   const { t } = useTranslation();
+  // A code the dashboard does not know yet is shown as-is rather than as a blank cell.
+  const labelOrRaw = (key: StringKey | null, raw: string) => (key === null ? raw : t(key));
   const { session } = useAuth();
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
 
@@ -99,7 +110,10 @@ export function MyDataPage() {
             <dl className="text-sm">
               <DataRow label={t("myDataProfileEmail")} value={data.profile.email} />
               <DataRow label={t("myDataProfileName")} value={data.profile.name} />
-              <DataRow label={t("myDataProfileRole")} value={data.profile.role} />
+              <DataRow
+                label={t("myDataProfileRole")}
+                value={labelOrRaw(roleLabelKey(data.profile.role), data.profile.role)}
+              />
               <DataRow
                 label={t("myDataProfileActive")}
                 value={data.profile.is_active ? t("myDataYes") : t("myDataNo")}
@@ -173,7 +187,9 @@ export function MyDataPage() {
                 <TableBody>
                   {data.auth_events.map((event, index) => (
                     <TableRow key={`${event.event}-${event.created_at}-${String(index)}`}>
-                      <TableCell>{event.event}</TableCell>
+                      <TableCell>
+                        {labelOrRaw(AUTH_EVENT_LABEL_KEY[event.event] ?? null, event.event)}
+                      </TableCell>
                       <TableCell>{event.ip_address ?? NULL_VALUE}</TableCell>
                       <TableCell>{formatDateTime(event.created_at)}</TableCell>
                     </TableRow>

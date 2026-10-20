@@ -42,6 +42,9 @@ function makeFakeFetch() {
     if (url.includes("/notifications/me/read-all")) {
       return Promise.resolve(new Response(JSON.stringify({ marked: 1 }), { status: 200 }));
     }
+    if (url.includes("/notifications/me/unread-count")) {
+      return Promise.resolve(new Response(JSON.stringify({ count: 1 }), { status: 200 }));
+    }
     if (/\/notifications\/[^/]+\/read$/.test(url)) {
       return Promise.resolve(new Response(JSON.stringify(UNREAD), { status: 200 }));
     }
@@ -171,11 +174,34 @@ describe("NotificationsPage", () => {
     });
   });
 
+  it("disables Marcar todas como lidas when nothing is unread", async () => {
+    const fetchImpl = vi.fn((input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url.includes("/notifications/me/unread-count")) {
+        return Promise.resolve(new Response(JSON.stringify({ count: 0 }), { status: 200 }));
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: [READ], total: 1, page: 1, page_size: 20 }), {
+          status: 200,
+        }),
+      );
+    });
+    renderPage(fetchImpl);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Marcar todas como lidas" })).toBeDisabled();
+    });
+  });
+
   it("shows an error banner when marking all as read fails", async () => {
     const fetchImpl = vi.fn((input: RequestInfo | URL) => {
       const url = requestUrl(input);
       if (url.includes("/notifications/me/read-all")) {
         return Promise.resolve(new Response("boom", { status: 500 }));
+      }
+      if (url.includes("/notifications/me/unread-count")) {
+        return Promise.resolve(new Response(JSON.stringify({ count: 1 }), { status: 200 }));
       }
       if (url.includes("/notifications/me")) {
         return Promise.resolve(

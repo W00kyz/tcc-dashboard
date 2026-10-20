@@ -20,12 +20,26 @@ const RULES = [
   { rule_kind: "NO_EVIDENCE", enabled: false, threshold_minutes: null, updated_at: null },
 ];
 
+const SETTINGS = {
+  check_radius_meters: 50,
+  alert_scan_interval_seconds: 60,
+  late_start_tolerance_min: 15,
+  absence_tolerance_min: 30,
+  late_stop_tolerance_min: 10,
+  no_evidence_grace_min: 25,
+  position_report_interval_seconds: 60,
+  updated_at: null,
+};
+
 function makeFakeFetch() {
   return vi.fn((input: RequestInfo | URL) => {
     const request = input as Request;
 
     if (request.url.includes("/alert-rules") && request.method === "PATCH") {
       return Promise.resolve(new Response(JSON.stringify(RULES[0]), { status: 200 }));
+    }
+    if (request.url.includes("/settings")) {
+      return Promise.resolve(new Response(JSON.stringify(SETTINGS), { status: 200 }));
     }
 
     return Promise.resolve(new Response(JSON.stringify(RULES), { status: 200 }));
@@ -97,11 +111,23 @@ describe("AlertRulesPage", () => {
     expect(await request.clone().json()).toEqual({ enabled: false });
   });
 
+  it("shows the global default for rules without an override, and the override otherwise", async () => {
+    renderPage(makeFakeFetch());
+
+    expect(await screen.findByLabelText("Rota não iniciada — Limiar (minutos)")).toHaveValue(15);
+    expect(screen.getByLabelText("Profissional ausente — Limiar (minutos)")).toHaveValue(45);
+    expect(screen.getByLabelText("Ponto atrasado — Limiar (minutos)")).toHaveValue(10);
+    expect(screen.getByLabelText("Execução sem evidência — Limiar (minutos)")).toHaveValue(25);
+    expect(screen.getByText("Padrão global: 30 min")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("usar o padrão global")).not.toBeInTheDocument();
+  });
+
   it("typing a threshold commits it on blur as a number", async () => {
     const fakeFetch = makeFakeFetch();
     renderPage(fakeFetch);
 
     const input = await screen.findByLabelText("Rota não iniciada — Limiar (minutos)");
+    await userEvent.clear(input);
     await userEvent.type(input, "20");
     await userEvent.tab();
 
@@ -127,6 +153,18 @@ describe("AlertRulesPage", () => {
     const request = firstPatch(fakeFetch);
     expect(request.url).toContain("/alert-rules/WORKER_ABSENT");
     expect(await request.clone().json()).toEqual({ threshold_minutes: null });
+    expect(input).toHaveValue(30);
+  });
+
+  it("blurring an untouched default does not send a PATCH", async () => {
+    const fakeFetch = makeFakeFetch();
+    renderPage(fakeFetch);
+
+    const input = await screen.findByLabelText("Rota não iniciada — Limiar (minutos)");
+    await userEvent.click(input);
+    await userEvent.tab();
+
+    expect(patchRequests(fakeFetch)).toHaveLength(0);
   });
 
   it("registers /regras-de-alerta under the MANAGER/ADMIN ProtectedRoute", () => {

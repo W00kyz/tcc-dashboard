@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -103,8 +104,6 @@ const POINT = {
   description: "",
   latitude: -7.2095,
   longitude: -35.8995,
-  point_type: "FIXED",
-  event_id: null,
 };
 
 function requestUrl(input: RequestInfo | URL): string {
@@ -595,19 +594,18 @@ describe("RouteBoardPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("links to the new-route pages with the right route_type", async () => {
+  it("opens the route builder in a dialog over the board, regular or occasional", async () => {
+    const user = userEvent.setup();
     renderPage(makeFakeFetch());
-
     await screen.findByRole("row", { name: /João da Silva/ });
 
-    expect(screen.getByRole("link", { name: "Nova rota" })).toHaveAttribute(
-      "href",
-      "/rotas/nova?type=REGULAR",
-    );
-    expect(screen.getByRole("link", { name: "Nova rota eventual" })).toHaveAttribute(
-      "href",
-      "/rotas/nova?type=OCCASIONAL",
-    );
+    await user.click(screen.getByRole("button", { name: "Nova rota" }));
+    expect(screen.getByRole("dialog", { name: "Nova rota" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Nova rota eventual" }));
+    expect(screen.getByRole("dialog", { name: "Nova rota eventual" })).toBeInTheDocument();
   });
 
   it("opens the building panel from the map and returns to the alerts", async () => {

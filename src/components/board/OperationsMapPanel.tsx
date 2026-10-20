@@ -1,6 +1,5 @@
 import type { components } from "@/api/generated/schema";
 import type { MapBuilding } from "@/components/board/BuildingsLayer";
-import type { MapServicePoint } from "@/components/board/ServicePointsLayer";
 import { WorkerPositionsMap } from "@/components/WorkerPositionsMap";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -16,10 +15,6 @@ const LEGEND: { key: StringKey; swatch: string }[] = [
   },
   { key: "boardMapLegendStale", swatch: "bg-muted border-status-pending border-2" },
   { key: "boardMapLegendBuilding", swatch: "bg-primary/15 border-primary rounded-[2px] border" },
-  {
-    key: "boardMapLegendApproximate",
-    swatch: "bg-primary/15 border-primary rounded-[2px] border border-dashed",
-  },
 ];
 
 interface OperationsMapPanelProps {
@@ -30,9 +25,6 @@ interface OperationsMapPanelProps {
   buildings?: MapBuilding[];
   selectedBuildingId?: string | null;
   onSelectBuilding?: (buildingId: string | null) => void;
-  servicePoints?: MapServicePoint[];
-  selectedPointId?: string | null;
-  onSelectPoint?: (pointId: string) => void;
 }
 
 /** The board's centrepiece: where every worker is right now, with late routes marked red. */
@@ -44,9 +36,6 @@ export function OperationsMapPanel({
   buildings,
   selectedBuildingId,
   onSelectBuilding,
-  servicePoints,
-  selectedPointId,
-  onSelectPoint,
 }: OperationsMapPanelProps) {
   const { t } = useTranslation();
   const lateCount = positions.filter((p) => delayedWorkerIds.has(p.field_worker_id)).length;
@@ -62,7 +51,9 @@ export function OperationsMapPanel({
             {t("boardMapTitle")}
           </h2>
           <span className="text-muted-foreground text-sm">
-            {t("boardMapWorkersInField").replace("{n}", String(positions.length))}
+            {positions.length === 1
+              ? t("boardMapWorkersInFieldOne")
+              : t("boardMapWorkersInField").replace("{n}", String(positions.length))}
             {lateCount > 0 && (
               <span className="text-status-late font-semibold">
                 {" · "}
@@ -89,9 +80,6 @@ export function OperationsMapPanel({
           buildings={buildings}
           selectedBuildingId={selectedBuildingId}
           onSelectBuilding={onSelectBuilding}
-          servicePoints={servicePoints}
-          selectedPointId={selectedPointId}
-          onSelectPoint={onSelectPoint}
           className="h-[min(62vh,40rem)] min-h-[22rem] rounded-[4px] border-0"
         />
         <p className="text-muted-foreground px-1 pt-2 text-xs">
