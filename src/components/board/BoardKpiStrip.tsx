@@ -89,9 +89,12 @@ function PoolCell({ pool }: { pool: PoolKpi }) {
     <Kpi
       label={`${pool.service_type_name} · ${pool.company_name}`}
       value={`${String(pool.done)} / ${String(pool.total)}`}
-      detail={`${t("boardPoolInProgress").replace("{n}", String(pool.in_progress))} · ${t(
-        "boardPoolFree",
-      ).replace("{n}", String(pool.free))}`}
+      // "em andamento" reads the same for one and many; "livre(s)" does not.
+      detail={`${t("boardPoolInProgress").replace("{n}", String(pool.in_progress))} · ${
+        pool.free === 1
+          ? t("boardPoolFreeOne")
+          : t("boardPoolFree").replace("{n}", String(pool.free))
+      }`}
     />
   );
 }

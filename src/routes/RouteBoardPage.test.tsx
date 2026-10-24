@@ -444,6 +444,31 @@ describe("RouteBoardPage", () => {
     });
   });
 
+  it("says '1 livre', not '1 livres', when one point of a type is free", async () => {
+    boardStreamState = {
+      fallback: false,
+      snapshot: snapshot({
+        pool: [
+          {
+            service_type_id: "t1",
+            service_type_name: "Limpeza de banheiro",
+            company_name: "Limpa Tudo",
+            total: 2,
+            done: 0,
+            in_progress: 1,
+            free: 1,
+          },
+        ],
+      }),
+    };
+    renderPage(makeFakeFetch());
+
+    const kpis = await screen.findByRole("region", { name: "Indicadores do dia" });
+    const pool = within(kpis).getByRole("group", { name: /Limpeza de banheiro/ });
+    expect(pool).toHaveTextContent("1 em andamento · 1 livre");
+    expect(pool).not.toHaveTextContent("1 livres");
+  });
+
   it("summarises the pool per service type, workers on route and today's releases", async () => {
     boardStreamState = {
       fallback: false,

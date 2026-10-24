@@ -565,6 +565,7 @@ export const strings = {
   boardPoolLabel: "Pontos de hoje por tipo de serviço",
   boardPoolInProgress: "{n} em andamento",
   boardPoolFree: "{n} livres",
+  boardPoolFreeOne: "1 livre",
   boardNotStartedTitle: "Ainda não iniciaram hoje",
   boardNotServiceDayTitle: "Hoje não é dia de serviço",
   boardNotServiceDayBody: "Nenhum ponto entra no pool hoje e ninguém é esperado em campo.",
