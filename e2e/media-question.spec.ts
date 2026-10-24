@@ -7,15 +7,15 @@ import { STORAGE } from "./support/users";
 test.use({ storageState: STORAGE.manager, viewport: { width: 1440, height: 1200 } });
 
 test("a form gets a 'Mídia (fotos)' question and publishes it", async ({ page }) => {
+  // Service types belong to a company now: one is created with it.
   const api = await SeedApi.signIn("manager");
-  const serviceType = await api.post<{ id: string; name: string }>("/service-types", {
-    name: `E2E Tipo mídia ${uniqueSuffix()}`,
-    average_duration_minutes: 30,
-  });
+  const company = await api.createCompany(`mídia ${uniqueSuffix()}`);
   await api.dispose();
 
   await page.goto("/formularios");
-  await page.getByLabel("Tipo de serviço").selectOption({ label: serviceType.name });
+  await page
+    .getByLabel("Tipo de serviço")
+    .selectOption({ label: `${company.serviceType.name} — ${company.name}` });
   await page.getByRole("button", { name: "Adicionar pergunta" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Enunciado").fill("Foto do piso após a limpeza");

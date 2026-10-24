@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 
-import { SeedApi, uniqueSuffix } from "./support/api";
+import { registerWorker, SeedApi, uniqueSuffix } from "./support/api";
 import { STORAGE } from "./support/users";
 
 test.use({ storageState: STORAGE.admin });
@@ -77,29 +77,79 @@ test.describe("Empresas", () => {
     });
   });
 
-  test("creates and edits a company", async ({ page }) => {
+  test("creates a company with its service types, then edits it", async ({ page }) => {
     const suffix = uniqueSuffix();
     await openNew(page, "/empresas-terceirizadas", "Nova empresa");
-    await page.getByLabel("Nome").fill(`E2E Empresa ${suffix}`);
+    await page.getByLabel("Nome", { exact: true }).fill(`E2E Empresa ${suffix}`);
     await page.getByLabel("CNPJ").fill(String(Date.now()).slice(-14).padStart(14, "9"));
+    await dialog(page).getByRole("button", { name: "Adicionar tipo" }).click();
+    await dialog(page).getByLabel("Nome do tipo 1").fill(`E2E Tipo ${suffix}`);
+    await dialog(page).getByLabel("Duração média do tipo 1 (min)").fill("40");
     await page.getByRole("button", { name: "Cadastrar" }).click();
-    await expect(page.getByText(`E2E Empresa ${suffix}`, { exact: true })).toBeVisible();
+    const row = page.getByRole("listitem").filter({ hasText: `E2E Empresa ${suffix}` });
+    await expect(row.getByText(`E2E Tipo ${suffix}`)).toBeVisible();
 
     await editFirstField(page, `E2E Empresa ${suffix}`, "Nome", `E2E Empresa ${suffix} editada`);
   });
+
+  test("a service type line needs a name before the company is saved", async ({ page }) => {
+    const posts: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/contractor-companies"
+      ) {
+        posts.push(request.url());
+      }
+    });
+    await openNew(page, "/empresas-terceirizadas", "Nova empresa");
+    await page.getByLabel("Nome", { exact: true }).fill(`E2E Empresa ${uniqueSuffix()}`);
+    await page.getByLabel("CNPJ").fill(String(Date.now()).slice(-14).padStart(14, "8"));
+    await dialog(page).getByRole("button", { name: "Adicionar tipo" }).click();
+    await dialog(page).getByLabel("Duração média do tipo 1 (min)").fill("30");
+    await dialog(page).getByRole("button", { name: "Cadastrar" }).click();
+
+    await expect(dialog(page).getByRole("alert")).toContainText(
+      "Todo tipo de serviço precisa de nome",
+    );
+    await expect(dialog(page).getByLabel("Nome do tipo 1")).toHaveAttribute("aria-invalid", "true");
+    expect(posts).toEqual([]);
+  });
+
+  test("a type still used by a point cannot be removed, and the dialog says by how many", async ({
+    page,
+  }) => {
+    const api = await SeedApi.signIn("admin");
+    const site = await api.createSite(uniqueSuffix(), 1);
+    await api.dispose();
+    const company = site.company?.name ?? "";
+    const serviceType = site.company?.serviceType.name ?? "";
+
+    await page.goto("/empresas-terceirizadas");
+    await page.getByRole("button", { name: `Editar ${company}` }).click();
+    await dialog(page)
+      .getByRole("button", { name: `Remover tipo ${serviceType}` })
+      .click();
+    await dialog(page).getByRole("button", { name: "Salvar alterações" }).click();
+
+    await expect(dialog(page).getByRole("alert")).toContainText(
+      `O tipo “${serviceType}” é usado por 1 ponto e não pode ser removido.`,
+    );
+    await dialog(page).getByRole("button", { name: "Cancelar" }).click();
+    const row = page.getByRole("listitem").filter({ hasText: company });
+    await expect(row.getByText(serviceType)).toBeVisible();
+  });
 });
 
-const EMPTY_SUBMIT_CASES = [
-  { page: "/profissionais", newLabel: "Novo profissional", api: "/field-workers" },
-  { page: "/tipos-de-servico", newLabel: "Novo tipo de serviço", api: "/service-types" },
-  { page: "/usuarios", newLabel: "Novo usuário", api: "/users" },
-];
+test("the old Tipos de serviço page lands on Empresas", async ({ page }) => {
+  await page.goto("/tipos-de-servico");
+  await expect(page).toHaveURL(/\/empresas-terceirizadas$/);
+  await expect(page.getByRole("link", { name: "Tipos de serviço", exact: true })).toHaveCount(0);
+});
 
-for (const { page: path, newLabel, api } of EMPTY_SUBMIT_CASES) {
-  test(`${path} blocks an empty submit`, async ({ page }) => {
-    await expectEmptySubmitBlocked(page, path, newLabel, api);
-  });
-}
+test("/usuarios blocks an empty submit", async ({ page }) => {
+  await expectEmptySubmitBlocked(page, "/usuarios", "Novo usuário", "/users");
+});
 
 test("Eventos was removed: no menu entry, no page, no event fields on points", async ({ page }) => {
   const api = await SeedApi.signIn("admin");
@@ -111,7 +161,7 @@ test("Eventos was removed: no menu entry, no page, no event fields on points", a
   const points = page.getByRole("dialog", { name: "Novo ponto de serviço" });
   await expect(points.getByLabel("Andar", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Eventos", exact: true })).toHaveCount(0);
-  await expect(points.getByLabel("Tipo")).toHaveCount(0);
+  await expect(points.getByLabel("Tipo", { exact: true })).toHaveCount(0);
   await expect(points.getByLabel("Evento")).toHaveCount(0);
   await expect(page.getByLabel("Mostrar arquivados")).toHaveCount(0);
 
@@ -119,34 +169,62 @@ test("Eventos was removed: no menu entry, no page, no event fields on points", a
   await expect(page.getByRole("heading", { name: "Página não encontrada" })).toBeVisible();
 });
 
-test("Tipos de serviço: rejects a zero duration, then creates and edits", async ({ page }) => {
-  const name = `E2E Tipo ${uniqueSuffix()}`;
-  await openNew(page, "/tipos-de-servico", "Novo tipo de serviço");
-  await page.getByLabel("Nome").fill(name);
-  await page.getByLabel("Duração média (minutos)").fill("0");
-  await page.getByRole("button", { name: "Cadastrar" }).click();
-  await expect(page.getByRole("alert")).toContainText("maior que zero");
+test.describe("Profissionais", () => {
+  /** A worker who signed up in the app for a new E2E company, waiting for approval. */
+  async function pendingWorker(suffix: string) {
+    const api = await SeedApi.signIn("admin");
+    const company = await api.createCompany(suffix);
+    await api.dispose();
 
-  await page.getByLabel("Duração média (minutos)").fill("45");
-  await page.getByRole("button", { name: "Cadastrar" }).click();
-  await expect(page.getByText(name, { exact: true })).toBeVisible();
-  await editFirstField(page, name, "Nome", `${name} editado`);
-});
+    return { company, worker: await registerWorker(suffix, company.id) };
+  }
 
-test("Profissionais: picks service types by checkbox and edits", async ({ page }) => {
-  const name = `E2E Profissional ${uniqueSuffix()}`;
-  await openNew(page, "/profissionais", "Novo profissional");
-  await page.getByLabel("Nome completo").fill(name);
-  await page
-    .getByLabel("Empresa terceirizada")
-    .selectOption({ label: "Limpa Tudo Terceirizados Ltda" });
-  await page.getByRole("button", { name: "Cadastrar" }).click();
-  await expect(page.getByRole("alert")).toContainText("Tipos de serviço");
+  const workerRow = (page: Page, name: string) =>
+    page.getByRole("listitem").filter({ hasText: name });
 
-  await page.getByRole("checkbox", { name: "Limpeza" }).check();
-  await page.getByRole("button", { name: "Cadastrar" }).click();
-  await expect(page.getByText(name, { exact: true })).toBeVisible();
-  await editFirstField(page, name, "Nome completo", `${name} editado`);
+  test("the manager does not register workers: there is no Novo profissional", async ({ page }) => {
+    await page.goto("/profissionais");
+    await expect(page.getByRole("heading", { name: "Profissionais de Campo" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Novo profissional" })).toHaveCount(0);
+  });
+
+  test("approves a self-registered worker into their company's group", async ({ page }) => {
+    const { company, worker } = await pendingWorker(uniqueSuffix());
+    await page.goto("/profissionais");
+    await expect(page.getByRole("heading", { name: "Aguardando aprovação" })).toBeVisible();
+    const pending = workerRow(page, worker.fullName);
+    await expect(pending).toContainText(worker.email);
+    await expect(pending).toContainText(company.name);
+
+    await pending.getByRole("button", { name: `Aprovar ${worker.fullName}` }).click();
+
+    await expect(page.getByRole("heading", { name: company.name })).toBeVisible();
+    const approved = workerRow(page, worker.fullName);
+    await expect(approved).toContainText("Ativo");
+    await expect(approved).toContainText("Feitos hoje: 0");
+    await expect(
+      approved.getByRole("button", { name: `Desativar ${worker.fullName}` }),
+    ).toBeVisible();
+  });
+
+  test("rejects a self-registered worker with a reason", async ({ page }) => {
+    const { worker } = await pendingWorker(uniqueSuffix());
+    await page.goto("/profissionais");
+    await workerRow(page, worker.fullName)
+      .getByRole("button", { name: `Reprovar ${worker.fullName}` })
+      .click();
+    const reject = page.getByRole("dialog", { name: "Reprovar cadastro" });
+    await reject.getByLabel("Motivo (opcional)").fill("E2E: empresa errada");
+    await reject.getByRole("button", { name: "Reprovar" }).click();
+    await expect(reject).toHaveCount(0);
+
+    await page.getByRole("button", { name: /^Reprovados \(\d+\)$/ }).click();
+    const rejected = workerRow(page, worker.fullName);
+    await expect(rejected).toContainText("Motivo: E2E: empresa errada");
+    await expect(
+      rejected.getByRole("button", { name: `Aprovar ${worker.fullName}` }),
+    ).toBeVisible();
+  });
 });
 
 test("Usuários: the admin cannot deactivate their own account", async ({ page }) => {

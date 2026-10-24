@@ -1,6 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
-import { campusToday, SeedApi, uniqueSuffix } from "./support/api";
 import { STORAGE } from "./support/users";
 
 test.use({ storageState: STORAGE.manager });
@@ -24,16 +23,8 @@ async function isCoveredBy(page: Page, target: Locator, owner: Locator): Promise
   );
 }
 
+// The map needs no route on it: Leaflet's panes are what fight the page's own layers.
 test.describe("operations map layering", () => {
-  test.beforeAll(async () => {
-    const api = await SeedApi.signIn("manager");
-    const suffix = uniqueSuffix();
-    const site = await api.createSite(suffix);
-    const worker = await api.fieldWorkerNamed("João da Silva");
-    await api.createRoute(worker.id, campusToday(), [site.points[0]?.id ?? ""]);
-    await api.dispose();
-  });
-
   test("the sticky header stays above the map when the page scrolls", async ({ page }) => {
     // Short viewport so the page has room to scroll the map under the header.
     await page.setViewportSize({ width: 1440, height: 520 });
@@ -42,27 +33,42 @@ test.describe("operations map layering", () => {
     const zoomIn = page.locator(".leaflet-control-zoom-in");
     await expect(zoomIn).toBeVisible();
     const header = page.locator("header").first();
-    const headerBox = await header.boundingBox();
-    const zoomBox = await zoomIn.boundingBox();
-    // Scroll so the zoom control sits right under the middle of the sticky header.
+    const headerHeight = (await header.boundingBox())?.height ?? 0;
+    // Scroll so the zoom control sits right under the middle of the sticky header. Measured
+    // again on every try: the KPI and pool cells above the map arrive with the live snapshot
+    // and can push it down after a single measured scroll (seen flaky in the D5 runs).
+    const goal = headerHeight / 2 + 8;
     await page.mouse.move(900, 300);
-    await page.mouse.wheel(0, (zoomBox?.y ?? 0) - (headerBox?.height ?? 0) / 2 - 8);
-    await expect.poll(async () => (await zoomIn.boundingBox())?.y ?? 0).toBeLessThan(56);
+    await expect
+      .poll(async () => {
+        const y = (await zoomIn.boundingBox())?.y ?? 0;
+        if (Math.abs(y - goal) > 8) {
+          await page.mouse.wheel(0, y - goal);
+        }
+
+        return Math.abs(y - goal) <= 8;
+      })
+      .toBe(true);
 
     expect(await isCoveredBy(page, zoomIn, header)).toBe(true);
   });
 
-  test("a board dialog opened over the map receives the clicks", async ({ page }) => {
-    // Tall enough that the map and the route rows are on screen together (no scroll).
-    await page.setViewportSize({ width: 1440, height: 1600 });
+  // The board lost its route dialogs with manual planning; the menu sheet a phone opens over
+  // the map is the overlay left to check (Leaflet's panes sit at z-index 400+).
+  test("the menu opened over the map on a phone receives the clicks", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/rotas");
     const zoomIn = page.locator(".leaflet-control-zoom-in");
+    await zoomIn.scrollIntoViewIfNeeded();
     await expect(zoomIn).toBeVisible();
-    await page.getByRole("button", { name: "Reatribuir" }).first().click();
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    const overlay = page.locator('[data-slot="dialog-overlay"]');
+    await page
+      .getByRole("button", { name: "Abrir ou fechar o menu" })
+      .filter({ visible: true })
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    // Whatever of the sheet (panel or backdrop) lies over the zoom control, the map must not.
+    const map = page.locator(".leaflet-container");
 
-    expect(await isCoveredBy(page, zoomIn, overlay)).toBe(true);
+    expect(await isCoveredBy(page, zoomIn, map)).toBe(false);
   });
 });
