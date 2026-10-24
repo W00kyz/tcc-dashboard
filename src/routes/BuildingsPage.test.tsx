@@ -56,7 +56,7 @@ function serviceType(id: string, name: string, company: string | null) {
     contractor_company_name: company,
   };
 }
-const IMPACT = { points: 1, floors: 2, routes: 1, executions: 3, photos: 2 };
+const IMPACT = { points: 1, floors: 2, routes: 1, executions: 3, photos: 2, appeals: 1 };
 
 function campusApi() {
   return new FakeApi()
@@ -287,6 +287,7 @@ describe("BuildingsPage", () => {
     );
     const dialog = screen.getByRole("dialog", { name: "Remover Sala 101?" });
     expect(await within(dialog).findByText("3 execuções")).toBeInTheDocument();
+    expect(within(dialog).getByText("1 recurso")).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: "Remover" }));
 
     await waitFor(() => {

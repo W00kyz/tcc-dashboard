@@ -472,6 +472,8 @@ export const strings = {
   deletionImpactExecutionsOne: "1 execução",
   deletionImpactPhotos: "{n} fotos",
   deletionImpactPhotosOne: "1 foto",
+  deletionImpactAppeals: "{n} recursos",
+  deletionImpactAppealsOne: "1 recurso",
   deletionConfirm: "Remover",
   deletionError: "Não foi possível remover. Tente novamente.",
   removeTitle: "Remover {name}?",

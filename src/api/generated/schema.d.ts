@@ -180,6 +180,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/public/privacy-notice": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Public Privacy Notice
+     * @description The notice a worker accepts when signing up; its version goes back in the sign-up.
+     */
+    get: operations["get_public_privacy_notice_public_privacy_notice_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/routes": {
     parameters: {
       query?: never;
@@ -230,8 +250,9 @@ export interface paths {
     /**
      * Start Route
      * @description The "Iniciar rota" button: create or reopen today's route and hand out a batch; a retry
-     *     while the batch is open returns it unchanged. 409 with a machine code when no batch can be
-     *     given.
+     *     while the batch is open returns it unchanged. A route DONE for an empty pool is looked at
+     *     again: reopened with the points released since, else `pool_empty=true`. 409 with a machine
+     *     code when the day or the position refuses any batch.
      */
     post: operations["start_route_routes_start_post"];
     delete?: never;
@@ -252,7 +273,9 @@ export interface paths {
     /**
      * Next Route Batch
      * @description The next batch once the current one has no open stop (unchanged while it has one). An
-     *     empty pool closes the route: `pool_empty=true`, status DONE.
+     *     empty pool closes the route: `pool_empty=true`, status DONE; asking again the same workday
+     *     reopens it when a point went back to the pool. 409 `ROUTE_DONE` for a route of a past
+     *     day.
      */
     post: operations["next_route_batch_routes__route_id__next_batch_post"];
     delete?: never;
@@ -1450,6 +1473,11 @@ export interface components {
   schemas: {
     /** AccessTokenResponse */
     AccessTokenResponse: {
+      worker_status?: components["schemas"]["FieldWorkerStatus"] | null;
+      /** Rejection Reason */
+      rejection_reason?: string | null;
+      /** Worker Active */
+      worker_active?: boolean | null;
       /** Access Token */
       access_token: string;
       /**
@@ -1457,6 +1485,8 @@ export interface components {
        * @default bearer
        */
       token_type: string;
+      /** Consent Required */
+      consent_required: boolean;
     };
     /**
      * AlertKind
@@ -2141,6 +2171,8 @@ export interface components {
       executions: number;
       /** Photos */
       photos: number;
+      /** Appeals */
+      appeals: number;
     };
     /**
      * EmbeddedForm
@@ -3191,6 +3223,11 @@ export interface components {
     };
     /** TokenResponse */
     TokenResponse: {
+      worker_status?: components["schemas"]["FieldWorkerStatus"] | null;
+      /** Rejection Reason */
+      rejection_reason?: string | null;
+      /** Worker Active */
+      worker_active?: boolean | null;
       /** Access Token */
       access_token: string;
       /** Refresh Token */
@@ -3202,9 +3239,6 @@ export interface components {
       token_type: string;
       /** Consent Required */
       consent_required: boolean;
-      worker_status?: components["schemas"]["FieldWorkerStatus"] | null;
-      /** Rejection Reason */
-      rejection_reason?: string | null;
     };
     /** UnreadCountOut */
     UnreadCountOut: {
@@ -3592,6 +3626,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PublicCompanyOut"][];
+        };
+      };
+    };
+  };
+  get_public_privacy_notice_public_privacy_notice_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NoticeOut"];
         };
       };
     };
