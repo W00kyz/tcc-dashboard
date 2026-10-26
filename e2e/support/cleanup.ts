@@ -80,12 +80,31 @@ export function sweepE2eRecords(): string {
 /** Records, by the database clock, that a run starts now, and the settings and alert rules it
  * starts from. Call before the first sign-in. */
 export function markRunStart(): void {
-  writeFileSync(RUN_STARTED_AT_FILE, psql("SELECT now();", ["-tA"]).trim());
   const rows: SeedRows = {
     settings: psql("SELECT row_to_json(s) FROM system_settings s;", ["-tA"]).trim(),
     alertRules: psql("SELECT json_agg(r) FROM alert_rules r;", ["-tA"]).trim(),
   };
+  refuseWidenedSettings(rows.settings);
+  writeFileSync(RUN_STARTED_AT_FILE, psql("SELECT now();", ["-tA"]).trim());
   writeFileSync(SEED_ROWS_FILE, JSON.stringify(rows));
+}
+
+/** The run widens the settings to a service day all week (serviceDay.ts). Finding them already
+ * widened means a killed run's snapshot was lost (e2e/.auth cleaned): taking them as the
+ * starting point would make the widening permanent, so stop and say how to recover. */
+function refuseWidenedSettings(settingsJson: string): void {
+  const settings = JSON.parse(settingsJson) as {
+    service_weekdays: number[];
+    workday_end_time: string;
+  };
+  if (settings.service_weekdays.length === 7 && settings.workday_end_time === "23:59:59") {
+    throw new Error(
+      `system_settings already has service_weekdays=${JSON.stringify(settings.service_weekdays)} ` +
+        `and workday_end_time="${settings.workday_end_time}", the e2e run's own service day: ` +
+        "a killed run left them and its snapshot is gone. Put the real values back in " +
+        "Configurações (default Mon–Fri, 17:00) and run again.",
+    );
+  }
 }
 
 /** The run is fully swept: forget its window and its starting rows. */

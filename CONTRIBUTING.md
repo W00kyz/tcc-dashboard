@@ -56,6 +56,27 @@ arquivo à mão — ele é regenerado inteiro a cada execução. Rodar de novo s
 o schema OpenAPI mudar, isto é, depois de qualquer mudança de request/response de
 rota no `tcc-backend`.
 
+## Testes end-to-end
+
+```bash
+npm run test:e2e
+```
+
+Rodam contra a stack real (`../infra/scripts/dev-up.sh`, ou `docker compose -f
+../infra/docker-compose.yml up -d`), no banco de desenvolvimento. Cada spec cria os próprios
+dados, marcados com "E2E" no nome (ou e-mail `e2e-`), e a execução os apaga no fim
+(`e2e/support/cleanup.sql`). Durante a execução as Configurações viram dia de serviço a semana
+toda, até 23:59:59; ao fim, a linha de configurações e as regras de alerta voltam exatamente como
+estavam.
+
+Para conferir que o banco termina a execução como começou:
+
+```bash
+e2e/support/db-snapshot.sh > antes.txt
+npm run test:e2e
+e2e/support/db-snapshot.sh | diff antes.txt -   # nenhuma diferença
+```
+
 ## Versões
 
 Todas travadas. Imagens Docker por digest, GitHub Actions por SHA, dependências por
