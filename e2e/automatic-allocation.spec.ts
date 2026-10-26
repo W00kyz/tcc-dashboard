@@ -103,10 +103,15 @@ test("a worker's automatic day, from sign-up to an accepted appeal", async ({ pa
     await expect(impediment).toContainText(first ?? "");
     await expect(impediment).toContainText("Acesso bloqueado");
     await expect(impediment).toContainText("E2E: sala trancada");
-    await impediment
-      .getByRole("button", { name: `Ciente do impedimento de ${worker.fullName}` })
-      .click();
-    await expect(impediment).toContainText("Ciente");
+    const acknowledge = impediment.getByRole("button", {
+      name: `Ciente do impedimento de ${worker.fullName}`,
+    });
+    await expect(impediment).toContainText("Pendente");
+    await acknowledge.click();
+    // The button and the resolved badge both read "Ciente": what changes is that the button
+    // and the "Pendente" badge are gone.
+    await expect(acknowledge).toHaveCount(0);
+    await expect(impediment).not.toContainText("Pendente");
   });
 
   await test.step("silent past the limit, the rest of the batch is released too", async () => {

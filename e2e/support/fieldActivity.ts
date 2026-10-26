@@ -166,6 +166,17 @@ export async function executionWithMediaAnswer(prompt: string): Promise<MediaExe
   return { servicePointId: point, arrivedKey, missingKey };
 }
 
+/** A GPS fix from `started`'s worker at the E2E site, so the board has a position for them. */
+export async function reportedPosition(started: StartedRoute): Promise<void> {
+  const app = await SeedApi.signInAs(started.worker.email, started.worker.password);
+  await app.post("/worker-positions", {
+    route_id: started.routeId,
+    ...SITE_SPOT,
+    reported_at: new Date().toISOString(),
+  });
+  await app.dispose();
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
@@ -174,6 +185,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
  * LOCATION_SILENCE, which the worker can appeal. The worker's last sign of life is the batch
  * handout (no position, no scan was sent), so moving it back is the whole of the silence; the
  * scan judges against the real clock, so nothing else on the stack is aged with it.
+ * WARNING: in the first 46 min after midnight (campus) this moves `started_at` into the previous
+ * day; the route keeps today's `route_date`, so the release still happens.
  */
 export function releaseForSilence(routeId: string, minutes = 46): void {
   if (!UUID.test(routeId)) {
