@@ -160,12 +160,12 @@ describe("AppShell navigation", () => {
     expect(within(breadcrumb).getByText("Notificações")).toHaveAttribute("aria-current", "page");
   });
 
-  it("links every registry page for a manager, and the form builder under planning (RF36)", async () => {
+  it("links every registry page for a manager", async () => {
     renderNav("MANAGER", makeFakeFetch(0));
     await openModule("Cadastros");
     await openModule("Planejamento");
 
-    for (const name of ["Prédios e pontos", "Profissionais", "Empresas", "Formulários"]) {
+    for (const name of ["Prédios e pontos", "Profissionais", "Empresas"]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
     // Service types live inside their company now; planning by hand is gone (§8.1).
@@ -236,12 +236,20 @@ describe("AppShell navigation", () => {
     expect(urls.some((url) => url.endsWith("/auth/logout"))).toBe(true);
   });
 
-  it("registers /formularios under the MANAGER/ADMIN ProtectedRoute", () => {
+  it("has no Formulários menu entry", async () => {
+    renderNav("MANAGER", makeFakeFetch(0));
+    await openModule("Cadastros");
+    await openModule("Planejamento");
+
+    expect(screen.queryByText(/Formulários/i)).toBeNull();
+  });
+
+  it("does not register the /formularios form builder route", () => {
     const managerBranch = appRoutes.find((branch) =>
       branch.children?.some((child) => child.path === "/rotas"),
     );
 
-    expect(managerBranch?.children?.map((child) => child.path)).toContain("/formularios");
+    expect(managerBranch?.children?.map((child) => child.path)).not.toContain("/formularios");
   });
 
   it("registers /notificacoes under the MANAGER/ADMIN ProtectedRoute", () => {

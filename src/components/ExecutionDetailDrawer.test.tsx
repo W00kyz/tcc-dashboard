@@ -28,8 +28,6 @@ const DETAIL = {
   route_id: "r1",
   clock_skew_seconds: null,
   appeal_id: null,
-  form_version_id: null,
-  answers: [],
   scans: [
     {
       kind: "CHECK_IN",
@@ -215,26 +213,8 @@ describe("ExecutionDetailDrawer", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("renders form answers with prompt-to-value formatting when form_version_id is set", async () => {
-    renderDrawer(
-      makeFakeFetch({
-        form_version_id: "fv1",
-        answers: [
-          { question_stable_key: "k1", prompt: "Área limpa?", value: true },
-          { question_stable_key: "k2", prompt: "Nível", value: ["baixo", "médio"] },
-        ],
-      }),
-    );
-
-    expect(await screen.findByText("Formulário")).toBeInTheDocument();
-    expect(screen.getByText("Área limpa?:")).toBeInTheDocument();
-    expect(screen.getByText("Sim")).toBeInTheDocument();
-    expect(screen.getByText("Nível:")).toBeInTheDocument();
-    expect(screen.getByText("baixo, médio")).toBeInTheDocument();
-  });
-
-  it("shows each MEDIA question's photos under its prompt, and not again as loose evidence", async () => {
-    const photo = (id: string, key: string) => ({
+  it("lists every photo in the evidence section", async () => {
+    const photo = (id: string) => ({
       id,
       kind: "PHOTO",
       text_body: null,
@@ -243,70 +223,15 @@ describe("ExecutionDetailDrawer", () => {
       captured_at: "2026-08-30T13:10:00Z",
       created_at: "2026-08-30T13:10:01Z",
       content_url: `/evidence/${id}/content`,
-      idempotency_key: key,
+      idempotency_key: id,
     });
-    renderDrawer(
-      makeFakeFetch({
-        form_version_id: "fv1",
-        // "gone" never arrived; "other" belongs to another execution, so it is not here either.
-        answers: [
-          {
-            question_stable_key: "k1",
-            prompt: "Foto do piso",
-            value: ["kp1", "gone", "other"],
-            question_type: "MEDIA",
-          },
-        ],
-        evidence: [photo("ev1", "kp1"), photo("ev2", "loose")],
-        evidence_count: 2,
-      }),
-    );
+    renderDrawer(makeFakeFetch({ evidence: [photo("ev1"), photo("ev2")], evidence_count: 2 }));
 
-    const answer = (await screen.findByText("Foto do piso:")).closest("li");
-    if (answer === null) {
-      throw new Error("expected the MEDIA answer to render as a list item");
-    }
-    expect(within(answer).getAllByRole("button")).toHaveLength(1);
-    expect(within(answer).getByText("2 fotos ainda não recebidas")).toBeInTheDocument();
-    const loose = screen.getByRole("heading", { name: "Evidências" }).closest("section");
-    if (loose === null) {
+    const section = (await screen.findByRole("heading", { name: "Evidências" })).closest("section");
+    if (section === null) {
       throw new Error("expected the evidence section");
     }
-    expect(within(loose).getAllByRole("button")).toHaveLength(1);
-  });
-
-  it("says when a MEDIA question was answered with no photo", async () => {
-    renderDrawer(
-      makeFakeFetch({
-        form_version_id: "fv1",
-        answers: [
-          { question_stable_key: "k1", prompt: "Foto extra", value: [], question_type: "MEDIA" },
-        ],
-      }),
-    );
-
-    expect(await screen.findByText("Foto extra:")).toBeInTheDocument();
-    expect(screen.getByText("Nenhuma foto")).toBeInTheDocument();
-  });
-
-  it("falls back to the removed-question label when an answer's prompt is null", async () => {
-    renderDrawer(
-      makeFakeFetch({
-        form_version_id: "fv1",
-        answers: [{ question_stable_key: "k1", prompt: null, value: "resposta" }],
-      }),
-    );
-
-    expect(await screen.findByText("Formulário")).toBeInTheDocument();
-    expect(screen.getByText("(pergunta removida da versão):")).toBeInTheDocument();
-    expect(screen.getByText("resposta")).toBeInTheDocument();
-  });
-
-  it("omits the form section entirely when form_version_id is null", async () => {
-    renderDrawer(makeFakeFetch({ form_version_id: null, answers: [] }));
-
-    await screen.findByText("Linha do tempo");
-    expect(screen.queryByText("Formulário")).not.toBeInTheDocument();
+    expect(within(section).getAllByRole("button")).toHaveLength(2);
   });
 
   it("shows the accepted appeal behind an execution done by appeal", async () => {

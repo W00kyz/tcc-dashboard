@@ -29,10 +29,6 @@ CREATE TEMP TABLE e2e_workers ON COMMIT DROP AS
 CREATE TEMP TABLE e2e_service_types ON COMMIT DROP AS
   SELECT id FROM service_types
   WHERE name LIKE 'E2E %' OR contractor_company_id IN (SELECT id FROM e2e_companies);
--- Forms belong to a service type; their audit entries (add_question, publish_form) point at
--- the form id.
-CREATE TEMP TABLE e2e_forms ON COMMIT DROP AS
-  SELECT id FROM forms WHERE service_type_id IN (SELECT id FROM e2e_service_types);
 -- A seed worker allocated an E2E point holds an E2E route: the route is the test's, so it goes
 -- by its points, not by its worker.
 CREATE TEMP TABLE e2e_routes ON COMMIT DROP AS
@@ -72,8 +68,7 @@ DELETE FROM audit_trail WHERE entity_id IN (
   UNION ALL SELECT id FROM e2e_users UNION ALL SELECT id FROM e2e_routes
   UNION ALL SELECT id FROM e2e_stops UNION ALL SELECT id FROM e2e_executions
   UNION ALL SELECT id FROM e2e_qr_codes UNION ALL SELECT id FROM e2e_alerts
-  UNION ALL SELECT id FROM e2e_forms UNION ALL SELECT id FROM e2e_impediments
-  UNION ALL SELECT id FROM e2e_appeals
+  UNION ALL SELECT id FROM e2e_impediments UNION ALL SELECT id FROM e2e_appeals
 );
 
 -- Notifications point at what they are about only inside the JSON payload, not by foreign key:
@@ -85,7 +80,6 @@ DELETE FROM notifications
      OR data->>'impediment_id' IN (SELECT id::text FROM e2e_impediments)
      OR data->>'appeal_id' IN (SELECT id::text FROM e2e_appeals);
 
-DELETE FROM answers WHERE execution_id IN (SELECT id FROM e2e_executions);
 DELETE FROM evidence_items WHERE execution_id IN (SELECT id FROM e2e_executions);
 DELETE FROM qr_scans
   WHERE execution_id IN (SELECT id FROM e2e_executions)
@@ -108,12 +102,6 @@ DELETE FROM buildings WHERE id IN (SELECT id FROM e2e_buildings);
 
 DELETE FROM field_workers WHERE id IN (SELECT id FROM e2e_workers);
 
-DELETE FROM form_questions WHERE form_version_id IN (
-  SELECT form_versions.id FROM form_versions JOIN forms ON forms.id = form_versions.form_id
-  WHERE forms.service_type_id IN (SELECT id FROM e2e_service_types));
-DELETE FROM form_versions WHERE form_id IN (
-  SELECT id FROM forms WHERE service_type_id IN (SELECT id FROM e2e_service_types));
-DELETE FROM forms WHERE service_type_id IN (SELECT id FROM e2e_service_types);
 DELETE FROM service_types WHERE id IN (SELECT id FROM e2e_service_types);
 -- After its workers and its service types: both point at the company.
 DELETE FROM contractor_companies WHERE id IN (SELECT id FROM e2e_companies);

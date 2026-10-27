@@ -52,8 +52,6 @@ const EXECUTION_A_DETAIL = {
   ...EXECUTION_A,
   scans: [],
   evidence: [],
-  form_version_id: null,
-  answers: [],
 };
 
 const WORKERS = [
