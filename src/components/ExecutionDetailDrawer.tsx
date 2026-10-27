@@ -30,6 +30,7 @@ const FLAG_LABEL_KEY: Record<string, StringKey> = {
   GPS_UNAVAILABLE: "executionFlagGpsUnavailable",
   ROOM_CHOSEN_MANUALLY: "executionFlagRoomChosenManually",
   CLOCK_SKEW: "executionFlagClockSkew",
+  INSUFFICIENT_EVIDENCE: "executionFlagInsufficientEvidence",
 };
 
 const SCAN_KIND_LABEL_KEY: Record<string, StringKey> = {
@@ -205,6 +206,15 @@ function DetailBody({
           </div>
         )}
       </section>
+
+      {detail.complaints_suggestions !== null && (
+        <section>
+          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
+            {t("executionComplaintsSuggestions")}
+          </h3>
+          <p className="mt-1 text-sm whitespace-pre-wrap">{detail.complaints_suggestions}</p>
+        </section>
+      )}
 
       {detail.review_status === "PENDING_REVIEW" && (
         <section className="space-y-2">

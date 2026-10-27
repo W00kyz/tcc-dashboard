@@ -21,3 +21,19 @@ Object.defineProperty(window, "matchMedia", {
 if (typeof Element.prototype.scrollIntoView !== "function") {
   Element.prototype.scrollIntoView = () => undefined;
 }
+
+// jsdom has no ResizeObserver; Radix's Checkbox measures its hidden form input with one when it
+// sits inside a <form> (the company dialog).
+if (typeof globalThis.ResizeObserver !== "function") {
+  globalThis.ResizeObserver = class {
+    observe() {
+      return undefined;
+    }
+    unobserve() {
+      return undefined;
+    }
+    disconnect() {
+      return undefined;
+    }
+  };
+}

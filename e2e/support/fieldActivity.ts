@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { registerWorker, type RegisteredWorker, SeedApi, uniqueSuffix } from "./api";
 import { psql, runReleaseScan } from "./stack";
@@ -119,4 +119,52 @@ UPDATE routes
        started_at = started_at - interval '${String(minutes)} minutes'
  WHERE id = '${routeId}';`);
   runReleaseScan();
+}
+
+// A 1x1 JPEG: the evidence endpoint only accepts JPEG bytes, and the drawer decodes them.
+const TINY_JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/yQALCAABAAEBAREA/8wABgAQEAX/2gAIAQEAAD8A0s8g/9k=",
+  "base64",
+);
+
+export interface FinishedExecution extends StartedRoute {
+  executionId: string;
+  complaints: string;
+}
+
+/** A worker's whole visit, through the API the app calls: check-in at a new E2E site's point,
+ * two photos, then check-out carrying `complaints` as the free text. */
+export async function finishedExecutionWithEvidence(
+  complaints = "E2E: torneira da pia vazando\nE2E: faltou papel toalha",
+): Promise<FinishedExecution> {
+  const started = await startedRouteOnNewSite();
+  const manager = await SeedApi.signIn("manager");
+  const qr = await manager.post<{ public_code: string }>(`/floors/${started.floorId}/qr-codes`, {
+    reason: "E2E: evidências",
+  });
+  await manager.dispose();
+
+  const app = await SeedApi.signInAs(started.worker.email, started.worker.password);
+  const checkIn = await app.post<{ execution_id: string }>("/check-ins", {
+    qr_payload: qr.public_code,
+    scanned_at: new Date().toISOString(),
+    idempotency_key: randomUUID(),
+  });
+  for (let photo = 0; photo < 2; photo += 1) {
+    await app.postMultipart(`/executions/${checkIn.execution_id}/evidence/photo`, {
+      file: { name: "e2e.jpg", mimeType: "image/jpeg", buffer: TINY_JPEG },
+      sha256: createHash("sha256").update(TINY_JPEG).digest("hex"),
+      captured_at: new Date().toISOString(),
+      idempotency_key: randomUUID(),
+    });
+  }
+  await app.post("/check-outs", {
+    qr_payload: qr.public_code,
+    scanned_at: new Date().toISOString(),
+    checkout_idempotency_key: randomUUID(),
+    complaints_suggestions: complaints,
+  });
+  await app.dispose();
+
+  return { ...started, executionId: checkIn.execution_id, complaints };
 }

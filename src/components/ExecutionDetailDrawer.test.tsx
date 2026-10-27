@@ -49,6 +49,7 @@ const DETAIL = {
     },
   ],
   evidence: [],
+  complaints_suggestions: null,
 };
 
 const APPEAL = {
@@ -211,6 +212,33 @@ describe("ExecutionDetailDrawer", () => {
     expect(
       screen.queryByRole("button", { name: "Marcar revisão como resolvida" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the complaints and suggestions typed at check-out, keeping line breaks", async () => {
+    renderDrawer(makeFakeFetch({ complaints_suggestions: "Falta papel\nTorneira vazando" }));
+
+    const heading = await screen.findByRole("heading", { name: "Reclamações e Sugestões" });
+    const section = heading.closest("section");
+    if (section === null) {
+      throw new Error("expected the complaints section");
+    }
+    const text = within(section).getByText(/Falta papel/);
+    expect(text).toHaveTextContent("Falta papel Torneira vazando");
+    expect(text).toHaveClass("whitespace-pre-wrap");
+  });
+
+  it("omits the complaints section when none was typed", async () => {
+    renderDrawer(makeFakeFetch({ complaints_suggestions: null }));
+
+    await screen.findByText("Linha do tempo");
+    expect(screen.queryByText("Reclamações e Sugestões")).not.toBeInTheDocument();
+  });
+
+  it("labels the INSUFFICIENT_EVIDENCE flag in pt-BR", async () => {
+    renderDrawer(makeFakeFetch({ validation_flags: ["INSUFFICIENT_EVIDENCE"] }));
+
+    expect(await screen.findByText("Evidências insuficientes")).toBeInTheDocument();
+    expect(screen.queryByText("INSUFFICIENT_EVIDENCE")).not.toBeInTheDocument();
   });
 
   it("lists every photo in the evidence section", async () => {
