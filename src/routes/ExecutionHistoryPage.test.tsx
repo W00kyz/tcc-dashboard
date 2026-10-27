@@ -23,6 +23,8 @@ const EXECUTION_A = {
   source: "APP",
   evidence_count: 3,
   route_id: "r1",
+  clock_skew_seconds: null,
+  appeal_id: null,
 };
 
 const EXECUTION_B = {
@@ -39,37 +41,24 @@ const EXECUTION_B = {
   geo_validation: null,
   review_status: "NONE",
   validation_flags: [],
-  source: "MANAGER_MANUAL",
+  source: "APPEAL",
   evidence_count: 0,
   route_id: "r2",
+  clock_skew_seconds: null,
+  appeal_id: "ap1",
 };
 
 const EXECUTION_A_DETAIL = {
   ...EXECUTION_A,
   scans: [],
   evidence: [],
-  manual_completion: null,
   form_version_id: null,
   answers: [],
-  reassigned: false,
-  assignment_history: null,
 };
 
 const WORKERS = [
-  {
-    id: "w1",
-    full_name: "João da Silva",
-    contractor_company_id: "c1",
-    service_type_ids: [],
-    user_id: null,
-  },
-  {
-    id: "w2",
-    full_name: "Maria Souza",
-    contractor_company_id: "c1",
-    service_type_ids: [],
-    user_id: null,
-  },
+  { id: "w1", full_name: "João da Silva", contractor_company_id: "c1" },
+  { id: "w2", full_name: "Maria Souza", contractor_company_id: "c1" },
 ];
 
 const BUILDINGS = [{ id: "b1", name: "Bloco CG", campus_area: "Central" }];
@@ -147,6 +136,34 @@ describe("ExecutionHistoryPage", () => {
       timeStyle: "short",
     });
     expect(screen.getByText(checkIn)).toBeInTheDocument();
+  });
+
+  it("names the origin of each execution, an accepted appeal as 'Por recurso'", async () => {
+    renderPage(makeFakeFetch());
+
+    // Each row is a button that opens the drawer, named after its worker.
+    const appealRow = await screen.findByRole("button", { name: /Maria Souza/ });
+    expect(within(appealRow).getByText("Por recurso")).toBeInTheDocument();
+    const appRow = screen.getByRole("button", { name: /João da Silva/ });
+    expect(within(appRow).getByText("App")).toBeInTheDocument();
+  });
+
+  it("filters by origin: app or appeal, no more manual completion", async () => {
+    const fakeFetch = makeFakeFetch();
+    renderPage(fakeFetch);
+    await screen.findByRole("button", { name: /Maria Souza/ });
+
+    const source = screen.getByLabelText("Origem");
+    expect(
+      within(source)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Todas", "App", "Por recurso"]);
+    fireEvent.change(source, { target: { value: "APPEAL" } });
+
+    await waitFor(() => {
+      expect(executionQueries(fakeFetch).some((url) => url.includes("source=APPEAL"))).toBe(true);
+    });
   });
 
   it("shows the empty state when no execution matches", async () => {

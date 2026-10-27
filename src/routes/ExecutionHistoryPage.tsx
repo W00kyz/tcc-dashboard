@@ -29,7 +29,7 @@ type ApiClient = ReturnType<typeof createApiClient>;
 
 type ReviewStatus = "PENDING_REVIEW" | "RESOLVED" | "NONE";
 type GeoValidation = "VALIDATED" | "OUT_OF_RADIUS" | "NOT_VALIDATED";
-type ExecutionSource = "APP" | "MANAGER_MANUAL";
+type ExecutionSource = "APP" | "APPEAL";
 
 interface ExecutionFilters {
   dateFrom: string;
@@ -62,7 +62,7 @@ const REVIEW_BADGE: Record<"PENDING_REVIEW" | "RESOLVED", { key: StringKey; tone
 
 const SOURCE_LABEL_KEY: Record<ExecutionSource, StringKey> = {
   APP: "executionsSourceApp",
-  MANAGER_MANUAL: "executionsSourceManual",
+  APPEAL: "executionsSourceAppeal",
 };
 
 // `ExecutionListItem` types these enum-ish fields as bare `string`; fold any value outside
@@ -78,7 +78,7 @@ function toReviewBadge(value: string): "PENDING_REVIEW" | "RESOLVED" | null {
 }
 
 function toSource(value: string): ExecutionSource {
-  return value === "MANAGER_MANUAL" ? "MANAGER_MANUAL" : "APP";
+  return value === "APPEAL" ? "APPEAL" : "APP";
 }
 
 function formatDateTime(iso: string): string {
@@ -365,9 +365,7 @@ export function ExecutionHistoryPage() {
           >
             <NativeSelectOption value="">{t("executionsFilterAll")}</NativeSelectOption>
             <NativeSelectOption value="APP">{t("executionsSourceApp")}</NativeSelectOption>
-            <NativeSelectOption value="MANAGER_MANUAL">
-              {t("executionsSourceManual")}
-            </NativeSelectOption>
+            <NativeSelectOption value="APPEAL">{t("executionsSourceAppeal")}</NativeSelectOption>
           </NativeSelect>
         </div>
       </fieldset>

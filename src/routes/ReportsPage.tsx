@@ -5,20 +5,12 @@ import { authAwareFetch } from "@/api/authFetch";
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
-import { formatReportPeriodBr } from "@/lib/dates";
 import { Label } from "@/components/ui/label";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ComplianceReportTable } from "@/components/reports/ComplianceReportTable";
 import { FileDown, FileSpreadsheet } from "lucide-react";
 import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
 import { Button } from "@/components/ui/button";
@@ -26,17 +18,18 @@ import { Input } from "@/components/ui/input";
 
 type ApiClient = ReturnType<typeof createApiClient>;
 type ComplianceReport = components["schemas"]["ComplianceReportOut"];
-type ComplianceTotals = components["schemas"]["ComplianceTotalsOut"];
 type Granularity = components["schemas"]["ReportGranularity"];
+type Outcome = "DONE" | "DONE_BY_APPEAL" | "UNSERVED";
 
 interface ReportFilters {
   granularity: Granularity;
   dateFrom: string;
   dateTo: string;
   fieldWorkerId: string;
+  companyId: string;
   serviceTypeId: string;
   buildingId: string;
-  routeStatus: string;
+  outcome: "" | Outcome;
 }
 
 const GRANULARITY_OPTIONS: { value: Granularity; key: StringKey }[] = [
@@ -45,35 +38,13 @@ const GRANULARITY_OPTIONS: { value: Granularity; key: StringKey }[] = [
   { value: "MONTHLY", key: "reportsGranularityMonthly" },
 ];
 
-const ROUTE_STATUS_OPTIONS: { value: string; key: StringKey }[] = [
-  { value: "PLANNED", key: "reportsRouteStatusPlanned" },
-  { value: "IN_PROGRESS", key: "reportsRouteStatusInProgress" },
-  { value: "DONE", key: "reportsRouteStatusDone" },
-  { value: "CANCELLED", key: "reportsRouteStatusCancelled" },
+// The RF44 "status" axis is the point-day outcome (spec 2026-10-20-alocacao-automatica §8.7); the
+// labels match the ones the API echoes back in `filters_applied.outcome`.
+const OUTCOME_OPTIONS: { value: Outcome; key: StringKey }[] = [
+  { value: "DONE", key: "reportsOutcomeDone" },
+  { value: "DONE_BY_APPEAL", key: "reportsOutcomeDoneByAppeal" },
+  { value: "UNSERVED", key: "reportsOutcomeUnserved" },
 ];
-
-// Column order mirrors `ComplianceRowOut` / `ComplianceTotalsOut`: the 13 absolute indicators,
-// then `completion_rate` rendered separately as a percentage.
-const METRIC_COLUMNS: { field: keyof ComplianceTotals; key: StringKey }[] = [
-  { field: "routes_total", key: "reportsColRoutesTotal" },
-  { field: "routes_started", key: "reportsColRoutesStarted" },
-  { field: "routes_completed", key: "reportsColRoutesCompleted" },
-  { field: "routes_cancelled", key: "reportsColRoutesCancelled" },
-  { field: "stops_total", key: "reportsColStopsTotal" },
-  { field: "stops_done", key: "reportsColStopsDone" },
-  { field: "stops_pending", key: "reportsColStopsPending" },
-  { field: "stops_reassigned", key: "reportsColStopsReassigned" },
-  { field: "executions_total", key: "reportsColExecutionsTotal" },
-  { field: "executions_with_evidence", key: "reportsColExecutionsWithEvidence" },
-  { field: "executions_flagged", key: "reportsColExecutionsFlagged" },
-  { field: "impediments_total", key: "reportsColImpediments" },
-  { field: "alerts_total", key: "reportsColAlerts" },
-];
-
-// "87,3%" — one decimal, pt-BR comma. `completion_rate` is a 0..1 ratio from the builder.
-function formatRate(rate: number): string {
-  return `${(rate * 100).toFixed(1).replace(".", ",")}%`;
-}
 
 function isRangeValid(filters: ReportFilters): boolean {
   return filters.dateFrom !== "" && filters.dateTo !== "" && filters.dateTo >= filters.dateFrom;
@@ -88,14 +59,17 @@ function buildExportQuery(filters: ReportFilters): URLSearchParams {
   if (filters.fieldWorkerId) {
     qs.set("field_worker_id", filters.fieldWorkerId);
   }
+  if (filters.companyId) {
+    qs.set("company_id", filters.companyId);
+  }
   if (filters.serviceTypeId) {
     qs.set("service_type_id", filters.serviceTypeId);
   }
   if (filters.buildingId) {
     qs.set("building_id", filters.buildingId);
   }
-  if (filters.routeStatus) {
-    qs.set("route_status", filters.routeStatus);
+  if (filters.outcome) {
+    qs.set("outcome", filters.outcome);
   }
 
   return qs;
@@ -113,9 +87,10 @@ async function fetchComplianceReport(
         date_to: filters.dateTo,
         // Empty string would 422; send `undefined` so openapi-fetch omits the param.
         field_worker_id: filters.fieldWorkerId || undefined,
+        company_id: filters.companyId || undefined,
         service_type_id: filters.serviceTypeId || undefined,
         building_id: filters.buildingId || undefined,
-        route_status: filters.routeStatus || undefined,
+        outcome: filters.outcome || undefined,
       },
     },
   });
@@ -131,9 +106,10 @@ function FiltersAppliedCaption({ report }: { report: ComplianceReport }) {
   const applied = report.filters_applied;
   const parts = [
     applied.field_worker_name,
+    applied.company_name,
     applied.service_type_name,
     applied.building_name,
-    applied.route_status,
+    applied.outcome,
   ].filter((value): value is string => Boolean(value));
 
   return (
@@ -141,54 +117,6 @@ function FiltersAppliedCaption({ report }: { report: ComplianceReport }) {
       {t("reportsFiltersAppliedPrefix")}{" "}
       {parts.length > 0 ? parts.join(" · ") : t("reportsFiltersAppliedNone")}
     </p>
-  );
-}
-
-function ReportTable({ report }: { report: ComplianceReport }) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="bg-card rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t("reportsColPeriod")}</TableHead>
-            {METRIC_COLUMNS.map((column) => (
-              <TableHead className="text-right" key={column.field}>
-                {t(column.key)}
-              </TableHead>
-            ))}
-            <TableHead className="text-right">{t("reportsColCompletionRate")}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {report.periods.map((period) => (
-            <TableRow key={period.period_start}>
-              <TableCell className="font-semibold whitespace-nowrap">
-                {formatReportPeriodBr(report.granularity, period.period_start)}
-              </TableCell>
-              {METRIC_COLUMNS.map((column) => (
-                <TableCell className="text-right" key={column.field}>
-                  {period[column.field]}
-                </TableCell>
-              ))}
-              <TableCell className="text-right">{formatRate(period.completion_rate)}</TableCell>
-            </TableRow>
-          ))}
-          <TableRow className="bg-muted/60 font-bold hover:bg-muted/60">
-            <TableCell>{t("reportsTotalsRow")}</TableCell>
-            {METRIC_COLUMNS.map((column) => (
-              <TableCell className="text-right" key={column.field}>
-                {report.totals[column.field]}
-              </TableCell>
-            ))}
-            <TableCell className="text-right">
-              {formatRate(report.totals.completion_rate)}
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
   );
 }
 
@@ -205,9 +133,10 @@ export function ReportsPage() {
     dateFrom: "",
     dateTo: "",
     fieldWorkerId: "",
+    companyId: "",
     serviceTypeId: "",
     buildingId: "",
-    routeStatus: "",
+    outcome: "",
   });
   // The report is on demand: a snapshot of the filters taken when "Gerar" is clicked keys the
   // query and enables it. Editing filters afterwards does not refetch until "Gerar" again.
@@ -221,6 +150,10 @@ export function ReportsPage() {
   const { data: workers } = useQuery({
     queryKey: ["field-workers"],
     queryFn: async () => (await client.GET("/field-workers")).data ?? [],
+  });
+  const { data: companies } = useQuery({
+    queryKey: ["contractor-companies"],
+    queryFn: async () => (await client.GET("/contractor-companies")).data ?? [],
   });
   const { data: serviceTypes } = useQuery({
     queryKey: ["service-types"],
@@ -290,7 +223,7 @@ export function ReportsPage() {
         aria-label={t("reportsParametersLabel")}
         className="bg-card space-y-5 rounded-md border p-4 sm:p-5"
       >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           <div className="space-y-1.5">
             <Label htmlFor="report-date-from">{t("reportsFilterDateFrom")}</Label>
             <Input
@@ -331,6 +264,23 @@ export function ReportsPage() {
             </NativeSelect>
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="report-company">{t("reportsFilterCompany")}</Label>
+            <NativeSelect
+              id="report-company"
+              value={filters.companyId}
+              onChange={(event) => {
+                updateFilters({ companyId: event.target.value });
+              }}
+            >
+              <NativeSelectOption value="">{t("reportsFilterAll")}</NativeSelectOption>
+              {companies?.map((company) => (
+                <NativeSelectOption key={company.id} value={company.id}>
+                  {company.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="report-service-type">{t("reportsFilterServiceType")}</Label>
             <NativeSelect
               id="report-service-type"
@@ -365,16 +315,16 @@ export function ReportsPage() {
             </NativeSelect>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="report-route-status">{t("reportsFilterRouteStatus")}</Label>
+            <Label htmlFor="report-outcome">{t("reportsFilterOutcome")}</Label>
             <NativeSelect
-              id="report-route-status"
-              value={filters.routeStatus}
+              id="report-outcome"
+              value={filters.outcome}
               onChange={(event) => {
-                updateFilters({ routeStatus: event.target.value });
+                updateFilters({ outcome: event.target.value as ReportFilters["outcome"] });
               }}
             >
               <NativeSelectOption value="">{t("reportsFilterAll")}</NativeSelectOption>
-              {ROUTE_STATUS_OPTIONS.map((option) => (
+              {OUTCOME_OPTIONS.map((option) => (
                 <NativeSelectOption key={option.value} value={option.value}>
                   {t(option.key)}
                 </NativeSelectOption>
@@ -451,7 +401,7 @@ export function ReportsPage() {
           {reportQuery.data.periods.length === 0 ? (
             <EmptyState>{t("reportsEmpty")}</EmptyState>
           ) : (
-            <ReportTable report={reportQuery.data} />
+            <ComplianceReportTable report={reportQuery.data} />
           )}
         </div>
       )}

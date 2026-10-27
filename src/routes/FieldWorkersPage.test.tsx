@@ -1,14 +1,58 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
+import { FakeApi } from "@/test/fakeApi";
 import { listItemWithText } from "@/test/queries";
 
-function renderPage(fetchImpl: typeof fetch) {
+function worker(overrides: Record<string, unknown>) {
+  return {
+    id: "w1",
+    full_name: "João da Silva",
+    email: "joao@ufcg.edu.br",
+    contractor_company_id: "c1",
+    contractor_company_name: "Limpa Tudo",
+    status: "APPROVED",
+    is_active: true,
+    rejection_reason: null,
+    created_at: "2026-10-01T12:00:00Z",
+    done_today: 3,
+    ...overrides,
+  };
+}
+
+const JOAO = worker({});
+const PEDRO = worker({
+  id: "w2",
+  full_name: "Pedro Alves",
+  email: "pedro@ufcg.edu.br",
+  contractor_company_id: "c2",
+  contractor_company_name: "Zelo Serviços",
+  is_active: false,
+  done_today: 0,
+});
+const MARIA = worker({
+  id: "w3",
+  full_name: "Maria Souza",
+  email: "maria@ufcg.edu.br",
+  status: "PENDING_APPROVAL",
+  done_today: 0,
+});
+const ANA = worker({
+  id: "w4",
+  full_name: "Ana Lima",
+  email: "ana@ufcg.edu.br",
+  status: "REJECTED",
+  rejection_reason: "Documento ilegível",
+  done_today: 0,
+});
+
+function renderPage(api: FakeApi) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  vi.stubGlobal("fetch", fetchImpl);
+  api.install();
 
   return render(
     <QueryClientProvider client={queryClient}>
@@ -19,172 +63,201 @@ function renderPage(fetchImpl: typeof fetch) {
   );
 }
 
-// Every test hits the four GET queries the page fires on mount, in the order the
-// component declares them: field workers, contractor companies, service types,
-// linkable users (Finding C2 — GET /field-workers/linkable-users, not GET /users).
-function mockListResponses({
-  workers = [],
-  companies = [],
-  serviceTypes = [],
-  linkableUsers = [],
-}: {
-  workers?: unknown[];
-  companies?: unknown[];
-  serviceTypes?: unknown[];
-  linkableUsers?: unknown[];
-}) {
-  return vi
-    .fn()
-    .mockResolvedValueOnce(new Response(JSON.stringify(workers), { status: 200 }))
-    .mockResolvedValueOnce(new Response(JSON.stringify(companies), { status: 200 }))
-    .mockResolvedValueOnce(new Response(JSON.stringify(serviceTypes), { status: 200 }))
-    .mockResolvedValueOnce(new Response(JSON.stringify(linkableUsers), { status: 200 }));
+function apiWith(workers: unknown[]) {
+  return new FakeApi().on("GET", "/field-workers", workers);
 }
 
 describe("FieldWorkersPage", () => {
-  it("lists field workers with their company name", async () => {
-    const fakeFetch = mockListResponses({
-      workers: [
-        {
-          id: "w1",
-          full_name: "João da Silva",
-          contractor_company_id: "c1",
-          service_type_ids: ["s1"],
-          user_id: null,
-        },
-      ],
-      companies: [{ id: "c1", name: "Limpa Tudo", cnpj: "12345678000199" }],
-      serviceTypes: [{ id: "s1", name: "Limpeza", average_duration_minutes: 30 }],
-    });
+  it("groups workers by company", async () => {
+    renderPage(apiWith([JOAO, PEDRO, MARIA]));
 
-    renderPage(fakeFetch);
-
-    await waitFor(() => {
-      expect(screen.getByText("João da Silva")).toBeInTheDocument();
-    });
-    const worker = listItemWithText("João da Silva");
-    expect(within(worker).getByText("Limpa Tudo")).toBeInTheDocument();
-  });
-
-  // Finding C2: the dropdown used to fetch the full GET /users list (Admin-only) and filter
-  // it client-side to FIELD_WORKER-role, not-yet-linked users — a Manager (who owns this
-  // whole screen) got a silent 403 there and an empty dropdown. GET /field-workers/
-  // linkable-users is Manager-or-Admin and does that filtering server-side, so this test only
-  // needs to confirm the dropdown renders exactly what that endpoint returns — there is no
-  // client-side filter left to exercise.
-  it("populates the linked-user dropdown from GET /field-workers/linkable-users", async () => {
-    const fakeFetch = mockListResponses({
-      workers: [
-        {
-          id: "w1",
-          full_name: "João da Silva",
-          contractor_company_id: "c1",
-          service_type_ids: [],
-          user_id: "u1",
-        },
-      ],
-      companies: [{ id: "c1", name: "Limpa Tudo", cnpj: "12345678000199" }],
-      linkableUsers: [{ id: "u2", name: "Maria Souza", email: "u2@example.com" }],
-    });
-
-    const { default: userEvent } = await import("@testing-library/user-event");
-    renderPage(fakeFetch);
-
-    await userEvent.click(await screen.findByRole("button", { name: "Novo profissional" }));
-    const linkedUserSelect = await screen.findByLabelText("Vincular usuário de login (opcional)");
-    await waitFor(() => {
-      expect(within(linkedUserSelect).getByText(/Maria Souza/)).toBeInTheDocument();
-    });
-    // The already-linked worker and any non-FIELD_WORKER user were never in the mocked
-    // response to begin with — the backend excludes them, not this component — so the only
-    // thing left to prove client-side is that nothing else got added on top of the response.
-    expect(within(linkedUserSelect).getAllByRole("option")).toHaveLength(2); // "Nenhum" + u2
-
-    // Confirms the fix at the network level: exactly one GET went to
-    // /field-workers/linkable-users, and GET /users (Admin-only, the endpoint that used to
-    // 403 for a Manager) was never called at all.
-    const requestedPaths = fakeFetch.mock.calls.map(
-      ([request]) => new URL((request as Request).url).pathname,
-    );
-    expect(requestedPaths).toContain("/field-workers/linkable-users");
-    expect(requestedPaths).not.toContain("/users");
-  });
-
-  it("submits the create-field-worker form with the selected service types", async () => {
-    const fakeFetch = mockListResponses({
-      companies: [{ id: "c1", name: "Limpa Tudo", cnpj: "12345678000199" }],
-      serviceTypes: [{ id: "s1", name: "Limpeza", average_duration_minutes: 30 }],
-    });
-    fakeFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          id: "w2",
-          full_name: "Pedro Alves",
-          contractor_company_id: "c1",
-          service_type_ids: ["s1"],
-          user_id: null,
-        }),
-        { status: 201 },
-      ),
-    );
-    // Two refetches after the mutation: react-query's invalidateQueries({ queryKey:
-    // ["field-workers"] }) matches by prefix, not exact key, so it also refetches
-    // ["field-workers", "linkable-users"] (Finding C2's query) alongside ["field-workers"]
-    // itself — correct, since a newly-created worker can change who still counts as
-    // "linkable".
-    fakeFetch.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
-    fakeFetch.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
-    const { default: userEvent } = await import("@testing-library/user-event");
-
-    renderPage(fakeFetch);
-    await waitFor(() => {
-      expect(fakeFetch).toHaveBeenCalledTimes(4);
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "Novo profissional" }));
-    await userEvent.type(screen.getByLabelText("Nome completo"), "Pedro Alves");
-    await userEvent.selectOptions(screen.getByLabelText("Empresa terceirizada"), "c1");
-    // Service types are checkboxes now, not a Ctrl-click <select multiple>.
-    await userEvent.click(screen.getByRole("checkbox", { name: "Limpeza" }));
-    await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
-
-    await waitFor(() => {
-      expect(fakeFetch).toHaveBeenCalledTimes(7);
-    });
-    // openapi-fetch calls the injected fetch with a single Request object rather than a
-    // (url, init) pair, so the submitted body has to be read off that Request's own clone.
-    const submitCall = fakeFetch.mock.calls.find(
-      ([request]) => (request as Request).method === "POST",
-    );
-    if (submitCall === undefined) {
-      throw new Error("expected a POST request to /field-workers among the fake fetch calls");
+    const limpa = (await screen.findByRole("heading", { name: "Limpa Tudo" })).closest("section");
+    const zelo = screen.getByRole("heading", { name: "Zelo Serviços" }).closest("section");
+    if (limpa === null || zelo === null) {
+      throw new Error("expected one section per company");
     }
-    const body = (await (submitCall[0] as Request).clone().json()) as Record<string, unknown>;
-    expect(body).toEqual({
-      full_name: "Pedro Alves",
-      contractor_company_id: "c1",
-      service_type_ids: ["s1"],
-      user_id: null,
+
+    const joao = listItemWithTextIn(limpa, "João da Silva");
+    expect(within(joao).getByText("joao@ufcg.edu.br")).toBeInTheDocument();
+    expect(within(joao).getByText("Ativo")).toBeInTheDocument();
+    expect(within(joao).getByText("Feitos hoje: 3")).toBeInTheDocument();
+    expect(within(limpa).queryByText("Pedro Alves")).not.toBeInTheDocument();
+
+    const pedro = listItemWithTextIn(zelo, "Pedro Alves");
+    expect(within(pedro).getByText("Desativado")).toBeInTheDocument();
+    expect(within(pedro).getByRole("button", { name: "Reativar Pedro Alves" })).toBeInTheDocument();
+    // A pending worker waits in its own section, not among the company's workers.
+    expect(within(limpa).queryByText("Maria Souza")).not.toBeInTheDocument();
+  });
+
+  it("lists who awaits approval with company and registration date", async () => {
+    renderPage(apiWith([JOAO, MARIA]));
+
+    await screen.findByRole("heading", { name: "Aguardando aprovação" });
+    const maria = listItemWithText("Maria Souza");
+    expect(within(maria).getByText("maria@ufcg.edu.br")).toBeInTheDocument();
+    expect(within(maria).getByText("Limpa Tudo")).toBeInTheDocument();
+    expect(within(maria).getByText("Cadastrado em 01/10/2026")).toBeInTheDocument();
+  });
+
+  it("hides the pending section when nobody waits", async () => {
+    renderPage(apiWith([JOAO]));
+
+    await screen.findByText("João da Silva");
+    expect(screen.queryByRole("heading", { name: "Aguardando aprovação" })).not.toBeInTheDocument();
+  });
+
+  it("approve moves worker out of pending", async () => {
+    const user = userEvent.setup();
+    let approved = false;
+    const api = new FakeApi()
+      .onRequest("GET", "/field-workers", () => [
+        JOAO,
+        approved ? { ...MARIA, status: "APPROVED" } : MARIA,
+      ])
+      .onRequest("POST", "/field-workers/w3/approve", () => {
+        approved = true;
+
+        return { ...MARIA, status: "APPROVED" };
+      });
+    renderPage(api);
+
+    await user.click(await screen.findByRole("button", { name: "Aprovar Maria Souza" }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", { name: "Aguardando aprovação" }),
+      ).not.toBeInTheDocument();
+    });
+    expect(api.sent("POST", "/field-workers/w3/approve")).toHaveLength(1);
+    expect(within(listItemWithText("Maria Souza")).getByText("Ativo")).toBeInTheDocument();
+  });
+
+  it("reject sends optional reason", async () => {
+    const user = userEvent.setup();
+    const api = apiWith([MARIA]).on("POST", "/field-workers/w3/reject", {
+      ...MARIA,
+      status: "REJECTED",
+    });
+    renderPage(api);
+
+    await user.click(await screen.findByRole("button", { name: "Reprovar Maria Souza" }));
+    const dialog = await screen.findByRole("dialog", { name: "Reprovar cadastro" });
+    await user.type(within(dialog).getByLabelText("Motivo (opcional)"), "Sem vínculo");
+    await user.click(within(dialog).getByRole("button", { name: "Reprovar" }));
+
+    await waitFor(() => {
+      expect(api.sent("POST", "/field-workers/w3/reject")).toHaveLength(1);
+    });
+    expect(api.sent("POST", "/field-workers/w3/reject")[0]?.body).toEqual({
+      reason: "Sem vínculo",
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 
-  it("does not post a worker without a service type, and says which field is missing", async () => {
-    const fakeFetch = mockListResponses({
-      companies: [{ id: "c1", name: "Limpa Tudo", cnpj: "12345678000199" }],
-      serviceTypes: [{ id: "s1", name: "Limpeza", average_duration_minutes: 30 }],
-    });
-    const { default: userEvent } = await import("@testing-library/user-event");
+  it("reject without a reason sends null and caps the reason at 300 characters", async () => {
+    const user = userEvent.setup();
+    const api = apiWith([MARIA]).on("POST", "/field-workers/w3/reject", MARIA);
+    renderPage(api);
 
-    renderPage(fakeFetch);
+    await user.click(await screen.findByRole("button", { name: "Reprovar Maria Souza" }));
+    const dialog = await screen.findByRole("dialog", { name: "Reprovar cadastro" });
+    expect(within(dialog).getByLabelText("Motivo (opcional)")).toHaveAttribute("maxlength", "300");
+    await user.click(within(dialog).getByRole("button", { name: "Reprovar" }));
+
     await waitFor(() => {
-      expect(fakeFetch).toHaveBeenCalledTimes(4);
+      expect(api.sent("POST", "/field-workers/w3/reject")[0]?.body).toEqual({ reason: null });
     });
-    await userEvent.click(screen.getByRole("button", { name: "Novo profissional" }));
-    await userEvent.type(screen.getByLabelText("Nome completo"), "Pedro Alves");
-    await userEvent.selectOptions(screen.getByLabelText("Empresa terceirizada"), "c1");
-    await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
+  });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Tipos de serviço");
-    expect(fakeFetch).toHaveBeenCalledTimes(4);
+  it("deactivate asks confirmation", async () => {
+    const user = userEvent.setup();
+    const api = apiWith([JOAO]).on("POST", "/field-workers/w1/deactivate", {
+      ...JOAO,
+      is_active: false,
+    });
+    renderPage(api);
+
+    await user.click(await screen.findByRole("button", { name: "Desativar João da Silva" }));
+    expect(api.sent("POST", "/field-workers/w1/deactivate")).toHaveLength(0);
+    const dialog = await screen.findByRole("dialog", { name: "Desativar João da Silva?" });
+    await user.click(within(dialog).getByRole("button", { name: "Desativar" }));
+
+    await waitFor(() => {
+      expect(api.sent("POST", "/field-workers/w1/deactivate")).toHaveLength(1);
+    });
+  });
+
+  it("reactivate asks confirmation too", async () => {
+    const user = userEvent.setup();
+    const api = apiWith([PEDRO]).on("POST", "/field-workers/w2/reactivate", PEDRO);
+    renderPage(api);
+
+    await user.click(await screen.findByRole("button", { name: "Reativar Pedro Alves" }));
+    expect(api.sent("POST", "/field-workers/w2/reactivate")).toHaveLength(0);
+    const dialog = await screen.findByRole("dialog", { name: "Reativar Pedro Alves?" });
+    await user.click(within(dialog).getByRole("button", { name: "Reativar" }));
+
+    await waitFor(() => {
+      expect(api.sent("POST", "/field-workers/w2/reactivate")).toHaveLength(1);
+    });
+  });
+
+  it("keeps rejected workers in a collapsed section with the reason and Aprovar", async () => {
+    const user = userEvent.setup();
+    const api = apiWith([ANA]).on("POST", "/field-workers/w4/approve", ANA);
+    renderPage(api);
+
+    const toggle = await screen.findByRole("button", { name: /Reprovados/ });
+    expect(screen.queryByText("Ana Lima")).not.toBeInTheDocument();
+    await user.click(toggle);
+
+    const ana = listItemWithText("Ana Lima");
+    expect(within(ana).getByText("Motivo: Documento ilegível")).toBeInTheDocument();
+    await user.click(within(ana).getByRole("button", { name: "Aprovar Ana Lima" }));
+    await waitFor(() => {
+      expect(api.sent("POST", "/field-workers/w4/approve")).toHaveLength(1);
+    });
+  });
+
+  it("explains a status conflict and refreshes the list", async () => {
+    const user = userEvent.setup();
+    const api = apiWith([MARIA]).on(
+      "POST",
+      "/field-workers/w3/approve",
+      { detail: { code: "INVALID_WORKER_STATUS", detail: "Worker is not pending." } },
+      409,
+    );
+    renderPage(api);
+
+    await user.click(await screen.findByRole("button", { name: "Aprovar Maria Souza" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Este cadastro já foi tratado por outra pessoa. A lista foi atualizada.",
+    );
+    await waitFor(() => {
+      expect(api.sent("GET", "/field-workers")).toHaveLength(2);
+    });
+  });
+
+  it("no create button", async () => {
+    renderPage(apiWith([JOAO]));
+
+    await screen.findByText("João da Silva");
+    expect(screen.queryByRole("button", { name: "Novo profissional" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
   });
 });
+
+function listItemWithTextIn(section: HTMLElement, text: string): HTMLElement {
+  const row = within(section)
+    .getAllByRole("listitem")
+    .find((item) => within(item).queryByText(text) !== null);
+  if (row === undefined) {
+    throw new Error(`No list item in the section shows "${text}".`);
+  }
+
+  return row;
+}

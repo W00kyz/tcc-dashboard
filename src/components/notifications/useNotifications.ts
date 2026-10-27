@@ -16,22 +16,20 @@ export const UNREAD_COUNT_KEY = ["notifications", "unread-count"] as const;
 
 export const NOTIFICATION_KIND_LABEL_KEY: Record<string, StringKey> = {
   ALERT: "notificationKindAlert",
-  ROUTE_ASSIGNED: "notificationKindRouteAssigned",
-  ROUTE_MODIFIED: "notificationKindRouteModified",
-  STOP_REASSIGNED: "notificationKindStopReassigned",
   IMPEDIMENT_REPORTED: "notificationKindImpedimentReported",
+  APPEAL_FILED: "notificationKindAppealFiled",
 };
 
 export function formatNotificationTime(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
-// Best-effort deep link: the route board is the only place that renders alerts and route
-// context, so both `alert_id` and `route_id` point there. No useful target → just mark read.
+// Best-effort deep link: impediments and appeals wait for a decision on Justificativas; the
+// route board is the only place that renders alerts and route context. No useful target →
+// just mark read.
 export function notificationTarget(data: Notification["data"]): string | null {
-  // RF17: an impediment is worked from the reassignment queue, not the board.
-  if (typeof data.impediment_id === "string") {
-    return "/reatribuicoes";
+  if (typeof data.impediment_id === "string" || typeof data.appeal_id === "string") {
+    return "/justificativas";
   }
   if (typeof data.route_id === "string" || typeof data.alert_id === "string") {
     return "/rotas";

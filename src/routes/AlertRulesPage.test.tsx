@@ -14,20 +14,29 @@ import { ProtectedRoute } from "@/auth/ProtectedRoute";
 const SESSION = { accessToken: "token", refreshToken: "refresh", role: "MANAGER" };
 
 const RULES = [
-  { rule_kind: "LATE_START", enabled: true, threshold_minutes: null, updated_at: null },
-  { rule_kind: "WORKER_ABSENT", enabled: true, threshold_minutes: 45, updated_at: null },
-  { rule_kind: "LATE_STOP", enabled: true, threshold_minutes: null, updated_at: null },
-  { rule_kind: "NO_EVIDENCE", enabled: false, threshold_minutes: null, updated_at: null },
+  { rule_kind: "NO_EVIDENCE", enabled: true, threshold_minutes: null, updated_at: null },
+  { rule_kind: "POINT_IMPEDED", enabled: true, threshold_minutes: null, updated_at: null },
+  { rule_kind: "BATCH_RELEASED", enabled: true, threshold_minutes: null, updated_at: null },
+  { rule_kind: "POINTS_UNSERVED", enabled: true, threshold_minutes: null, updated_at: null },
+  { rule_kind: "APPEAL_FILED", enabled: false, threshold_minutes: null, updated_at: null },
 ];
 
 const SETTINGS = {
   check_radius_meters: 50,
   alert_scan_interval_seconds: 60,
-  late_start_tolerance_min: 15,
-  absence_tolerance_min: 30,
-  late_stop_tolerance_min: 10,
   no_evidence_grace_min: 25,
   position_report_interval_seconds: 60,
+  allocation_batch_size: 4,
+  campus_min_lat: -7.225,
+  campus_max_lat: -7.205,
+  campus_min_lng: -35.92,
+  campus_max_lng: -35.898,
+  outside_campus_release_minutes: 10,
+  location_silence_warning_minutes: 30,
+  location_silence_release_minutes: 45,
+  workday_end_time: "17:00:00",
+  service_weekdays: [0, 1, 2, 3, 4],
+  appeal_window_hours: 48,
   updated_at: null,
 };
 
@@ -87,46 +96,52 @@ describe("AlertRulesPage", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the four rules with their pt-BR names", async () => {
+  it("renders the five rules with their pt-BR names, in order", async () => {
     renderPage(makeFakeFetch());
 
-    expect(await screen.findByText("Rota não iniciada")).toBeInTheDocument();
-    expect(screen.getByText("Profissional ausente")).toBeInTheDocument();
-    expect(screen.getByText("Ponto atrasado")).toBeInTheDocument();
-    expect(screen.getByText("Execução sem evidência")).toBeInTheDocument();
+    await screen.findByText("Sem evidência");
+    const names = screen
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => row.querySelector("td")?.textContent);
+    expect(names).toEqual([
+      "Sem evidência",
+      "Ponto impedido",
+      "Lote liberado",
+      "Pontos não atendidos",
+      "Recurso recebido",
+    ]);
   });
 
-  it("toggling a rule off sends PATCH /alert-rules/LATE_STOP with { enabled: false }", async () => {
+  it("toggling a rule off sends PATCH /alert-rules/BATCH_RELEASED with { enabled: false }", async () => {
     const fakeFetch = makeFakeFetch();
     renderPage(fakeFetch);
 
-    const checkbox = await screen.findByRole("checkbox", { name: "Ponto atrasado" });
+    const checkbox = await screen.findByRole("checkbox", { name: "Lote liberado" });
     await userEvent.click(checkbox);
 
     await waitFor(() => {
       expect(patchRequests(fakeFetch)).toHaveLength(1);
     });
     const request = firstPatch(fakeFetch);
-    expect(request.url).toContain("/alert-rules/LATE_STOP");
+    expect(request.url).toContain("/alert-rules/BATCH_RELEASED");
     expect(await request.clone().json()).toEqual({ enabled: false });
   });
 
-  it("shows the global default for rules without an override, and the override otherwise", async () => {
+  it("offers a threshold only for the timed rule; the event rules fire on the event", async () => {
     renderPage(makeFakeFetch());
 
-    expect(await screen.findByLabelText("Rota não iniciada — Limiar (minutos)")).toHaveValue(15);
-    expect(screen.getByLabelText("Profissional ausente — Limiar (minutos)")).toHaveValue(45);
-    expect(screen.getByLabelText("Ponto atrasado — Limiar (minutos)")).toHaveValue(10);
-    expect(screen.getByLabelText("Execução sem evidência — Limiar (minutos)")).toHaveValue(25);
-    expect(screen.getByText("Padrão global: 30 min")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("usar o padrão global")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("Sem evidência — Limiar (minutos)")).toHaveValue(25);
+    expect(screen.getByText("Padrão global")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Ponto impedido — Limiar (minutos)")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Dispara no próprio evento")).toHaveLength(4);
   });
 
   it("typing a threshold commits it on blur as a number", async () => {
     const fakeFetch = makeFakeFetch();
     renderPage(fakeFetch);
 
-    const input = await screen.findByLabelText("Rota não iniciada — Limiar (minutos)");
+    const input = await screen.findByLabelText("Sem evidência — Limiar (minutos)");
     await userEvent.clear(input);
     await userEvent.type(input, "20");
     await userEvent.tab();
@@ -135,15 +150,27 @@ describe("AlertRulesPage", () => {
       expect(patchRequests(fakeFetch)).toHaveLength(1);
     });
     const request = firstPatch(fakeFetch);
-    expect(request.url).toContain("/alert-rules/LATE_START");
+    expect(request.url).toContain("/alert-rules/NO_EVIDENCE");
     expect(await request.clone().json()).toEqual({ threshold_minutes: 20 });
   });
 
-  it("clearing a threshold commits null (use the global default)", async () => {
-    const fakeFetch = makeFakeFetch();
+  it("clearing an override commits null (use the global default)", async () => {
+    const overridden = RULES.map((rule) =>
+      rule.rule_kind === "NO_EVIDENCE" ? { ...rule, threshold_minutes: 40 } : rule,
+    );
+    const fakeFetch = vi.fn((input: RequestInfo | URL) => {
+      const request = input as Request;
+      if (request.url.includes("/settings")) {
+        return Promise.resolve(new Response(JSON.stringify(SETTINGS), { status: 200 }));
+      }
+
+      return Promise.resolve(new Response(JSON.stringify(overridden), { status: 200 }));
+    });
     renderPage(fakeFetch);
 
-    const input = await screen.findByLabelText("Profissional ausente — Limiar (minutos)");
+    const input = await screen.findByLabelText("Sem evidência — Limiar (minutos)");
+    expect(input).toHaveValue(40);
+    expect(screen.getByText("Padrão global: 25 min")).toBeInTheDocument();
     await userEvent.clear(input);
     await userEvent.tab();
 
@@ -151,16 +178,16 @@ describe("AlertRulesPage", () => {
       expect(patchRequests(fakeFetch)).toHaveLength(1);
     });
     const request = firstPatch(fakeFetch);
-    expect(request.url).toContain("/alert-rules/WORKER_ABSENT");
+    expect(request.url).toContain("/alert-rules/NO_EVIDENCE");
     expect(await request.clone().json()).toEqual({ threshold_minutes: null });
-    expect(input).toHaveValue(30);
+    expect(input).toHaveValue(25);
   });
 
   it("blurring an untouched default does not send a PATCH", async () => {
     const fakeFetch = makeFakeFetch();
     renderPage(fakeFetch);
 
-    const input = await screen.findByLabelText("Rota não iniciada — Limiar (minutos)");
+    const input = await screen.findByLabelText("Sem evidência — Limiar (minutos)");
     await userEvent.click(input);
     await userEvent.tab();
 

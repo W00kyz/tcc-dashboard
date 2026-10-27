@@ -16,29 +16,22 @@ type BoardPosition = components["schemas"]["BoardPosition"];
 export const STALE_AFTER_SECONDS = 15 * 60;
 
 // Leaflet paints SVG attributes, not CSS: these hexes mirror DESIGN.md's tokens — sign-blue
-// for a worker in the field, status-late for one whose route is delayed, status-pending for a
-// fix too old to trust. Sign-yellow stays reserved for counters.
+// for a worker in the field, status-pending for a fix too old to trust. Sign-yellow stays
+// reserved for counters.
 const MARKER_STYLE = {
   live: { color: "#14213d", fillColor: "#14213d" },
-  late: { color: "#ffffff", fillColor: "#b3261e" },
   stale: { color: "#6b7079", fillColor: "#eceee9" },
 } as const;
 
 export type MarkerState = keyof typeof MARKER_STYLE;
 
-/** Which of the three marker treatments a fix gets. Lateness wins over staleness: a delayed
- * route is the exception the manager must see, however old the last fix. */
-export function markerState(position: BoardPosition, delayedWorkerIds: Set<string>): MarkerState {
-  if (delayedWorkerIds.has(position.field_worker_id)) {
-    return "late";
-  }
-
+/** Which of the two marker treatments a fix gets. Example: `markerState(position) // "live"`. */
+export function markerState(position: BoardPosition): MarkerState {
   return position.age_seconds > STALE_AFTER_SECONDS ? "stale" : "live";
 }
 
 interface WorkerPositionsMapProps {
   positions: BoardPosition[];
-  delayedWorkerIds?: Set<string>;
   selectedWorkerId?: string | null;
   onSelectWorker?: (workerId: string) => void;
   buildings?: MapBuilding[];
@@ -48,13 +41,7 @@ interface WorkerPositionsMapProps {
 }
 
 // With 50–100 workers on one campus, permanent name labels pile into an unreadable mass. Only
-// the exceptions (late) and the worker the manager picked keep their label; the rest show it
-// on hover.
-function keepsPermanentLabel(state: MarkerState, selected: boolean): boolean {
-  return state === "late" || selected;
-}
-
-const NO_DELAYED_WORKERS = new Set<string>();
+// the worker the manager picked keeps the label; the rest show it on hover.
 const NO_BUILDINGS: MapBuilding[] = [];
 
 // Close enough to tell one building from the next; a manager already zoomed in further keeps
@@ -91,28 +78,20 @@ function glideToBounds(map: L.Map, bounds: L.LatLngBounds): void {
   map.flyToBounds(bounds, { ...options, duration: GLIDE_SECONDS });
 }
 
-function workerLabel(position: BoardPosition, state: MarkerState, lateSuffix: string): string {
-  return state === "late"
-    ? `${position.field_worker_name} · ${lateSuffix}`
-    : position.field_worker_name;
-}
-
 interface WorkerDrawing {
   map: L.Map;
   layer: L.LayerGroup;
   positions: BoardPosition[];
-  delayedWorkerIds: Set<string>;
   selectedWorkerId: string | null;
-  lateSuffix: string;
   onSelect: (workerId: string) => void;
 }
 
 function workerMarker(drawing: WorkerDrawing, position: BoardPosition): L.CircleMarker {
-  const state = markerState(position, drawing.delayedWorkerIds);
+  const state = markerState(position);
   const selected = position.field_worker_id === drawing.selectedWorkerId;
 
   return L.circleMarker([position.latitude, position.longitude], {
-    radius: selected ? 11 : state === "late" ? 9 : 6,
+    radius: selected ? 11 : 6,
     fillOpacity: 0.95,
     // Path bubbles clicks to the map by default; that would clear the open building.
     bubblingMouseEvents: false,
@@ -120,8 +99,8 @@ function workerMarker(drawing: WorkerDrawing, position: BoardPosition): L.Circle
     ...MARKER_STYLE[state],
     // Selection: a thick white halo, not a new colour (sign-yellow is for counters).
     ...(selected ? { color: "#ffffff" } : {}),
-  }).bindTooltip(workerLabel(position, state, drawing.lateSuffix), {
-    permanent: keepsPermanentLabel(state, selected),
+  }).bindTooltip(position.field_worker_name, {
+    permanent: selected,
     direction: "top",
   });
 }
@@ -283,8 +262,7 @@ function useBuildingsLayer(handle: CampusMapHandle, props: WorkerPositionsMapPro
 }
 
 function useWorkersLayer(handle: CampusMapHandle, props: WorkerPositionsMapProps): void {
-  const { t } = useTranslation();
-  const { positions, delayedWorkerIds = NO_DELAYED_WORKERS, selectedWorkerId = null } = props;
+  const { positions, selectedWorkerId = null } = props;
   const onSelectRef = useLatest(props.onSelectWorker);
 
   useEffect(() => {
@@ -295,12 +273,10 @@ function useWorkersLayer(handle: CampusMapHandle, props: WorkerPositionsMapProps
       map: handle.mapRef.current,
       layer: handle.layersRef.current.workers,
       positions,
-      delayedWorkerIds,
       selectedWorkerId,
-      lateSuffix: t("boardMapLateSuffix"),
       onSelect: (workerId) => onSelectRef.current?.(workerId),
     });
-  }, [handle, positions, delayedWorkerIds, selectedWorkerId, t, onSelectRef]);
+  }, [handle, positions, selectedWorkerId, onSelectRef]);
 }
 
 /** RF42: the latest position each field worker reported, on a map, with the campus buildings

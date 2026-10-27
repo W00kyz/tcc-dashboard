@@ -27,10 +27,9 @@ const DETAIL = {
   evidence_count: 0,
   route_id: "r1",
   clock_skew_seconds: null,
+  appeal_id: null,
   form_version_id: null,
   answers: [],
-  reassigned: false,
-  assignment_history: null,
   scans: [
     {
       kind: "CHECK_IN",
@@ -52,11 +51,26 @@ const DETAIL = {
     },
   ],
   evidence: [],
-  manual_completion: {
-    completed_by: "Gestor Central",
-    reason: "Sistema fora do ar durante a visita",
-    completed_at: "2026-08-30T14:00:00Z",
-  },
+};
+
+const APPEAL = {
+  id: "ap1",
+  route_stop_id: "rs1",
+  field_worker_id: "w1",
+  field_worker_name: "João da Silva",
+  service_point_id: "sp1",
+  service_point_name: "Sala 101",
+  building_name: "Bloco CG",
+  released_at: "2026-08-30T14:00:00Z",
+  release_reason: "LOCATION_SILENCE",
+  reason: "NO_SIGNAL",
+  note: "Fiquei no subsolo sem sinal",
+  claimed_executed_at: "2026-08-30T13:05:00Z",
+  status: "ACCEPTED",
+  filed_at: "2026-08-30T15:00:00Z",
+  reviewed_at: "2026-08-30T16:00:00Z",
+  reviewed_by_name: "Larissa Andrade",
+  review_note: "Confirmado com o fiscal do prédio",
 };
 
 const PHOTO_EVIDENCE = [
@@ -102,6 +116,10 @@ function makeFakeFetch(overrides: Record<string, unknown> = {}) {
       );
     }
 
+    if (url.includes("/appeals")) {
+      return Promise.resolve(new Response(JSON.stringify([APPEAL]), { status: 200 }));
+    }
+
     if (url.includes("/evidence/")) {
       return Promise.resolve(new Response(new Blob(["img-bytes"]), { status: 200 }));
     }
@@ -130,7 +148,7 @@ beforeEach(() => {
 });
 
 describe("ExecutionDetailDrawer", () => {
-  it("renders timeline, geo badge, flag badges, scan distances and the manual-completion reason", async () => {
+  it("renders timeline, geo badge, flag badges and scan distances", async () => {
     renderDrawer(makeFakeFetch());
 
     expect(await screen.findByText(formatDateTime(DETAIL.checked_in_at))).toBeInTheDocument();
@@ -148,8 +166,6 @@ describe("ExecutionDetailDrawer", () => {
     // Scan geo_validation is translated, not the raw enum.
     expect(screen.getByText("Não validado")).toBeInTheDocument();
     expect(screen.queryByText("NOT_VALIDATED")).not.toBeInTheDocument();
-
-    expect(screen.getByText("Sistema fora do ar durante a visita")).toBeInTheDocument();
   });
 
   it("shows the clock-skew warning row (rounded) when clock_skew_seconds is set", async () => {
@@ -293,45 +309,33 @@ describe("ExecutionDetailDrawer", () => {
     expect(screen.queryByText("Formulário")).not.toBeInTheDocument();
   });
 
-  it("renders the reassignment chain when the stop was reassigned", async () => {
-    renderDrawer(
-      makeFakeFetch({
-        reassigned: true,
-        assignment_history: [
-          {
-            field_worker_id: "w1",
-            full_name: "João da Silva",
-            sequence: 1,
-            assigned_by_name: "Larissa",
-            transfer_reason: null,
-            outcome: "REASSIGNED",
-          },
-          {
-            field_worker_id: "w2",
-            full_name: "Maria Souza",
-            sequence: 2,
-            assigned_by_name: "Larissa",
-            transfer_reason: "cobertura de ferias",
-            outcome: null,
-          },
-        ],
-      }),
-    );
+  it("shows the accepted appeal behind an execution done by appeal", async () => {
+    const fakeFetch = makeFakeFetch({ source: "APPEAL", appeal_id: "ap1" });
+    renderDrawer(fakeFetch);
 
-    expect(await screen.findByText("Histórico de responsáveis")).toBeInTheDocument();
-    expect(screen.getByText("Designado originalmente:")).toBeInTheDocument();
-    expect(screen.getByText(/João da Silva/)).toBeInTheDocument();
-    expect(screen.getByText("Reatribuído para:")).toBeInTheDocument();
-    expect(screen.getByText(/Maria Souza/)).toBeInTheDocument();
-    expect(screen.getByText(/cobertura de ferias/)).toBeInTheDocument();
-    expect(screen.getByText("Reatribuído")).toBeInTheDocument();
+    const appeal = await screen.findByRole("region", { name: "Recurso" });
+    expect(await within(appeal).findByText("Fiquei sem sinal")).toBeInTheDocument();
+    expect(within(appeal).getByText("Fiquei no subsolo sem sinal")).toBeInTheDocument();
+    expect(within(appeal).getByText(/Sem localização/)).toBeInTheDocument();
+    expect(within(appeal).getByText(formatDateTime(APPEAL.reviewed_at))).toBeInTheDocument();
+    expect(within(appeal).getByText("Aceito por Larissa Andrade")).toBeInTheDocument();
+    expect(within(appeal).getByText("Confirmado com o fiscal do prédio")).toBeInTheDocument();
+    expect(
+      fakeFetch.mock.calls.some(([input]) =>
+        requestUrl(input).includes("/appeals?status=ACCEPTED"),
+      ),
+    ).toBe(true);
   });
 
-  it("omits the reassignment section when the stop was not reassigned", async () => {
-    renderDrawer(makeFakeFetch({ reassigned: false, assignment_history: null }));
+  it("asks for no appeal when the execution came from the app", async () => {
+    const fakeFetch = makeFakeFetch();
+    renderDrawer(fakeFetch);
 
     await screen.findByText("Linha do tempo");
-    expect(screen.queryByText("Histórico de responsáveis")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Recurso" })).not.toBeInTheDocument();
+    expect(fakeFetch.mock.calls.some(([input]) => requestUrl(input).includes("/appeals"))).toBe(
+      false,
+    );
   });
 
   it("calls onClose when Escape is pressed", async () => {

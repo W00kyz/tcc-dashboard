@@ -19,9 +19,9 @@ const UNREAD = {
 
 const READ = {
   id: "n2",
-  kind: "ROUTE_ASSIGNED",
-  title: "Nova rota",
-  body: "Você recebeu uma rota.",
+  kind: "APPEAL_FILED",
+  title: "Novo recurso",
+  body: "Maria contestou a liberação de Sala 202.",
   data: {},
   read_at: "2026-09-06T10:00:00Z",
   created_at: "2026-09-06T09:00:00Z",
@@ -93,9 +93,9 @@ describe("NotificationsPage", () => {
     renderPage(makeFakeFetch());
 
     expect(await screen.findByText("Ponto atrasado")).toBeInTheDocument();
-    expect(screen.getByText("Nova rota")).toBeInTheDocument();
+    expect(screen.getByText("Novo recurso")).toBeInTheDocument();
     const unread = screen.getByRole("button", { name: /Ponto atrasado/ });
-    const read = screen.getByRole("button", { name: /Nova rota/ });
+    const read = screen.getByRole("button", { name: /Novo recurso/ });
     expect(within(unread).getByText("Não lida")).toBeInTheDocument();
     expect(within(read).queryByText("Não lida")).not.toBeInTheDocument();
   });
@@ -116,7 +116,7 @@ describe("NotificationsPage", () => {
     });
   });
 
-  it("opens an impediment notification on the reassignment queue (RF17)", async () => {
+  it("opens an impediment notification on Justificativas", async () => {
     const impediment = {
       ...UNREAD,
       id: "n3",
@@ -145,7 +145,8 @@ describe("NotificationsPage", () => {
           <AuthProvider>
             <Routes>
               <Route path="/notificacoes" element={<NotificationsPage />} />
-              <Route path="/reatribuicoes" element={<p>fila de reatribuição</p>} />
+              <Route path="/rotas" element={<p>quadro de rotas</p>} />
+              <Route path="/justificativas" element={<p>justificativas</p>} />
             </Routes>
           </AuthProvider>
         </QueryClientProvider>
@@ -155,7 +156,43 @@ describe("NotificationsPage", () => {
     expect(await screen.findByText("Impossibilidade")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Impossibilidade sinalizada/ }));
 
-    expect(await screen.findByText("fila de reatribuição")).toBeInTheDocument();
+    expect(await screen.findByText("justificativas")).toBeInTheDocument();
+  });
+
+  it("opens an appeal notification on Justificativas and labels its kind", async () => {
+    const filed = { ...UNREAD, id: "n4", kind: "APPEAL_FILED", data: { appeal_id: "a1" } };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ items: [filed], total: 1, page: 1, page_size: 20 }), {
+            status: 200,
+          }),
+        ),
+      ),
+    );
+    localStorage.setItem(
+      "route-monitor.session",
+      JSON.stringify({ accessToken: "t", refreshToken: "r", role: "MANAGER" }),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/notificacoes"]}>
+        <QueryClientProvider client={new QueryClient()}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/notificacoes" element={<NotificationsPage />} />
+              <Route path="/justificativas" element={<p>justificativas</p>} />
+            </Routes>
+          </AuthProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Recurso")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Ponto atrasado/ }));
+
+    expect(await screen.findByText("justificativas")).toBeInTheDocument();
   });
 
   it("marks all notifications read", async () => {
@@ -230,7 +267,7 @@ describe("NotificationsPage", () => {
     const user = userEvent.setup();
     renderPage(fetchImpl);
 
-    await screen.findByText("Nova rota");
+    await screen.findByText("Novo recurso");
     await user.click(screen.getByRole("checkbox", { name: "Só não lidas" }));
 
     await waitFor(() => {
@@ -239,7 +276,7 @@ describe("NotificationsPage", () => {
       ).toBe(true);
     });
     await waitFor(() => {
-      expect(screen.queryByText("Nova rota")).not.toBeInTheDocument();
+      expect(screen.queryByText("Novo recurso")).not.toBeInTheDocument();
     });
   });
 

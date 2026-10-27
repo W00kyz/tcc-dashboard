@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
+import { usePendingJustificationsCount } from "@/hooks/usePendingJustificationsCount";
 import { useReviewQueueCount } from "@/hooks/useReviewQueueCount";
 import { ROLE_LABEL_KEY } from "@/auth/roleLabel";
 
@@ -39,11 +40,15 @@ const ACTIVE_ITEM_CLASS =
 type BadgeCounts = Record<NavBadgeKind, number | undefined>;
 
 function useBadgeCounts(enabled: boolean): BadgeCounts {
-  return { reviewQueue: useReviewQueueCount(enabled) };
+  return {
+    reviewQueue: useReviewQueueCount(enabled),
+    justifications: usePendingJustificationsCount(enabled),
+  };
 }
 
 const BADGE_TARGET: Record<NavBadgeKind, { to: string; aria: StringKey }> = {
   reviewQueue: { to: `/execucoes?${PENDING_REVIEW_QUERY}`, aria: "navReviewQueueBadgeAria" },
+  justifications: { to: "/justificativas", aria: "navJustificationsBadgeAria" },
 };
 
 function CountBadgeLink({ kind, count }: { kind: NavBadgeKind; count: number | undefined }) {
@@ -181,7 +186,7 @@ function SidebarBrand() {
 
 function AccountMenu({ role }: { role: Session["role"] }) {
   const { t } = useTranslation();
-  const counts: BadgeCounts = { reviewQueue: undefined };
+  const counts: BadgeCounts = { reviewQueue: undefined, justifications: undefined };
 
   return (
     <>

@@ -21,7 +21,6 @@ type FloorChoice = string;
 type Translate = (key: StringKey) => string;
 
 const STATUS_BADGE: Record<PointVisitStatus, { label: StringKey; tone: BadgeTone | "outline" }> = {
-  LATE: { label: "pointStatusLate", tone: "late" },
   IN_PROGRESS: { label: "pointStatusInProgress", tone: "progress" },
   PENDING: { label: "pointStatusPending", tone: "pending" },
   DONE: { label: "pointStatusDone", tone: "done" },
@@ -54,12 +53,11 @@ function plural(t: Translate, count: number, many: StringKey, one: StringKey): s
 }
 
 function summaryLine(t: Translate, statuses: PointVisitStatus[]): string {
-  const { total, done, late } = summarisePoints(statuses);
+  const { total, done } = summarisePoints(statuses);
 
   return [
     plural(t, total, "buildingPanelPoints", "buildingPanelPointsOne"),
     plural(t, done, "buildingPanelDone", "buildingPanelDoneOne"),
-    plural(t, late, "buildingPanelLate", "buildingPanelLateOne"),
   ].join(" · ");
 }
 

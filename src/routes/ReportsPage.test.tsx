@@ -18,18 +18,19 @@ function requestUrl(input: RequestInfo | URL): string {
 const PERIOD = {
   period_label: "01/08",
   period_start: "2026-08-01",
-  routes_total: 4,
-  routes_started: 3,
-  routes_completed: 2,
-  routes_cancelled: 1,
-  stops_total: 10,
-  stops_done: 5,
-  stops_pending: 5,
-  stops_reassigned: 0,
+  points_total: 10,
+  points_done: 5,
+  points_done_by_appeal: 1,
+  points_unserved: 5,
+  points_released: 4,
+  points_impeded: 1,
+  released_route_remainder: 0,
+  released_left_campus: 2,
+  released_location_silence: 1,
+  released_end_of_day: 0,
   executions_total: 6,
   executions_with_evidence: 4,
   executions_flagged: 1,
-  impediments_total: 0,
   alerts_total: 2,
   completion_rate: 0.5,
 };
@@ -40,14 +41,17 @@ const REPORT = {
   date_to: "2026-08-02",
   filters_applied: {
     field_worker_name: "João da Silva",
+    company_name: "Limpa Tudo",
     service_type_name: null,
     building_name: null,
-    route_status: null,
+    outcome: "Feito por recurso",
   },
   periods: [PERIOD],
   totals: { ...PERIOD, period_label: undefined, period_start: undefined },
   generated_at: "2026-08-03T00:00:00Z",
 };
+
+const COMPANIES = [{ id: "c1", name: "Limpa Tudo", cnpj: "00.000.000/0001-00", service_types: [] }];
 
 function makeFakeFetch(options: { report?: unknown; exportOk?: boolean } = {}) {
   const report = options.report ?? REPORT;
@@ -65,6 +69,9 @@ function makeFakeFetch(options: { report?: unknown; exportOk?: boolean } = {}) {
     }
     if (url.includes("/reports/compliance")) {
       return Promise.resolve(new Response(JSON.stringify(report), { status: 200 }));
+    }
+    if (url.includes("/contractor-companies")) {
+      return Promise.resolve(new Response(JSON.stringify(COMPANIES), { status: 200 }));
     }
     if (
       url.includes("/field-workers") ||
@@ -154,6 +161,65 @@ describe("ReportsPage", () => {
     expect(screen.getAllByRole("cell", { name: "50,0%" }).length).toBeGreaterThanOrEqual(2);
   });
 
+  it("filters by company and by point outcome, with the API's pt-BR labels", async () => {
+    const fakeFetch = makeFakeFetch();
+    renderPage(fakeFetch);
+
+    const outcome = screen.getByLabelText("Situação do ponto");
+    expect(
+      Array.from(outcome.querySelectorAll("option")).map((option) => option.textContent),
+    ).toEqual(["Todos", "Feito", "Feito por recurso", "Não atendido"]);
+    expect(screen.queryByLabelText("Status de rota")).not.toBeInTheDocument();
+
+    setRange();
+    await screen.findByRole("option", { name: "Limpa Tudo" });
+    fireEvent.change(screen.getByLabelText("Empresa"), { target: { value: "c1" } });
+    fireEvent.change(outcome, { target: { value: "DONE_BY_APPEAL" } });
+    fireEvent.click(screen.getByRole("button", { name: "Gerar relatório" }));
+
+    await waitFor(() => {
+      expect(
+        reportRequests(fakeFetch).some(
+          (url) =>
+            url.includes("/reports/compliance?") &&
+            url.includes("company_id=c1") &&
+            url.includes("outcome=DONE_BY_APPEAL"),
+        ),
+      ).toBe(true);
+    });
+    expect(
+      await screen.findByText(/João da Silva · Limpa Tudo · Feito por recurso/),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the point-day indicators, releases by reason and the executions", async () => {
+    renderPage(makeFakeFetch());
+
+    setRange();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar relatório" }));
+
+    await screen.findByRole("cell", { name: "TOTAIS" });
+    for (const header of [
+      "Pontos no dia",
+      "Feitos",
+      "Por recurso",
+      "Não atendidos",
+      "Liberações",
+      "Impedimento",
+      "Resto da rota impedido",
+      "Saiu do campus",
+      "Sem localização",
+      "Fim do expediente",
+      "Execuções",
+      "Com evidência",
+      "Sinalizadas",
+      "Alertas",
+    ]) {
+      expect(screen.getByRole("columnheader", { name: header })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("columnheader", { name: "Reatrib." })).not.toBeInTheDocument();
+  });
+
   it("shows the empty state when the report has no periods", async () => {
     renderPage(makeFakeFetch({ report: { ...REPORT, periods: [] } }));
 
@@ -161,7 +227,7 @@ describe("ReportsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Gerar relatório" }));
 
     expect(
-      await screen.findByText("Nenhuma rota no período com os filtros selecionados."),
+      await screen.findByText("Nenhum ponto no período com os filtros selecionados."),
     ).toBeInTheDocument();
   });
 

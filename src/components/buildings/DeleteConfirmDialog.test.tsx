@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { DeleteConfirmDialog } from "@/components/buildings/DeleteConfirmDialog";
 
-const IMPACT = { points: 3, floors: 1, routes: 2, executions: 1, photos: 0 };
+const IMPACT = { points: 3, floors: 1, routes: 2, executions: 1, photos: 0, appeals: 0 };
 
 function renderDialog(onConfirm: () => Promise<void>, onDeleted = vi.fn()) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

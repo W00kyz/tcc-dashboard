@@ -1,266 +1,270 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
+import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Page, PageHeader, Section } from "@/components/layout/Page";
+import { RegistryList } from "@/components/layout/Registry";
+import { assertSaved, RegistrySaveError } from "@/components/layout/registryForm";
+import { ErrorMessage } from "@/components/layout/StateMessages";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { FieldWorkerConfirmDialog } from "@/components/workers/FieldWorkerConfirmDialog";
+import { RejectWorkerDialog } from "@/components/workers/RejectWorkerDialog";
 import { useTranslation } from "@/i18n/useTranslation";
-import { Page, PageHeader } from "@/components/layout/Page";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { RegistryList, RegistryNewButton } from "@/components/layout/Registry";
-import { RegistryDialog, useRegistryDialog } from "@/components/layout/RegistryDialog";
-import { assertSaved, RegistryEditButton } from "@/components/layout/registryForm";
 
-interface FieldWorkerRow {
-  id: string;
-  full_name: string;
-  contractor_company_id: string;
-  service_type_ids: string[];
-  user_id: string | null;
-}
-interface CompanyRow {
-  id: string;
-  name: string;
-  cnpj: string;
-}
-interface ServiceTypeRow {
-  id: string;
-  name: string;
-  average_duration_minutes: number;
-}
-// Finding C2: mirrors the backend's LinkableUserOut — the dedicated projection
-// GET /field-workers/linkable-users returns for this dropdown (already filtered
-// server-side to FIELD_WORKER-role users not yet linked to a worker), not the full
-// UserOut shape GET /users returns.
-interface LinkableUserRow {
-  id: string;
-  name: string;
-  email: string;
+type FieldWorkerRow = components["schemas"]["FieldWorkerOut"];
+type WorkerAction = "approve" | "reject" | "deactivate" | "reactivate";
+
+interface Transition {
+  worker: FieldWorkerRow;
+  action: WorkerAction;
+  reason?: string | null;
 }
 
-function splitIds(joined: string): string[] {
-  return joined === "" ? [] : joined.split(",");
+// The dialog a row action opened; approving needs no confirmation.
+type OpenDialog = { worker: FieldWorkerRow; kind: "reject" | "deactivate" | "reactivate" } | null;
+
+function formatRegistered(iso: string): string {
+  return new Date(iso).toLocaleDateString("pt-BR");
 }
 
+function groupByCompany(workers: FieldWorkerRow[]): [string, FieldWorkerRow[]][] {
+  const groups = new Map<string, FieldWorkerRow[]>();
+  for (const worker of workers) {
+    const name = worker.contractor_company_name;
+    groups.set(name, [...(groups.get(name) ?? []), worker]);
+  }
+
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
+}
+
+const muted = "text-muted-foreground text-sm";
+
+// Workers sign themselves up from the app and the manager approves them (spec 2026-10-20 §8.3).
 export function FieldWorkersPage() {
   const { t } = useTranslation();
   const { session } = useAuth();
   const queryClient = useQueryClient();
-  // Mirrors RouteBoardPage/UsersPage/ServiceTypesPage/ContractorCompaniesPage's convention:
-  // fall back to an empty token instead of asserting a non-null session, so the page renders
-  // (and its requests fail cleanly) even before the session has hydrated from storage.
+  // Mirrors RouteBoardPage/UsersPage/ContractorCompaniesPage's convention: fall back to an
+  // empty token instead of asserting a non-null session, so the page renders (and its request
+  // fails cleanly) even before the session has hydrated from storage.
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
+  const [dialog, setDialog] = useState<OpenDialog>(null);
 
   const { data: workers } = useQuery({
     queryKey: ["field-workers"],
     queryFn: async () => {
-      const { data } = await client.GET("/field-workers");
-
-      return data as FieldWorkerRow[];
-    },
-  });
-  const { data: companies } = useQuery({
-    queryKey: ["contractor-companies"],
-    queryFn: async () => {
-      const { data } = await client.GET("/contractor-companies");
-
-      return data as CompanyRow[];
-    },
-  });
-  const { data: serviceTypes } = useQuery({
-    queryKey: ["service-types"],
-    queryFn: async () => {
-      const { data } = await client.GET("/service-types");
-
-      return data as ServiceTypeRow[];
-    },
-  });
-  // Finding C2: GET /users is Admin-only, so a Manager (who owns this whole screen) got a
-  // silent 403 here and an empty dropdown. GET /field-workers/linkable-users is Manager-or-
-  // Admin and already does the "FIELD_WORKER-role, not yet linked" filtering server-side, so
-  // there is no client-side filter to compute any more — render its response directly.
-  const { data: linkableUsers } = useQuery({
-    queryKey: ["field-workers", "linkable-users"],
-    queryFn: async () => {
-      const { data } = await client.GET("/field-workers/linkable-users");
-
-      return data as LinkableUserRow[];
-    },
-  });
-
-  // `serviceTypeIds` rides the string-only form as a comma-joined list so "at least one
-  // service type" is checked like any other required field.
-  const dialog = useRegistryDialog(
-    { fullName: "", companyId: "", serviceTypeIds: "", linkedUserId: "" },
-    ["fullName", "companyId", "serviceTypeIds"],
-  );
-  const { form } = dialog;
-  const selectedServiceTypeIds = splitIds(form.values.serviceTypeIds);
-  const editedWorker = workers?.find((worker) => worker.id === form.editingId);
-
-  const save = useMutation({
-    mutationFn: async () => {
-      const body = {
-        full_name: form.values.fullName.trim(),
-        contractor_company_id: form.values.companyId,
-        service_type_ids: selectedServiceTypeIds,
-        user_id: form.values.linkedUserId || null,
-      };
-      if (form.editingId !== null) {
-        const { response } = await client.PATCH("/field-workers/{worker_id}", {
-          params: { path: { worker_id: form.editingId } },
-          body,
-        });
-        assertSaved(response, `PATCH /field-workers/${form.editingId}`);
-
-        return;
+      const { data, response } = await client.GET("/field-workers");
+      if (!response.ok || data === undefined) {
+        throw new Error(`GET /field-workers failed with status ${String(response.status)}.`);
       }
-      const { response } = await client.POST("/field-workers", { body });
-      assertSaved(response, "POST /field-workers");
+
+      return data;
     },
-    onSuccess: () => {
-      dialog.close();
+  });
+
+  const transition = useMutation({
+    mutationFn: async ({ worker, action, reason }: Transition) => {
+      const params = { params: { path: { worker_id: worker.id } } };
+      const request = `POST /field-workers/${worker.id}/${action}`;
+      const { response } =
+        action === "approve"
+          ? await client.POST("/field-workers/{worker_id}/approve", params)
+          : action === "reject"
+            ? await client.POST("/field-workers/{worker_id}/reject", {
+                ...params,
+                body: { reason: reason ?? null },
+              })
+            : action === "deactivate"
+              ? await client.POST("/field-workers/{worker_id}/deactivate", params)
+              : await client.POST("/field-workers/{worker_id}/reactivate", params);
+      assertSaved(response, request);
+    },
+    onSettled: () => {
+      setDialog(null);
+      // A conflict means the list was stale, so it is refreshed on failure as well.
       void queryClient.invalidateQueries({ queryKey: ["field-workers"] });
     },
   });
 
-  function toggleServiceType(id: string, checked: boolean) {
-    const next = checked
-      ? [...selectedServiceTypeIds, id]
-      : selectedServiceTypeIds.filter((selected) => selected !== id);
-    form.setField("serviceTypeIds", next.join(","));
-  }
+  const run = (worker: FieldWorkerRow, action: WorkerAction, reason?: string | null) => {
+    transition.mutate({ worker, action, reason });
+  };
 
-  function companyName(id: string): string {
-    return companies?.find((company) => company.id === id)?.name ?? id;
-  }
+  const pending = workers?.filter((worker) => worker.status === "PENDING_APPROVAL") ?? [];
+  const rejected = workers?.filter((worker) => worker.status === "REJECTED") ?? [];
+  const approved = workers?.filter((worker) => worker.status === "APPROVED") ?? [];
 
   return (
     <Page>
-      <PageHeader
-        title={t("fieldWorkersPageTitle")}
-        actions={
-          <RegistryNewButton
-            label={t("fieldWorkersNew")}
-            onClick={() => {
-              save.reset();
-              dialog.openNew();
-            }}
-          />
-        }
-      />
-      <RegistryList
-        items={workers}
-        getKey={(worker) => worker.id}
-        renderItem={(worker) => (
-          <>
-            <span className="text-foreground min-w-0 flex-1 font-semibold">{worker.full_name}</span>
-            <span className="text-muted-foreground text-sm">
-              {companyName(worker.contractor_company_id)}
-            </span>
-            <RegistryEditButton
-              itemName={worker.full_name}
-              onEdit={() => {
-                save.reset();
-                dialog.openEdit(worker.id, {
-                  fullName: worker.full_name,
-                  companyId: worker.contractor_company_id,
-                  serviceTypeIds: worker.service_type_ids.join(","),
-                  linkedUserId: worker.user_id ?? "",
-                });
-              }}
-            />
-          </>
-        )}
-      />
-      <RegistryDialog
-        dialog={dialog}
-        save={save}
-        createLabel={t("fieldWorkersSubmitCreate")}
-        fieldLabels={{
-          fullName: t("fieldWorkersFieldName"),
-          companyId: t("fieldWorkersFieldCompany"),
-          serviceTypeIds: t("fieldWorkersFieldServiceTypes"),
-        }}
-        onSubmit={() => {
-          save.mutate();
-        }}
-      >
-        <div className="space-y-1.5">
-          <Label htmlFor="worker-name">{t("fieldWorkersFieldName")}</Label>
-          <Input
-            id="worker-name"
-            value={form.values.fullName}
-            aria-invalid={form.isInvalid("fullName")}
-            onChange={(event) => {
-              form.setField("fullName", event.target.value);
-            }}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="worker-company">{t("fieldWorkersFieldCompany")}</Label>
-          <NativeSelect
-            id="worker-company"
-            value={form.values.companyId}
-            aria-invalid={form.isInvalid("companyId")}
-            onChange={(event) => {
-              form.setField("companyId", event.target.value);
-            }}
-          >
-            <NativeSelectOption value="" />
-            {companies?.map((company) => (
-              <NativeSelectOption key={company.id} value={company.id}>
-                {company.name}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </div>
-        {/* Checkboxes, not <select multiple>: Ctrl-click to pick a second type is not
-         * something the PU staff should have to know. */}
-        <fieldset className="space-y-2" aria-invalid={form.isInvalid("serviceTypeIds")}>
-          <legend className="text-sm leading-none font-semibold">
-            {t("fieldWorkersFieldServiceTypes")}
-          </legend>
-          <div className="mt-3 space-y-2">
-            {serviceTypes?.map((serviceType) => (
-              <Label key={serviceType.id} className="font-normal">
-                <input
-                  type="checkbox"
-                  checked={selectedServiceTypeIds.includes(serviceType.id)}
-                  onChange={(event) => {
-                    toggleServiceType(serviceType.id, event.target.checked);
+      <PageHeader title={t("fieldWorkersPageTitle")} />
+      {transition.error !== null && (
+        <ErrorMessage>
+          {transition.error instanceof RegistrySaveError && transition.error.status === 409
+            ? t("fieldWorkersInvalidStatus")
+            : t("fieldWorkersActionError")}
+        </ErrorMessage>
+      )}
+      {pending.length > 0 && (
+        <Section title={t("fieldWorkersPendingHeading")}>
+          <RegistryList
+            items={pending}
+            getKey={(worker) => worker.id}
+            renderItem={(worker) => (
+              <>
+                <span className="text-foreground min-w-0 flex-1 font-semibold">
+                  {worker.full_name}
+                </span>
+                <span className={muted}>{worker.email}</span>
+                <span className={muted}>{worker.contractor_company_name}</span>
+                <span className={muted}>
+                  {t("fieldWorkersRegisteredOn").replace(
+                    "{date}",
+                    formatRegistered(worker.created_at),
+                  )}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  aria-label={t("fieldWorkersApproveWorker").replace("{name}", worker.full_name)}
+                  disabled={transition.isPending}
+                  onClick={() => {
+                    run(worker, "approve");
                   }}
-                />
-                {serviceType.name}
-              </Label>
-            ))}
-          </div>
-        </fieldset>
-        <div className="space-y-1.5">
-          <Label htmlFor="worker-linked-user">{t("fieldWorkersFieldLinkedUser")}</Label>
-          <NativeSelect
-            id="worker-linked-user"
-            value={form.values.linkedUserId}
-            onChange={(event) => {
-              form.setField("linkedUserId", event.target.value);
-            }}
-          >
-            <NativeSelectOption value="">{t("fieldWorkersNoLinkedUser")}</NativeSelectOption>
-            {/* linkable-users lists only users not linked yet, so the worker being edited
-             * would otherwise lose its own login from the options. */}
-            {editedWorker?.user_id && (
-              <NativeSelectOption value={editedWorker.user_id}>
-                {t("fieldWorkersKeepLinkedUser")}
-              </NativeSelectOption>
+                >
+                  {t("fieldWorkersApprove")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  aria-label={t("fieldWorkersRejectWorker").replace("{name}", worker.full_name)}
+                  onClick={() => {
+                    setDialog({ worker, kind: "reject" });
+                  }}
+                >
+                  {t("fieldWorkersReject")}
+                </Button>
+              </>
             )}
-            {linkableUsers?.map((user) => (
-              <NativeSelectOption key={user.id} value={user.id}>
-                {user.name} — {user.email}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </div>
-      </RegistryDialog>
+          />
+        </Section>
+      )}
+      {groupByCompany(approved).map(([company, companyWorkers]) => (
+        <Section key={company} title={company}>
+          <RegistryList
+            items={companyWorkers}
+            getKey={(worker) => worker.id}
+            renderItem={(worker) => (
+              <>
+                <span className="text-foreground min-w-0 flex-1 font-semibold">
+                  {worker.full_name}
+                </span>
+                <span className={muted}>{worker.email}</span>
+                <span className={muted}>
+                  {worker.is_active
+                    ? t("fieldWorkersStatusActive")
+                    : t("fieldWorkersStatusInactive")}
+                </span>
+                <span className={muted}>
+                  {t("fieldWorkersDoneToday").replace("{n}", String(worker.done_today))}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  aria-label={t(
+                    worker.is_active
+                      ? "fieldWorkersDeactivateWorker"
+                      : "fieldWorkersReactivateWorker",
+                  ).replace("{name}", worker.full_name)}
+                  onClick={() => {
+                    setDialog({ worker, kind: worker.is_active ? "deactivate" : "reactivate" });
+                  }}
+                >
+                  {t(worker.is_active ? "fieldWorkersDeactivate" : "fieldWorkersReactivate")}
+                </Button>
+              </>
+            )}
+          />
+        </Section>
+      ))}
+      {rejected.length > 0 && (
+        <Collapsible className="space-y-3">
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="ghost" className="group -ml-3 font-bold">
+              <ChevronRight
+                aria-hidden="true"
+                className="transition-transform group-data-[state=open]:rotate-90"
+              />
+              {t("fieldWorkersRejectedHeading").replace("{n}", String(rejected.length))}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <RegistryList
+              items={rejected}
+              getKey={(worker) => worker.id}
+              renderItem={(worker) => (
+                <>
+                  <span className="text-foreground min-w-0 flex-1 font-semibold">
+                    {worker.full_name}
+                  </span>
+                  <span className={muted}>{worker.email}</span>
+                  <span className={muted}>{worker.contractor_company_name}</span>
+                  {worker.rejection_reason !== null && (
+                    <span className={muted}>
+                      {t("fieldWorkersRejectionReason").replace(
+                        "{reason}",
+                        worker.rejection_reason,
+                      )}
+                    </span>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    aria-label={t("fieldWorkersApproveWorker").replace("{name}", worker.full_name)}
+                    disabled={transition.isPending}
+                    onClick={() => {
+                      run(worker, "approve");
+                    }}
+                  >
+                    {t("fieldWorkersApprove")}
+                  </Button>
+                </>
+              )}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+      <RejectWorkerDialog
+        workerName={dialog?.kind === "reject" ? dialog.worker.full_name : null}
+        pending={transition.isPending}
+        onCancel={() => {
+          setDialog(null);
+        }}
+        onReject={(reason) => {
+          if (dialog !== null) {
+            run(dialog.worker, "reject", reason);
+          }
+        }}
+      />
+      <FieldWorkerConfirmDialog
+        target={
+          dialog !== null && dialog.kind !== "reject" ? { ...dialog, kind: dialog.kind } : null
+        }
+        pending={transition.isPending}
+        onCancel={() => {
+          setDialog(null);
+        }}
+        onConfirm={() => {
+          if (dialog !== null && dialog.kind !== "reject") {
+            run(dialog.worker, dialog.kind);
+          }
+        }}
+      />
     </Page>
   );
 }

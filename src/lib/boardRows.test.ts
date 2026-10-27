@@ -2,48 +2,48 @@ import { describe, expect, it } from "vitest";
 
 import type { components } from "@/api/generated/schema";
 import type { BoardSnapshot } from "@/api/monitoringStream";
-import {
-  buildBoardRows,
-  filterRowsByWorkerName,
-  groupRowsByCompany,
-  paginateGroups,
-  urgencyRank,
-} from "@/lib/boardRows";
+import { buildBoardRows, filterRowsByWorkerName, paginateRows, urgencyRank } from "@/lib/boardRows";
 
 type RouteOut = components["schemas"]["RouteOut"];
 
-function route(id: string, worker: string, name: string, status = "PLANNED"): RouteOut {
+function route(id: string, worker: string, name: string, status = "IN_PROGRESS"): RouteOut {
   return {
     id,
     field_worker_id: worker,
     field_worker_name: name,
-    route_date: "2026-10-11",
-    route_type: "REGULAR",
+    route_date: "2026-10-20",
     status,
-    scheduled_start_at: null,
     started_at: null,
     routing_degraded: false,
+    current_batch: 2,
     stops: [
-      { id: `${id}-1`, order_index: 1, status: "DONE", service_point_name: "Sala 1" },
-      { id: `${id}-2`, order_index: 2, status: "PENDING", service_point_name: "Sala 2" },
+      { id: `${id}-1`, order_index: 1, batch_number: 1, status: "DONE" },
+      { id: `${id}-2`, order_index: 2, batch_number: 1, status: "RELEASED" },
+      { id: `${id}-3`, order_index: 3, batch_number: 2, status: "DONE" },
+      { id: `${id}-4`, order_index: 4, batch_number: 2, status: "PENDING" },
     ],
   } as RouteOut;
 }
 
-function snapshotWith(delayed: string[], alerts: Record<string, number> = {}): BoardSnapshot {
+function snapshotWith(alerts: Record<string, number> = {}): BoardSnapshot {
   return {
-    generated_at: "2026-10-11T12:00:00Z",
-    routes: [...new Set([...delayed, ...Object.keys(alerts)])].map((id) => ({
+    generated_at: "2026-10-20T12:00:00Z",
+    service_day: true,
+    routes: Object.entries(alerts).map(([id, count]) => ({
       route_id: id,
       field_worker_id: "x",
       field_worker_name: "x",
-      route_date: "2026-10-11",
+      company_name: "x",
+      route_date: "2026-10-20",
       status: "IN_PROGRESS",
-      is_delayed: delayed.includes(id),
-      open_alert_count: alerts[id] ?? 0,
-      stop_total: 2,
-      stop_done: 1,
+      open_alert_count: count,
+      current_batch: 2,
+      stops: [],
+      done_today: 2,
     })),
+    pool: [],
+    not_started: [],
+    released_today: 0,
     open_alerts: [],
     worker_positions: [
       {
@@ -51,7 +51,7 @@ function snapshotWith(delayed: string[], alerts: Record<string, number> = {}): B
         field_worker_name: "Ana",
         latitude: -7.2,
         longitude: -35.9,
-        reported_at: "2026-10-11T12:00:00Z",
+        reported_at: "2026-10-20T12:00:00Z",
         age_seconds: 60,
       },
     ],
@@ -59,51 +59,55 @@ function snapshotWith(delayed: string[], alerts: Record<string, number> = {}): B
 }
 
 const WORKERS = [
-  { id: "w1", contractor_company_id: "c1" },
-  { id: "w2", contractor_company_id: "c1" },
-  { id: "w3", contractor_company_id: "c2" },
-  { id: "w4", contractor_company_id: "gone" },
-];
-const COMPANIES = [
-  { id: "c1", name: "Limpa Campus" },
-  { id: "c2", name: "Agro Jardins" },
+  { id: "w1", contractor_company_id: "c1", contractor_company_name: "Limpa Campus" },
+  { id: "w2", contractor_company_id: "c2", contractor_company_name: "Agro Jardins" },
 ];
 
 describe("buildBoardRows", () => {
-  it("joins live flags, company and last position onto each route", () => {
+  it("joins the alert count, company, last position, current batch and points done", () => {
     const [row] = buildBoardRows({
       routes: [route("r1", "w1", "Ana")],
-      snapshot: snapshotWith(["r1"], { r1: 2 }),
+      snapshot: snapshotWith({ r1: 2 }),
       workers: WORKERS,
     });
 
     expect(row).toMatchObject({
       companyId: "c1",
-      isDelayed: true,
+      companyName: "Limpa Campus",
       openAlertCount: 2,
-      stopsDone: 1,
-      stopsTotal: 2,
+      doneToday: 2,
     });
+    expect(row?.currentBatch.map((stop) => stop.id)).toEqual(["r1-3", "r1-4"]);
     expect(row?.position?.age_seconds).toBe(60);
+  });
+
+  it("leaves the company empty for a worker the list does not know", () => {
+    const [row] = buildBoardRows({
+      routes: [route("r1", "gone", "Ana")],
+      snapshot: null,
+      workers: WORKERS,
+    });
+
+    expect(row).toMatchObject({ companyId: null, companyName: null, openAlertCount: 0 });
   });
 });
 
 describe("urgencyRank", () => {
-  it("puts delayed, then alerting, then running, then planned, then finished routes", () => {
+  it("puts alerting, then paused, then running, then finished routes, then by name", () => {
     const rows = buildBoardRows({
       routes: [
         route("done", "w1", "A", "DONE"),
-        route("plan", "w1", "B"),
-        route("run", "w1", "C", "IN_PROGRESS"),
-        route("alert", "w1", "D", "IN_PROGRESS"),
-        route("late", "w1", "E", "IN_PROGRESS"),
+        route("run-b", "w1", "C"),
+        route("run-a", "w1", "B"),
+        route("paused", "w1", "D", "PAUSED"),
+        route("alert", "w1", "E"),
       ],
-      snapshot: snapshotWith(["late"], { alert: 1 }),
+      snapshot: snapshotWith({ alert: 1 }),
       workers: WORKERS,
     });
 
-    const order = [...rows].sort((a, b) => urgencyRank(a) - urgencyRank(b)).map((r) => r.route.id);
-    expect(order).toEqual(["late", "alert", "run", "plan", "done"]);
+    expect(rows.map((row) => row.route.id)).toEqual(["alert", "paused", "run-a", "run-b", "done"]);
+    expect(rows.map(urgencyRank)).toEqual([0, 1, 2, 2, 3]);
   });
 });
 
@@ -120,72 +124,37 @@ describe("filterRowsByWorkerName", () => {
   });
 });
 
-describe("groupRowsByCompany", () => {
-  it("groups by company with subtotals, delayed groups first, unknown company last", () => {
-    const rows = buildBoardRows({
-      routes: [
-        route("r1", "w1", "Ana"),
-        route("r2", "w2", "Bia", "CANCELLED"),
-        route("r3", "w3", "Caio", "IN_PROGRESS"),
-        route("r4", "w4", "Davi"),
-      ],
-      snapshot: snapshotWith(["r3"]),
+describe("paginateRows", () => {
+  function rowsOf(count: number) {
+    return buildBoardRows({
+      routes: Array.from({ length: count }, (_, i) =>
+        route(`r${String(i)}`, "w1", `P${String(i).padStart(2, "0")}`),
+      ),
+      snapshot: null,
       workers: WORKERS,
     });
-
-    const groups = groupRowsByCompany(rows, COMPANIES);
-
-    expect(groups.map((group) => group.companyName)).toEqual([
-      "Agro Jardins",
-      "Limpa Campus",
-      null,
-    ]);
-    expect(groups[0]).toMatchObject({ routeCount: 1, delayedCount: 1 });
-    // The cancelled route still counts as a route but not towards stop completion.
-    expect(groups[1]).toMatchObject({ routeCount: 2, stopsDone: 1, stopsTotal: 2 });
-  });
-});
-
-describe("paginateGroups", () => {
-  function groupsOf(sizes: number[]) {
-    const rows = sizes.flatMap((size, groupIndex) =>
-      Array.from({ length: size }, (_, i) =>
-        route(
-          `g${String(groupIndex)}-${String(i)}`,
-          groupIndex === 0 ? "w1" : "w3",
-          `P${String(i)}`,
-        ),
-      ),
-    );
-
-    return groupRowsByCompany(
-      buildBoardRows({ routes: rows, snapshot: null, workers: WORKERS }),
-      COMPANIES,
-    );
   }
 
-  it("fills each page with the page size, splitting a company across pages", () => {
-    // Agro Jardins (w3) sorts before Limpa Campus (w1): 7 + 8 rows.
-    const groups = groupsOf([8, 7]);
+  it("fills each page with the page size", () => {
+    const rows = rowsOf(15);
 
-    const first = paginateGroups(groups, 1, 10);
-    expect(first.groups.map((group) => [group.companyName, group.rows.length])).toEqual([
-      ["Agro Jardins", 7],
-      ["Limpa Campus", 3],
-    ]);
+    const first = paginateRows(rows, 1, 10);
+    expect(first.rows).toHaveLength(10);
     expect(first).toMatchObject({ pageCount: 2, totalRows: 15, firstRow: 1, lastRow: 10 });
 
-    const second = paginateGroups(groups, 2, 10);
-    expect(second.groups.map((group) => [group.companyName, group.rows.length])).toEqual([
-      ["Limpa Campus", 5],
+    const second = paginateRows(rows, 2, 10);
+    expect(second.rows.map((row) => row.route.field_worker_name)).toEqual([
+      "P10",
+      "P11",
+      "P12",
+      "P13",
+      "P14",
     ]);
-    // Subtotals still describe the whole company, not just this page.
-    expect(second.groups[0]?.routeCount).toBe(8);
     expect(second).toMatchObject({ firstRow: 11, lastRow: 15 });
   });
 
   it("clamps a page past the end and reports an empty table as one page", () => {
-    expect(paginateGroups(groupsOf([3]), 9, 10).page).toBe(1);
-    expect(paginateGroups([], 1, 10)).toMatchObject({ pageCount: 1, totalRows: 0, firstRow: 0 });
+    expect(paginateRows(rowsOf(3), 9, 10).page).toBe(1);
+    expect(paginateRows([], 1, 10)).toMatchObject({ pageCount: 1, totalRows: 0, firstRow: 0 });
   });
 });

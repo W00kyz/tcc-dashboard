@@ -20,6 +20,7 @@ export interface DeletionImpact {
   routes: number;
   executions: number;
   photos: number;
+  appeals: number;
 }
 
 // Order of the list; each kind with its singular and plural wording.
@@ -29,6 +30,7 @@ const IMPACT_LINES: { kind: keyof DeletionImpact; one: StringKey; many: StringKe
   { kind: "routes", one: "deletionImpactRoutesOne", many: "deletionImpactRoutes" },
   { kind: "executions", one: "deletionImpactExecutionsOne", many: "deletionImpactExecutions" },
   { kind: "photos", one: "deletionImpactPhotosOne", many: "deletionImpactPhotos" },
+  { kind: "appeals", one: "deletionImpactAppealsOne", many: "deletionImpactAppeals" },
 ];
 
 interface DeleteConfirmDialogProps {

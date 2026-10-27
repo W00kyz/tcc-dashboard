@@ -10,6 +10,15 @@ for (const role of Object.keys(SEED_USERS) as SeedRole[]) {
     await page.getByLabel("Senha").fill(SEED_PASSWORD);
     await page.getByRole("button", { name: "Entrar" }).click();
     await expect(page).not.toHaveURL(/\/entrar/);
+    // A privacy notice newer than the account's last consent gates every page (LGPD, Etapa 11).
+    // Accepted here, like the person would; the sweep removes the consent with the run's window,
+    // so the next run is asked again.
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    const consent = page.getByRole("button", { name: "Li e concordo" });
+    if (await consent.isVisible()) {
+      await consent.click();
+      await expect(consent).toHaveCount(0);
+    }
     await page.context().storageState({ path: STORAGE[role] });
   });
 }

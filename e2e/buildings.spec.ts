@@ -158,6 +158,10 @@ test("points are created, edited and removed in dialogs, with no coordinates", a
   await expect(create.getByLabel("Latitude")).toHaveCount(0);
   await create.getByLabel("Andar").selectOption({ label: site.floor.label });
   await create.getByLabel("Nome").fill(pointName);
+  // Every point has a service type: it is what puts the point in a company's daily pool.
+  await create
+    .getByLabel("Tipo de serviço")
+    .selectOption({ label: site.company?.serviceType.name ?? "" });
   await create.getByLabel("Descrição").fill("Laboratório");
   await create.getByRole("button", { name: "Cadastrar" }).click();
   await expect(panel.getByText(pointName)).toBeVisible();

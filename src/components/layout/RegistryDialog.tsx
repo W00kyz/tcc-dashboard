@@ -70,6 +70,8 @@ interface RegistryDialogProps<Values extends FormValues> {
   fieldLabels: Partial<Record<keyof Values, string>>;
   // Extra blocking problems the page checks itself (e.g. a window that ends before it starts).
   problems?: string[];
+  /** The page's own sentence for a save failure it understands (null = the generic message). */
+  saveErrorMessage?: (error: Error) => string | null;
   /** Overrides "Novo cadastro" / "Editar cadastro". */
   title?: string;
   description?: string;
@@ -125,6 +127,7 @@ export function RegistryDialog<Values extends FormValues>(props: RegistryDialogP
             save={save}
             fieldLabels={props.fieldLabels}
             problems={problems}
+            saveErrorMessage={props.saveErrorMessage}
           />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={close}>

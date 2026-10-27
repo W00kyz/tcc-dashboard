@@ -8,26 +8,20 @@ import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { AppShell } from "@/components/shell/AppShell";
 import { AlertRulesPage } from "@/routes/AlertRulesPage";
 import { BuildingsPage } from "@/routes/BuildingsPage";
-import {
-  LegacyBuildingRedirect,
-  LegacyEditRouteRedirect,
-  LegacyNewRouteRedirect,
-} from "@/routes/legacyRedirects";
+import { LegacyBuildingRedirect } from "@/routes/legacyRedirects";
 import { ContractorCompaniesPage } from "@/routes/ContractorCompaniesPage";
 import { ExecutionHistoryPage } from "@/routes/ExecutionHistoryPage";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { ForgotPasswordPage } from "@/routes/ForgotPasswordPage";
 import { FormBuilderPage } from "@/routes/FormBuilderPage";
+import { JustificationsPage } from "@/routes/JustificationsPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { MyDataPage } from "@/routes/MyDataPage";
 import { NotFoundPage } from "@/routes/NotFoundPage";
 import { NotificationsPage } from "@/routes/NotificationsPage";
-import { ReassignmentsPage } from "@/routes/ReassignmentsPage";
 import { ReportsPage } from "@/routes/ReportsPage";
 import { ResetPasswordPage } from "@/routes/ResetPasswordPage";
 import { RouteBoardPage } from "@/routes/RouteBoardPage";
-import { RouteTemplatesPage } from "@/routes/RouteTemplatesPage";
-import { ServiceTypesPage } from "@/routes/ServiceTypesPage";
 import { SettingsPage } from "@/routes/SettingsPage";
 import { UsersPage } from "@/routes/UsersPage";
 
@@ -65,15 +59,18 @@ export const appRoutes: RouteObject[] = [
     children: [
       { path: "/rotas", element: <RouteBoardPage /> },
       { path: "/regras-de-alerta", element: <AlertRulesPage /> },
-      { path: "/reatribuicoes", element: <ReassignmentsPage /> },
       { path: "/notificacoes", element: <NotificationsPage /> },
       { path: "/execucoes", element: <ExecutionHistoryPage /> },
+      { path: "/justificativas", element: <JustificationsPage /> },
       { path: "/relatorios", element: <ReportsPage /> },
-      // Creating and editing a route happens in a Dialog over the board; old links open it.
-      { path: "/rotas/nova", element: <LegacyNewRouteRedirect /> },
-      { path: "/rotas/:routeId/editar", element: <LegacyEditRouteRedirect /> },
-      { path: "/templates-de-rota", element: <RouteTemplatesPage /> },
-      { path: "/tipos-de-servico", element: <ServiceTypesPage /> },
+      // Routes are allocated automatically now (spec 2026-10-20-alocacao-automatica §8.1):
+      // nothing is planned, reassigned or built by hand, so the old pages land on the board.
+      { path: "/templates-de-rota", element: <Navigate to="/rotas" replace /> },
+      { path: "/reatribuicoes", element: <Navigate to="/rotas" replace /> },
+      { path: "/rotas/nova", element: <Navigate to="/rotas" replace /> },
+      { path: "/rotas/:routeId/editar", element: <Navigate to="/rotas" replace /> },
+      // Service types belong to a company and are edited in its dialog.
+      { path: "/tipos-de-servico", element: <Navigate to="/empresas-terceirizadas" replace /> },
       { path: "/empresas-terceirizadas", element: <ContractorCompaniesPage /> },
       { path: "/profissionais", element: <FieldWorkersPage /> },
       { path: "/predios", element: <BuildingsPage /> },

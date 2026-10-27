@@ -16,7 +16,7 @@ export default defineConfig({
   use: {
     baseURL,
     locale: "pt-BR",
-    // Campina Grande. The arrival-window regression depends on the browser clock being local.
+    // Campina Grande: dates and times on screen read as the campus wall clock.
     timezoneId: "America/Fortaleza",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
