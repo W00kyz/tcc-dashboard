@@ -87,85 +87,6 @@ export async function executionAwaitingReview(): Promise<StartedRoute> {
   return started;
 }
 
-// A real 1×1 JPEG: the evidence endpoint only accepts JPEG bytes.
-const TINY_JPEG = Buffer.from(
-  "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////" +
-    "////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAA" +
-    "AAAAAP/aAAgBAQABPxA=",
-  "base64",
-);
-
-interface MediaExecution {
-  servicePointId: string;
-  arrivedKey: string;
-  missingKey: string;
-}
-
-/** The form of `serviceTypeId` with one MEDIA question, published; returns its ids. */
-async function publishedMediaForm(manager: SeedApi, serviceTypeId: string, prompt: string) {
-  const form = await manager.get<{ form_id: string }>(`/service-types/${serviceTypeId}/form`);
-  await manager.post(`/forms/${form.form_id}/draft/questions`, {
-    prompt,
-    question_type: "MEDIA",
-    required: true,
-    options: [],
-  });
-  const version = await manager.post<{
-    form_version_id: string;
-    questions: { stable_key: string }[];
-  }>(`/forms/${form.form_id}/publish`, {});
-
-  return {
-    formVersionId: version.form_version_id,
-    stableKey: version.questions[0]?.stable_key ?? "",
-  };
-}
-
-/**
- * A finished execution whose MEDIA answer lists two photos: one uploaded, one that never
- * arrived (its upload still queued on the phone). The check-out is accepted anyway (Ruling 6).
- */
-export async function executionWithMediaAnswer(prompt: string): Promise<MediaExecution> {
-  const suffix = uniqueSuffix();
-  const manager = await SeedApi.signIn("manager");
-  const site = await manager.createSite(suffix, 1);
-  const form = await publishedMediaForm(manager, site.company?.serviceType.id ?? "", prompt);
-  const point = site.points[0]?.id ?? "";
-  const worker = await approvedWorker(manager, suffix, site.company?.id ?? "");
-  const qr = await manager.post<{ public_code: string }>(`/floors/${site.floor.id}/qr-codes`, {
-    reason: "E2E: pergunta de mídia",
-  });
-  await manager.dispose();
-
-  await startRoute(worker);
-  const app = await SeedApi.signInAs(worker.email, worker.password);
-  const now = () => new Date().toISOString();
-  const checkIn = await app.post<{ execution_id: string }>("/check-ins", {
-    qr_payload: qr.public_code,
-    ...SITE_SPOT,
-    scanned_at: now(),
-    idempotency_key: randomUUID(),
-  });
-  const [arrivedKey, missingKey] = [randomUUID(), randomUUID()];
-  await app.postMultipart(`/executions/${checkIn.execution_id}/evidence/photo`, {
-    file: { name: "foto.jpg", mimeType: "image/jpeg", buffer: TINY_JPEG },
-    sha256: createHash("sha256").update(TINY_JPEG).digest("hex"),
-    captured_at: now(),
-    idempotency_key: arrivedKey,
-  });
-  await app.post("/check-outs", {
-    qr_payload: qr.public_code,
-    ...SITE_SPOT,
-    scanned_at: now(),
-    checkout_idempotency_key: randomUUID(),
-    form_version_id: form.formVersionId,
-    answers: [{ stable_key: form.stableKey, value: [arrivedKey, missingKey] }],
-  });
-  await app.dispose();
-
-  return { servicePointId: point, arrivedKey, missingKey };
-}
-
 /** A GPS fix from `started`'s worker at the E2E site, so the board has a position for them. */
 export async function reportedPosition(started: StartedRoute): Promise<void> {
   const app = await SeedApi.signInAs(started.worker.email, started.worker.password);
@@ -198,4 +119,52 @@ UPDATE routes
        started_at = started_at - interval '${String(minutes)} minutes'
  WHERE id = '${routeId}';`);
   runReleaseScan();
+}
+
+// A 1x1 JPEG: the evidence endpoint only accepts JPEG bytes, and the drawer decodes them.
+const TINY_JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/yQALCAABAAEBAREA/8wABgAQEAX/2gAIAQEAAD8A0s8g/9k=",
+  "base64",
+);
+
+export interface FinishedExecution extends StartedRoute {
+  executionId: string;
+  complaints: string;
+}
+
+/** A worker's whole visit, through the API the app calls: check-in at a new E2E site's point,
+ * two photos, then check-out carrying `complaints` as the free text. */
+export async function finishedExecutionWithEvidence(
+  complaints = "E2E: torneira da pia vazando\nE2E: faltou papel toalha",
+): Promise<FinishedExecution> {
+  const started = await startedRouteOnNewSite();
+  const manager = await SeedApi.signIn("manager");
+  const qr = await manager.post<{ public_code: string }>(`/floors/${started.floorId}/qr-codes`, {
+    reason: "E2E: evidências",
+  });
+  await manager.dispose();
+
+  const app = await SeedApi.signInAs(started.worker.email, started.worker.password);
+  const checkIn = await app.post<{ execution_id: string }>("/check-ins", {
+    qr_payload: qr.public_code,
+    scanned_at: new Date().toISOString(),
+    idempotency_key: randomUUID(),
+  });
+  for (let photo = 0; photo < 2; photo += 1) {
+    await app.postMultipart(`/executions/${checkIn.execution_id}/evidence/photo`, {
+      file: { name: "e2e.jpg", mimeType: "image/jpeg", buffer: TINY_JPEG },
+      sha256: createHash("sha256").update(TINY_JPEG).digest("hex"),
+      captured_at: new Date().toISOString(),
+      idempotency_key: randomUUID(),
+    });
+  }
+  await app.post("/check-outs", {
+    qr_payload: qr.public_code,
+    scanned_at: new Date().toISOString(),
+    checkout_idempotency_key: randomUUID(),
+    complaints_suggestions: complaints,
+  });
+  await app.dispose();
+
+  return { ...started, executionId: checkIn.execution_id, complaints };
 }

@@ -238,6 +238,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/routes/me/approach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * My Approach
+     * @description The street leg from `(lat, lng)` to the worker's next stop: the first PENDING stop of
+     *     today's current batch, in route order. 204 when there is none; 503 with `OSRM_UNAVAILABLE`
+     *     when OSRM cannot answer — the server never falls back to a straight line itself.
+     */
+    get: operations["my_approach_routes_me_approach_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/routes/start": {
     parameters: {
       query?: never;
@@ -898,92 +920,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/service-types/{service_type_id}/form": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Form */
-    get: operations["get_form_service_types__service_type_id__form_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/forms/{form_id}/draft/questions": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Create Question */
-    post: operations["create_question_forms__form_id__draft_questions_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/forms/{form_id}/draft/questions/{stable_key}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Delete Question */
-    delete: operations["delete_question_forms__form_id__draft_questions__stable_key__delete"];
-    options?: never;
-    head?: never;
-    /** Patch Question */
-    patch: operations["patch_question_forms__form_id__draft_questions__stable_key__patch"];
-    trace?: never;
-  };
-  "/forms/{form_id}/draft/order": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** Put Order */
-    put: operations["put_order_forms__form_id__draft_order_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/forms/{form_id}/publish": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Publish */
-    post: operations["publish_forms__form_id__publish_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/routes/{route_id}/impediments": {
     parameters: {
       query?: never;
@@ -1571,24 +1507,6 @@ export interface components {
       /** Pool Empty */
       pool_empty: boolean;
     };
-    /** AnswerInBody */
-    AnswerInBody: {
-      /** Stable Key */
-      stable_key: string;
-      /** Value */
-      value: unknown;
-    };
-    /** AnswerOut */
-    AnswerOut: {
-      /** Question Stable Key */
-      question_stable_key: string;
-      /** Prompt */
-      prompt: string | null;
-      /** Value */
-      value: unknown;
-      /** Question Type */
-      question_type: string | null;
-    };
     /** AppealBody */
     AppealBody: {
       /**
@@ -1703,6 +1621,24 @@ export interface components {
        * Format: date-time
        */
       deadline: string;
+    };
+    /**
+     * ApproachOut
+     * @description The live first leg: the street path from the worker's position to the next stop. Never
+     *     stored; the app asks again as the worker moves.
+     */
+    ApproachOut: {
+      /**
+       * Route Stop Id
+       * Format: uuid
+       */
+      route_stop_id: string;
+      /** Geometry */
+      geometry: number[][];
+      /** Distance M */
+      distance_m: number;
+      /** Duration S */
+      duration_s: number;
     };
     /** AuthEventOut */
     AuthEventOut: {
@@ -1958,10 +1894,8 @@ export interface components {
       execution_id?: string | null;
       /** Client Clock Offset Seconds */
       client_clock_offset_seconds?: number | null;
-      /** Form Version Id */
-      form_version_id?: string | null;
-      /** Answers */
-      answers?: components["schemas"]["AnswerInBody"][] | null;
+      /** Complaints Suggestions */
+      complaints_suggestions?: string | null;
     };
     /** CheckOutResponse */
     CheckOutResponse: {
@@ -1996,6 +1930,8 @@ export interface components {
       name: string;
       /** Average Duration Minutes */
       average_duration_minutes: number;
+      /** Requires Evidence */
+      requires_evidence: boolean;
     };
     /**
      * ComplianceReportOut
@@ -2174,20 +2110,6 @@ export interface components {
       /** Appeals */
       appeals: number;
     };
-    /**
-     * EmbeddedForm
-     * @description The stop's active PUBLISHED execution form, shipped inside `GET /routes/me` so the app
-     *     has the schema (with hashes) before it goes offline (spec §5.2, Etapa 7).
-     */
-    EmbeddedForm: {
-      /**
-       * Form Version Id
-       * Format: uuid
-       */
-      form_version_id: string;
-      /** Questions */
-      questions: components["schemas"]["FormQuestionField"][];
-    };
     /** EvidenceItemOut */
     EvidenceItemOut: {
       /**
@@ -2300,10 +2222,8 @@ export interface components {
       scans: components["schemas"]["ExecutionScan"][];
       /** Evidence */
       evidence: components["schemas"]["ExecutionEvidence"][];
-      /** Form Version Id */
-      form_version_id: string | null;
-      /** Answers */
-      answers: components["schemas"]["AnswerOut"][];
+      /** Complaints Suggestions */
+      complaints_suggestions: string | null;
     };
     /** ExecutionEvidence */
     ExecutionEvidence: {
@@ -2495,92 +2415,6 @@ export interface components {
       /** Label */
       label: string;
     };
-    /** FormOverviewResponse */
-    FormOverviewResponse: {
-      /**
-       * Form Id
-       * Format: uuid
-       */
-      form_id: string;
-      /**
-       * Service Type Id
-       * Format: uuid
-       */
-      service_type_id: string;
-      draft: components["schemas"]["FormVersionResponse"];
-      /** Published */
-      published: components["schemas"]["PublishedVersionResponse"][];
-    };
-    /**
-     * FormQuestionField
-     * @description One question of the embedded form, mirroring `FormQuestionOut`. `content_hash` is the
-     *     per-question fingerprint the app pins each answer to while offline (spec §5.2).
-     */
-    FormQuestionField: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /**
-       * Stable Key
-       * Format: uuid
-       */
-      stable_key: string;
-      /** Order Index */
-      order_index: number;
-      /** Prompt */
-      prompt: string;
-      question_type: components["schemas"]["QuestionType"];
-      /** Required */
-      required: boolean;
-      /** Options */
-      options: string[];
-      /** Content Hash */
-      content_hash: string | null;
-    };
-    /** FormQuestionResponse */
-    FormQuestionResponse: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /**
-       * Stable Key
-       * Format: uuid
-       */
-      stable_key: string;
-      /** Order Index */
-      order_index: number;
-      /** Prompt */
-      prompt: string;
-      question_type: components["schemas"]["QuestionType"];
-      /** Required */
-      required: boolean;
-      /** Options */
-      options: string[];
-      /** Content Hash */
-      content_hash: string | null;
-    };
-    /** FormVersionResponse */
-    FormVersionResponse: {
-      /**
-       * Form Version Id
-       * Format: uuid
-       */
-      form_version_id: string;
-      status: components["schemas"]["FormVersionStatus"];
-      /** Version Number */
-      version_number: number;
-      /** Questions */
-      questions: components["schemas"]["FormQuestionResponse"][];
-    };
-    /**
-     * FormVersionStatus
-     * @enum {string}
-     */
-    FormVersionStatus: "DRAFT" | "PUBLISHED";
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -2873,20 +2707,6 @@ export interface components {
       /** Name */
       name: string;
     };
-    /** PublishedVersionResponse */
-    PublishedVersionResponse: {
-      /**
-       * Form Version Id
-       * Format: uuid
-       */
-      form_version_id: string;
-      /** Version Number */
-      version_number: number;
-      /** Published At */
-      published_at: string | null;
-      /** Question Count */
-      question_count: number;
-    };
     /** QrCodeOut */
     QrCodeOut: {
       /**
@@ -2906,24 +2726,6 @@ export interface components {
       /** Status */
       status: string;
     };
-    /** QuestionBody */
-    QuestionBody: {
-      /** Prompt */
-      prompt: string;
-      question_type: components["schemas"]["QuestionType"];
-      /** Required */
-      required: boolean;
-      /**
-       * Options
-       * @default []
-       */
-      options: string[];
-    };
-    /**
-     * QuestionType
-     * @enum {string}
-     */
-    QuestionType: "TEXT" | "NUMBER" | "BOOLEAN" | "SINGLE_CHOICE" | "MULTI_CHOICE" | "MEDIA";
     /** RefreshRequest */
     RefreshRequest: {
       /** Refresh Token */
@@ -2963,11 +2765,6 @@ export interface components {
      */
     ReleaseReason:
       "IMPEDIMENT" | "ROUTE_REMAINDER" | "LEFT_CAMPUS" | "LOCATION_SILENCE" | "END_OF_DAY";
-    /** ReorderBody */
-    ReorderBody: {
-      /** Stable Keys */
-      stable_keys: string[];
-    };
     /**
      * ReportGranularity
      * @enum {string}
@@ -3038,6 +2835,11 @@ export interface components {
       floor_label: string;
       /** Building Name */
       building_name: string;
+      /**
+       * Building Id
+       * Format: uuid
+       */
+      building_id: string;
       /** Latitude */
       latitude: number;
       /** Longitude */
@@ -3052,7 +2854,10 @@ export interface components {
       service_type_id: string | null;
       /** Service Type Name */
       service_type_name: string | null;
-      form: components["schemas"]["EmbeddedForm"] | null;
+      /** Requires Evidence */
+      requires_evidence: boolean;
+      /** Done At */
+      done_at: string | null;
     };
     /**
      * RouteStopStatus
@@ -3121,6 +2926,8 @@ export interface components {
       name: string;
       /** Average Duration Minutes */
       average_duration_minutes: number;
+      /** Requires Evidence */
+      requires_evidence: boolean;
       /** Contractor Company Id */
       contractor_company_id: string | null;
       /** Contractor Company Name */
@@ -3140,6 +2947,11 @@ export interface components {
        * @default 30
        */
       average_duration_minutes: number;
+      /**
+       * Requires Evidence
+       * @default false
+       */
+      requires_evidence: boolean;
     };
     /** SettingsOut */
     SettingsOut: {
@@ -3700,6 +3512,52 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["MyDayOut"];
         };
+      };
+    };
+  };
+  my_approach_routes_me_approach_get: {
+    parameters: {
+      query: {
+        lat: number;
+        lng: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApproachOut"];
+        };
+      };
+      /** @description No route today, or no PENDING stop in its current batch. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+      /** @description OSRM is unavailable or cannot route the leg; draw a straight line. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
@@ -5108,206 +4966,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_form_service_types__service_type_id__form_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        service_type_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["FormOverviewResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  create_question_forms__form_id__draft_questions_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        form_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["QuestionBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["FormVersionResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  delete_question_forms__form_id__draft_questions__stable_key__delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        form_id: string;
-        stable_key: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["FormVersionResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  patch_question_forms__form_id__draft_questions__stable_key__patch: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        form_id: string;
-        stable_key: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["QuestionBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["FormVersionResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  put_order_forms__form_id__draft_order_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        form_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ReorderBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["FormVersionResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  publish_forms__form_id__publish_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        form_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["FormVersionResponse"];
         };
       };
       /** @description Validation Error */

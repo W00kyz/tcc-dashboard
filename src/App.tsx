@@ -13,7 +13,6 @@ import { ContractorCompaniesPage } from "@/routes/ContractorCompaniesPage";
 import { ExecutionHistoryPage } from "@/routes/ExecutionHistoryPage";
 import { FieldWorkersPage } from "@/routes/FieldWorkersPage";
 import { ForgotPasswordPage } from "@/routes/ForgotPasswordPage";
-import { FormBuilderPage } from "@/routes/FormBuilderPage";
 import { JustificationsPage } from "@/routes/JustificationsPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { MyDataPage } from "@/routes/MyDataPage";
@@ -78,8 +77,6 @@ export const appRoutes: RouteObject[] = [
       { path: "/predios/:buildingId", element: <LegacyBuildingRedirect /> },
       { path: "/predios/:buildingId/andares", element: <LegacyBuildingRedirect /> },
       { path: "/pontos-de-servico", element: <Navigate to="/predios" replace /> },
-      // RF36: managers maintain the execution forms (the API already allows MANAGER).
-      { path: "/formularios", element: <FormBuilderPage /> },
     ],
   },
   {

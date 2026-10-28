@@ -13,6 +13,7 @@ export interface ServiceTypeDraft {
   id: string | null;
   name: string;
   minutes: string;
+  requiresEvidence: boolean;
 }
 
 let nextKey = 0;
@@ -26,6 +27,7 @@ export function draftFromType(type: CompanyServiceTypeOut): ServiceTypeDraft {
     id: type.id,
     name: type.name,
     minutes: String(type.average_duration_minutes),
+    requiresEvidence: type.requires_evidence,
   };
 }
 
@@ -33,7 +35,7 @@ export function draftFromType(type: CompanyServiceTypeOut): ServiceTypeDraft {
 export function blankDraft(): ServiceTypeDraft {
   nextKey += 1;
 
-  return { key: nextKey, id: null, name: "", minutes: DEFAULT_MINUTES };
+  return { key: nextKey, id: null, name: "", minutes: DEFAULT_MINUTES, requiresEvidence: false };
 }
 
 function minutesOf(draft: ServiceTypeDraft): number {
@@ -54,6 +56,7 @@ export function toServiceTypeRows(drafts: ServiceTypeDraft[]): ServiceTypeRow[] 
     id: draft.id,
     name: draft.name.trim(),
     average_duration_minutes: minutesOf(draft),
+    requires_evidence: draft.requiresEvidence,
   }));
 }
 

@@ -7,6 +7,7 @@ import {
   type ServiceTypeDraft,
 } from "@/components/companies/serviceTypeRows";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -23,7 +24,7 @@ interface ServiceTypeRowsProps {
   showInvalid: boolean;
 }
 
-/** The company dialog's "Tipos de serviço": a line per type (name, average minutes, remove),
+/** The company dialog's "Tipos de serviço": a line per type (name, average minutes, "Exige evidências", remove),
  * "Adicionar tipo" for a new one and, when some exist, a picker to adopt an orphan type.
  * @example <ServiceTypeRows drafts={rows} onChange={setRows} orphans={orphans} showInvalid={false} /> */
 export function ServiceTypeRows({ drafts, onChange, orphans, showInvalid }: ServiceTypeRowsProps) {
@@ -42,7 +43,7 @@ export function ServiceTypeRows({ drafts, onChange, orphans, showInvalid }: Serv
         const minutesBad = showInvalid && !(Number(draft.minutes) > 0);
 
         return (
-          <div key={draft.key} className="flex items-center gap-2">
+          <div key={draft.key} className="flex flex-wrap items-center gap-2">
             <Input
               aria-label={t("serviceTypeName").replace("{n}", position)}
               placeholder={t("contractorCompaniesFieldName")}
@@ -67,6 +68,15 @@ export function ServiceTypeRows({ drafts, onChange, orphans, showInvalid }: Serv
             <span aria-hidden="true" className="text-muted-foreground text-sm">
               {t("serviceTypeMinutesUnit")}
             </span>
+            <Label className="shrink-0 font-normal">
+              <Checkbox
+                checked={draft.requiresEvidence}
+                onCheckedChange={(checked) => {
+                  edit(draft.key, { requiresEvidence: checked === true });
+                }}
+              />
+              {t("serviceTypeRequiresEvidence")}
+            </Label>
             <Button
               type="button"
               variant="ghost"

@@ -78,7 +78,9 @@ const COMPANY = {
   id: "c1",
   name: "Limpa Tudo",
   cnpj: "12345678000199",
-  service_types: [{ id: "t1", name: "Limpeza", average_duration_minutes: 30 }],
+  service_types: [
+    { id: "t1", name: "Limpeza", average_duration_minutes: 30, requires_evidence: false },
+  ],
 };
 
 function companiesApi() {
@@ -116,8 +118,8 @@ describe("ContractorCompaniesPage service types", () => {
         name: "Limpa Tudo",
         cnpj: "12345678000199",
         service_types: [
-          { id: "t1", name: "Limpeza", average_duration_minutes: 30 },
-          { id: null, name: "Dedetização", average_duration_minutes: 90 },
+          { id: "t1", name: "Limpeza", average_duration_minutes: 30, requires_evidence: false },
+          { id: null, name: "Dedetização", average_duration_minutes: 90, requires_evidence: false },
         ],
       });
     });

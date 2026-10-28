@@ -7,11 +7,6 @@ import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { EvidenceViewer } from "@/components/EvidenceViewer";
 import { ExecutionAppeal } from "@/components/execution/ExecutionAppeal";
-import { MediaAnswerPhotos } from "@/components/execution/MediaAnswerPhotos";
-import {
-  type MediaAnswerPhotos as MediaAnswerPhotosData,
-  splitEvidenceByAnswers,
-} from "@/components/execution/mediaAnswers";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
 import { X } from "lucide-react";
@@ -20,7 +15,6 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 
 type ExecutionDetail = components["schemas"]["ExecutionDetail"];
 type ExecutionScan = components["schemas"]["ExecutionScan"];
-type AnswerOut = components["schemas"]["AnswerOut"];
 
 interface ExecutionDetailDrawerProps {
   executionId: string | null;
@@ -36,6 +30,7 @@ const FLAG_LABEL_KEY: Record<string, StringKey> = {
   GPS_UNAVAILABLE: "executionFlagGpsUnavailable",
   ROOM_CHOSEN_MANUALLY: "executionFlagRoomChosenManually",
   CLOCK_SKEW: "executionFlagClockSkew",
+  INSUFFICIENT_EVIDENCE: "executionFlagInsufficientEvidence",
 };
 
 const SCAN_KIND_LABEL_KEY: Record<string, StringKey> = {
@@ -83,43 +78,6 @@ function formatDistance(distanceM: number | null): string {
   return distanceM === null ? "—" : `${String(Math.round(distanceM))} m`;
 }
 
-// `value` is `unknown` on the wire (AnswerOut) — the text-like question types collapse to
-// three renderable shapes: BOOLEAN, MULTI_CHOICE (array), and everything else as text. MEDIA
-// renders its photos instead (MediaAnswerPhotos).
-function formatAnswerValue(t: Translate, value: unknown): string {
-  if (typeof value === "boolean") {
-    return value ? t("executionFormYes") : t("executionFormNo");
-  }
-  if (Array.isArray(value)) {
-    return value.join(", ");
-  }
-
-  return String(value);
-}
-
-interface AnswerRowProps {
-  answer: AnswerOut;
-  /** Set for a MEDIA answer: its photos, shown instead of the raw list of keys. */
-  media: MediaAnswerPhotosData | undefined;
-  onLightboxOpenChange: (open: boolean) => void;
-}
-
-function AnswerRow({ answer, media, onLightboxOpenChange }: AnswerRowProps) {
-  const { t } = useTranslation();
-  const prompt = answer.prompt ?? t("executionFormAnswerRemovedQuestion");
-
-  return (
-    <li className="text-sm">
-      <span className="text-muted-foreground">{prompt}: </span>
-      {media === undefined ? (
-        formatAnswerValue(t, answer.value)
-      ) : (
-        <MediaAnswerPhotos entry={media} onLightboxOpenChange={onLightboxOpenChange} />
-      )}
-    </li>
-  );
-}
-
 function ScanRow({ scan }: { scan: ExecutionScan }) {
   const { t } = useTranslation();
   const kindKey = SCAN_KIND_LABEL_KEY[scan.kind];
@@ -148,8 +106,6 @@ function DetailBody({
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const client = createApiClient(apiBaseUrl, session?.accessToken ?? "");
-  // Photos a MEDIA answer lists show under that question, not again among the loose evidence.
-  const evidence = splitEvidenceByAnswers(detail.answers, detail.evidence);
 
   const resolveReview = useMutation({
     mutationFn: async () => {
@@ -219,24 +175,6 @@ function DetailBody({
         </section>
       )}
 
-      {detail.form_version_id !== null && (
-        <section>
-          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
-            {t("executionFormHeading")}
-          </h3>
-          <ul className="mt-1 space-y-1">
-            {detail.answers.map((answer) => (
-              <AnswerRow
-                key={answer.question_stable_key}
-                answer={answer}
-                media={evidence.byQuestion.get(answer.question_stable_key)}
-                onLightboxOpenChange={onLightboxOpenChange}
-              />
-            ))}
-          </ul>
-        </section>
-      )}
-
       {detail.scans.length > 0 && (
         <section>
           <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
@@ -250,8 +188,8 @@ function DetailBody({
         </section>
       )}
 
-      {/* An execution created by an accepted appeal (spec 2026-10-20 §7.5) carries no answers
-       * or evidence of its own: the appeal is its record. */}
+      {/* An execution created by an accepted appeal (spec 2026-10-20 §7.5) carries no evidence
+       * of its own: the appeal is its record. */}
       {detail.source === "APPEAL" && detail.appeal_id !== null && (
         <ExecutionAppeal appealId={detail.appeal_id} />
       )}
@@ -260,14 +198,23 @@ function DetailBody({
         <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
           {t("executionEvidenceHeading")}
         </h3>
-        {evidence.loose.length === 0 ? (
+        {detail.evidence.length === 0 ? (
           <p className="text-muted-foreground mt-1 text-sm">{t("executionNoEvidence")}</p>
         ) : (
           <div className="mt-1">
-            <EvidenceViewer items={evidence.loose} onLightboxOpenChange={onLightboxOpenChange} />
+            <EvidenceViewer items={detail.evidence} onLightboxOpenChange={onLightboxOpenChange} />
           </div>
         )}
       </section>
+
+      {detail.complaints_suggestions !== null && (
+        <section>
+          <h3 className="text-muted-foreground mb-2 text-[0.6875rem] font-bold tracking-[0.08em] uppercase">
+            {t("executionComplaintsSuggestions")}
+          </h3>
+          <p className="mt-1 text-sm whitespace-pre-wrap">{detail.complaints_suggestions}</p>
+        </section>
+      )}
 
       {detail.review_status === "PENDING_REVIEW" && (
         <section className="space-y-2">

@@ -3,7 +3,6 @@ import {
   Building2,
   ClipboardCheck,
   FileBarChart,
-  FileText,
   HardHat,
   Handshake,
   LayoutList,
@@ -62,10 +61,7 @@ export const NAV_MODULES: NavModule[] = [
     label: "navGroupPlanning",
     defaultOpen: false,
     roles: MANAGEMENT_ROLES,
-    entries: [
-      { to: "/regras-de-alerta", label: "navAlertRules", icon: ShieldAlert },
-      { to: "/formularios", label: "navForms", icon: FileText },
-    ],
+    entries: [{ to: "/regras-de-alerta", label: "navAlertRules", icon: ShieldAlert }],
   },
   {
     id: "registry",
