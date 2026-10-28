@@ -177,7 +177,7 @@ export const strings = {
   executionFlagRoomChosenManually: "Sala escolhida manualmente",
   executionFlagClockSkew: "Desvio de relógio implausível",
   executionFlagInsufficientEvidence: "Evidências insuficientes",
-  executionComplaintsSuggestions: "Reclamações e Sugestões",
+  executionComplaintsSuggestions: "Observação",
   executionEvidenceHeading: "Evidências",
   executionNoEvidence: "Nenhuma evidência registrada.",
   executionResolveReviewButton: "Marcar revisão como resolvida",

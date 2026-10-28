@@ -217,7 +217,7 @@ describe("ExecutionDetailDrawer", () => {
   it("shows the complaints and suggestions typed at check-out, keeping line breaks", async () => {
     renderDrawer(makeFakeFetch({ complaints_suggestions: "Falta papel\nTorneira vazando" }));
 
-    const heading = await screen.findByRole("heading", { name: "Reclamações e Sugestões" });
+    const heading = await screen.findByRole("heading", { name: "Observação" });
     const section = heading.closest("section");
     if (section === null) {
       throw new Error("expected the complaints section");
@@ -231,7 +231,7 @@ describe("ExecutionDetailDrawer", () => {
     renderDrawer(makeFakeFetch({ complaints_suggestions: null }));
 
     await screen.findByText("Linha do tempo");
-    expect(screen.queryByText("Reclamações e Sugestões")).not.toBeInTheDocument();
+    expect(screen.queryByText("Observação")).not.toBeInTheDocument();
   });
 
   it("labels the INSUFFICIENT_EVIDENCE flag in pt-BR", async () => {

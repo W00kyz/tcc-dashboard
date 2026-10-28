@@ -2795,6 +2795,11 @@ export interface components {
       floor_label: string;
       /** Building Name */
       building_name: string;
+      /**
+       * Building Id
+       * Format: uuid
+       */
+      building_id: string;
       /** Latitude */
       latitude: number;
       /** Longitude */
@@ -2811,6 +2816,8 @@ export interface components {
       service_type_name: string | null;
       /** Requires Evidence */
       requires_evidence: boolean;
+      /** Done At */
+      done_at: string | null;
     };
     /**
      * RouteStopStatus
