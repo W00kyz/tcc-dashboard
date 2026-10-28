@@ -238,6 +238,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/routes/me/approach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * My Approach
+     * @description The street leg from `(lat, lng)` to the worker's next stop: the first PENDING stop of
+     *     today's current batch, in route order. 204 when there is none; 503 with `OSRM_UNAVAILABLE`
+     *     when OSRM cannot answer — the server never falls back to a straight line itself.
+     */
+    get: operations["my_approach_routes_me_approach_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/routes/start": {
     parameters: {
       query?: never;
@@ -1599,6 +1621,24 @@ export interface components {
        * Format: date-time
        */
       deadline: string;
+    };
+    /**
+     * ApproachOut
+     * @description The live first leg: the street path from the worker's position to the next stop. Never
+     *     stored; the app asks again as the worker moves.
+     */
+    ApproachOut: {
+      /**
+       * Route Stop Id
+       * Format: uuid
+       */
+      route_stop_id: string;
+      /** Geometry */
+      geometry: number[][];
+      /** Distance M */
+      distance_m: number;
+      /** Duration S */
+      duration_s: number;
     };
     /** AuthEventOut */
     AuthEventOut: {
@@ -3472,6 +3512,52 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["MyDayOut"];
         };
+      };
+    };
+  };
+  my_approach_routes_me_approach_get: {
+    parameters: {
+      query: {
+        lat: number;
+        lng: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApproachOut"];
+        };
+      };
+      /** @description No route today, or no PENDING stop in its current batch. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+      /** @description OSRM is unavailable or cannot route the leg; draw a straight line. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
