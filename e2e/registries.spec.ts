@@ -151,15 +151,16 @@ test("/usuarios blocks an empty submit", async ({ page }) => {
   await expectEmptySubmitBlocked(page, "/usuarios", "Novo usuário", "/users");
 });
 
-test("Eventos was removed: no menu entry, no page, no event fields on points", async ({ page }) => {
+test("Eventos was removed: no menu entry, no page, no event fields on rooms", async ({ page }) => {
   const api = await SeedApi.signIn("admin");
   const site = await api.createSite(uniqueSuffix(), 0);
   await api.dispose();
 
   await page.goto(`/predios?predio=${site.building.id}`);
-  await page.getByRole("button", { name: "Novo ponto" }).click();
-  const points = page.getByRole("dialog", { name: "Novo ponto de serviço" });
-  await expect(points.getByLabel("Andar", { exact: true })).toBeVisible();
+  // Points are made through rooms now: the room dialog asks for a name and Limpeza, nothing more.
+  await page.getByRole("button", { name: "Nova sala" }).click();
+  const points = page.getByRole("dialog", { name: "Nova sala" });
+  await expect(points.getByLabel("Nome da sala (opcional)")).toBeVisible();
   await expect(page.getByRole("link", { name: "Eventos", exact: true })).toHaveCount(0);
   await expect(points.getByLabel("Tipo", { exact: true })).toHaveCount(0);
   await expect(points.getByLabel("Evento")).toHaveCount(0);

@@ -97,6 +97,7 @@ DELETE FROM routes WHERE id IN (SELECT id FROM e2e_routes);
 
 DELETE FROM qr_codes WHERE id IN (SELECT id FROM e2e_qr_codes);
 DELETE FROM service_points WHERE id IN (SELECT id FROM e2e_points);
+DELETE FROM rooms WHERE floor_id IN (SELECT id FROM e2e_floors);
 DELETE FROM floors WHERE id IN (SELECT id FROM e2e_floors);
 DELETE FROM buildings WHERE id IN (SELECT id FROM e2e_buildings);
 

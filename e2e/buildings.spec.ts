@@ -99,8 +99,11 @@ test("a building is drawn as a rectangle and, once registered, is selected with 
   await popup.getByRole("button", { name: "Cadastrar" }).click();
 
   await expect(card(page).getByText(name)).toBeVisible();
-  await expect(card(page).getByText("0 andares · 0 pontos")).toBeVisible();
-  await expect(page.getByRole("region", { name: `Pontos de serviço · ${name}` })).toBeVisible();
+  // A new building is born with its Térreo, so it already has one floor and no rooms.
+  await expect(card(page).getByText("1 andar · 0 pontos")).toBeVisible();
+  const panel = page.getByRole("region", { name: `Andares e salas · ${name}` });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("group", { name: "Térreo", exact: true })).toBeVisible();
   const created = await buildingNamed(name);
   expect(page.url()).toContain(`predio=${created.id}`);
   expect(created.footprint_source).toBe("drawn");
@@ -122,10 +125,12 @@ test("nothing shows below the map until a building is selected", async ({ page }
   await page.goto("/predios");
   await expect(page.getByRole("region", { name: MAP })).toBeVisible();
 
-  await expect(page.getByRole("region", { name: /^Pontos de serviço/ })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: /^Andares e salas/ })).toHaveCount(0);
 });
 
-test("the pencil opens the building's dialog: rename, floors and QR codes", async ({ page }) => {
+test("the pencil opens the building's dialog to rename it; QR codes live on the floor", async ({
+  page,
+}) => {
   page.on("dialog", (dialog) => void dialog.accept("E2E: primeira impressão"));
   const api = await SeedApi.signIn("manager");
   const site = await api.createSite(uniqueSuffix(), 0);
@@ -140,52 +145,89 @@ test("the pencil opens the building's dialog: rename, floors and QR codes", asyn
   await nameField.fill(`${site.building.name} editado`);
   await dialog.getByRole("button", { name: "Salvar alterações" }).first().click();
   await expect(dialog.getByText("Dados do prédio salvos.")).toBeVisible();
+  // The dialog no longer lists floors: they, and their QR codes, are managed under the map.
+  await expect(dialog.getByText("Andares e QR Codes")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
 
-  await dialog.getByRole("button", { name: "Gerar QR" }).click();
-  await expect(dialog.getByRole("status").filter({ hasText: "QR Code gerado" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Revogar QR" })).toBeEnabled();
+  const floor = page.getByRole("group", { name: site.floor.label, exact: true });
+  await floor.getByRole("button", { name: "Gerar QR" }).click();
+  await expect(floor.getByRole("status").filter({ hasText: "QR Code gerado" })).toBeVisible();
+  await expect(floor.getByRole("button", { name: "Revogar QR" })).toBeEnabled();
 });
 
-test("points are created, edited and removed in dialogs, with no coordinates", async ({ page }) => {
+test("floors and rooms are managed under the map: rooms, services, rename and removal", async ({
+  page,
+}) => {
   const api = await SeedApi.signIn("manager");
   const site = await api.createSite(uniqueSuffix(), 0);
-  const pointName = `E2E Sala dialog ${uniqueSuffix()}`;
+  const namedRoom = `E2E Auditório ${uniqueSuffix()}`;
+  const extraService = site.company?.serviceType.name ?? "";
   await openBuildingFromAddress(page, site.building.id);
-  const panel = page.getByRole("region", { name: `Pontos de serviço · ${site.building.name}` });
+  const panel = page.getByRole("region", { name: `Andares e salas · ${site.building.name}` });
+  const terreo = panel.getByRole("group", { name: "Térreo", exact: true });
+  const room = (name: string) => terreo.getByRole("group", { name, exact: true });
 
-  await panel.getByRole("button", { name: "Novo ponto" }).click();
-  const create = page.getByRole("dialog", { name: "Novo ponto de serviço" });
-  await expect(create.getByLabel("Latitude")).toHaveCount(0);
-  await create.getByLabel("Andar").selectOption({ label: site.floor.label });
-  await create.getByLabel("Nome").fill(pointName);
-  // Every point has a service type: it is what puts the point in a company's daily pool.
-  await create
-    .getByLabel("Tipo de serviço")
-    .selectOption({ label: site.company?.serviceType.name ?? "" });
-  await create.getByLabel("Descrição").fill("Laboratório");
-  await create.getByRole("button", { name: "Cadastrar" }).click();
-  await expect(panel.getByText(pointName)).toBeVisible();
+  // Rooms 101, 102, 103: the name is left blank and the next number is taken.
+  for (const number of ["101", "102", "103"]) {
+    await terreo.getByRole("button", { name: "Nova sala" }).click();
+    const create = page.getByRole("dialog", { name: "Nova sala" });
+    await expect(create.getByLabel("Nome da sala (opcional)")).toHaveAttribute(
+      "placeholder",
+      number,
+    );
+    await expect(create.getByLabel("Limpeza")).toBeChecked();
+    await create.getByRole("button", { name: "Cadastrar" }).click();
+    await expect(create).toHaveCount(0);
+    await expect(room(number)).toBeVisible();
+    await expect(room(number).getByLabel("Limpeza")).toBeChecked();
+  }
 
-  await panel.getByRole("button", { name: `Editar ${pointName}` }).click();
-  const edit = page.getByRole("dialog", { name: "Editar ponto de serviço" });
-  await edit.getByLabel("Nome").fill(`${pointName} 2`);
-  await edit.getByRole("button", { name: "Salvar alterações" }).click();
-  await expect(panel.getByText(`${pointName} 2`)).toBeVisible();
+  // A named room without the default Limpeza service has no service checkbox.
+  await terreo.getByRole("button", { name: "Nova sala" }).click();
+  const named = page.getByRole("dialog", { name: "Nova sala" });
+  await named.getByLabel("Nome da sala (opcional)").fill(namedRoom);
+  await named.getByLabel("Limpeza").uncheck();
+  await named.getByRole("button", { name: "Cadastrar" }).click();
+  await expect(room(namedRoom)).toBeVisible();
+  await expect(room(namedRoom).getByRole("checkbox")).toHaveCount(0);
 
-  const [saved] = await api.get<PointRecord[]>(`/service-points?building_id=${site.building.id}`);
-  const building = await buildingNamed(site.building.name);
-  expect(saved !== undefined && insideBox(saved, ringOf(building))).toBe(true);
+  // A second service on a room, then turning Limpeza off keeps the point but leaves the pool.
+  await room("101").getByRole("button", { name: "Adicionar serviço" }).click();
+  const addService = page.getByRole("dialog", { name: "Adicionar serviço" });
+  await addService.getByLabel("Tipo de serviço").selectOption({ label: extraService });
+  await addService.getByRole("button", { name: "Adicionar" }).click();
+  await expect(addService).toHaveCount(0);
+  await expect(room("101").getByLabel(extraService)).toBeChecked();
+  await room("101").getByLabel("Limpeza").uncheck();
+  await expect(room("101").getByLabel("Limpeza")).not.toBeChecked();
 
-  await panel.getByRole("button", { name: `Remover ${pointName} 2` }).click();
-  const confirm = page.getByRole("dialog", { name: `Remover ${pointName} 2?` });
-  await expect(confirm.getByText("Esta ação não pode ser desfeita.")).toBeVisible();
-  await confirm.getByRole("button", { name: "Remover" }).click();
+  await room("102").getByRole("button", { name: "Renomear" }).click();
+  const rename = page.getByRole("dialog", { name: "Renomear" });
+  await rename.getByLabel("Nome da sala").fill(`${namedRoom} 2`);
+  await rename.getByRole("button", { name: "Salvar alterações" }).click();
+  await expect(rename).toHaveCount(0);
+  await expect(room(`${namedRoom} 2`)).toBeVisible();
+
+  // Removing asks first, then takes the room (and its services) away.
+  await terreo.getByRole("button", { name: "Remover sala 103" }).click();
+  const confirmRoom = page.getByRole("dialog", { name: "Remover 103?" });
+  await expect(confirmRoom.getByText("1 ponto de serviço")).toBeVisible();
+  await confirmRoom.getByRole("button", { name: "Remover" }).click();
   // While a dialog is open the panel is aria-hidden: wait for it to close before reading it.
-  await expect(confirm).toHaveCount(0);
-  await expect(panel.getByText(`${pointName} 2`)).toHaveCount(0);
-  expect(await api.get<PointRecord[]>(`/service-points?building_id=${site.building.id}`)).toEqual(
-    [],
-  );
+  await expect(confirmRoom).toHaveCount(0);
+  await expect(room("103")).toHaveCount(0);
+
+  // A second floor, then the Térreo goes with everything left in it.
+  await panel.getByRole("button", { name: "Novo andar" }).click();
+  await expect(panel.getByRole("group", { name: "1", exact: true })).toBeVisible();
+  await panel.getByRole("button", { name: "Remover andar Térreo" }).click();
+  const confirmFloor = page.getByRole("dialog", { name: "Remover Térreo?" });
+  await expect(confirmFloor.getByText("Também será removido:")).toBeVisible();
+  await confirmFloor.getByRole("button", { name: "Remover" }).click();
+  await expect(confirmFloor).toHaveCount(0);
+  await expect(terreo).toHaveCount(0);
+  await expect(panel.getByRole("group", { name: "1", exact: true })).toBeVisible();
   await api.dispose();
 });
 
@@ -242,7 +284,7 @@ test("old building addresses land on the map with the building selected", async 
   await page.goto(`/predios/${site.building.id}/andares`);
   await expect(page).toHaveURL(new RegExp(`/predios\\?predio=${site.building.id}$`));
   await expect(
-    page.getByRole("region", { name: `Pontos de serviço · ${site.building.name}` }),
+    page.getByRole("region", { name: `Andares e salas · ${site.building.name}` }),
   ).toBeVisible();
 
   await page.goto("/pontos-de-servico");

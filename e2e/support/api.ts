@@ -198,7 +198,7 @@ export class SeedApi {
     return { id: company.id, name: company.name, serviceType };
   }
 
-  /** A building with one floor and `pointCount` service points close to each other, typed with
+  /** A building with its Térreo floor and `pointCount` service points close to each other, typed with
    * `serviceTypeId` — by default the type of a new E2E company made for this site. */
   async createSite(suffix: string, pointCount = 1, serviceTypeId?: string) {
     const company = serviceTypeId === undefined ? await this.createCompany(suffix) : null;
@@ -208,10 +208,13 @@ export class SeedApi {
       // Every building is registered with its outline; this one holds the points below.
       footprint: E2E_SITE_OUTLINE,
     });
-    const floor = await this.post<{ id: string; label: string }>("/floors", {
-      building_id: building.id,
-      label: `Térreo ${suffix}`,
-    });
+    // A building is born with its Térreo: the site uses that floor instead of adding a second.
+    const [floor] = await this.get<{ id: string; label: string }[]>(
+      `/floors?building_id=${building.id}`,
+    );
+    if (floor === undefined) {
+      throw new Error(`building "${building.name}" came back with no floor; expected its Térreo.`);
+    }
     const points: Named[] = [];
     for (let index = 0; index < pointCount; index += 1) {
       points.push(
