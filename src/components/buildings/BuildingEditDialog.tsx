@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import type { components } from "@/api/generated/schema";
 import { BuildingDetailsForm } from "@/components/buildings/BuildingDetailsForm";
-import { BuildingFloorsSection } from "@/components/buildings/BuildingFloorsSection";
 import {
   type DeletionImpact,
   DeleteConfirmDialog,
@@ -57,8 +56,8 @@ function useRemoveBuilding(building: BuildingOut, onDeleted: () => void) {
   };
 }
 
-/** Everything about one building but its points, in a Dialog opened from its card on the map:
- * name and campus area, floors with their QR codes, redrawing the outline, removing it.
+/** Everything about one building but its floors and points, in a Dialog opened from its card on
+ * the map: name and campus area, redrawing the outline, removing it.
  * @example <BuildingEditDialog building={b} open onOpenChange={set} onRedraw={r} onDeleted={d} /> */
 export function BuildingEditDialog(props: BuildingEditDialogProps) {
   const { t } = useTranslation();
@@ -78,7 +77,6 @@ export function BuildingEditDialog(props: BuildingEditDialogProps) {
         </DialogHeader>
         {/* Keyed by id: the name/area form starts from the building it was opened with. */}
         <BuildingDetailsForm key={building.id} building={building} />
-        <BuildingFloorsSection buildingId={building.id} />
         <div className="flex flex-wrap justify-between gap-2 border-t pt-4">
           <Button type="button" variant="outline" onClick={props.onRedraw}>
             <SquareDashed aria-hidden="true" />

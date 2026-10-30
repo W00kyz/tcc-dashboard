@@ -8,7 +8,6 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { BuildingsPage } from "@/routes/BuildingsPage";
 import { DRAWN_RECTANGLE } from "@/test/FakeCampusBuildingsMap";
 import { FakeApi } from "@/test/fakeApi";
-import { listItemWithText } from "@/test/queries";
 
 vi.mock("@/components/buildings/CampusBuildingsMap", async () => ({
   CampusBuildingsMap: (await import("@/test/FakeCampusBuildingsMap")).FakeCampusBuildingsMap,
@@ -39,13 +38,6 @@ const POINT = {
   longitude: -35.905,
   service_type_id: "t1",
   service_type_name: "Limpeza",
-};
-const UNTYPED_POINT = {
-  ...POINT,
-  id: "p3",
-  name: "Sala 103",
-  service_type_id: null,
-  service_type_name: null,
 };
 function serviceType(id: string, name: string, company: string | null) {
   return {
@@ -106,7 +98,7 @@ const map = () => screen.getByRole("region", { name: "mapa dos prédios" });
 const selectBlocoCI = async () => {
   await userEvent.click(await within(map()).findByRole("button", { name: "Bloco CI" }));
 };
-const pointsPanel = () => screen.getByRole("region", { name: /Pontos de serviço/ });
+const roomsPanel = () => screen.getByRole("region", { name: /Andares e salas/ });
 
 describe("BuildingsPage", () => {
   afterEach(() => {
@@ -119,11 +111,11 @@ describe("BuildingsPage", () => {
     renderPage();
 
     expect(await within(map()).findByRole("button", { name: "Bloco CI" })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: /Pontos de serviço/ })).toBeNull();
+    expect(screen.queryByRole("region", { name: /Andares e salas/ })).toBeNull();
     expect(screen.queryByRole("group", { name: "popup do prédio selecionado" })).toBeNull();
   });
 
-  it("selecting a building shows its card on the map and its points below", async () => {
+  it("selecting a building shows its card on the map and its floors below", async () => {
     campusApi();
 
     renderPage();
@@ -133,8 +125,9 @@ describe("BuildingsPage", () => {
     expect(within(card).getByText("Bloco CI")).toBeInTheDocument();
     expect(await within(card).findByText("2 andares · 1 ponto")).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Editar Bloco CI" })).toBeInTheDocument();
-    expect(await within(pointsPanel()).findByText("Sala 101")).toBeInTheDocument();
-    expect(listItemWithText("Sala 101")).toHaveTextContent("Térreo · Sala de aula");
+    const floors = await within(roomsPanel()).findAllByRole("group");
+    expect(floors.map((floor) => floor.getAttribute("aria-label"))).toEqual(["Térreo", "1º andar"]);
+    expect(screen.getByRole("region", { name: "Andares e salas · Bloco CI" })).toBeInTheDocument();
     expect(screen.getByTestId("search")).toHaveTextContent("?predio=b1");
   });
 
@@ -145,7 +138,7 @@ describe("BuildingsPage", () => {
     await selectBlocoCI();
     await userEvent.click(within(map()).getByRole("button", { name: "clicar fora dos prédios" }));
 
-    expect(screen.queryByRole("region", { name: /Pontos de serviço/ })).toBeNull();
+    expect(screen.queryByRole("region", { name: /Andares e salas/ })).toBeNull();
     expect(screen.queryByRole("group", { name: "popup do prédio selecionado" })).toBeNull();
   });
 
@@ -154,11 +147,11 @@ describe("BuildingsPage", () => {
 
     renderPage("/predios?predio=b1");
 
-    const panel = await screen.findByRole("region", { name: /Pontos de serviço/ });
-    expect(await within(panel).findByText("Sala 101")).toBeInTheDocument();
+    const panel = await screen.findByRole("region", { name: /Andares e salas/ });
+    expect(await within(panel).findByRole("group", { name: "Térreo" })).toBeInTheDocument();
   });
 
-  it("the pencil opens the building's edit dialog with its data and floors", async () => {
+  it("the pencil opens the building's edit dialog with its data but no floors", async () => {
     const api = campusApi().on("PATCH", "/buildings/b1", building("b1", "Bloco CI 2", SQUARE));
 
     renderPage();
@@ -166,7 +159,8 @@ describe("BuildingsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Editar Bloco CI" }));
 
     const dialog = screen.getByRole("dialog", { name: "Editar prédio" });
-    expect(await within(dialog).findByText("1º andar")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("heading", { name: /Andares/ })).toBeNull();
+    expect(within(dialog).queryByText("1º andar")).toBeNull();
     const name = within(dialog).getByLabelText("Nome", { selector: "#building-name" });
     await userEvent.clear(name);
     await userEvent.type(name, "Bloco CI 2");
@@ -177,121 +171,6 @@ describe("BuildingsPage", () => {
         name: "Bloco CI 2",
         campus_area: "CCT",
       });
-    });
-  });
-
-  it("registers a point in a dialog with floor, name, description and service type", async () => {
-    const api = campusApi().on("POST", "/service-points", { ...POINT, id: "p2" }, 201);
-
-    renderPage();
-    await selectBlocoCI();
-    await userEvent.click(within(pointsPanel()).getByRole("button", { name: "Novo ponto" }));
-    const dialog = screen.getByRole("dialog", { name: "Novo ponto de serviço" });
-    await userEvent.selectOptions(within(dialog).getByLabelText("Andar"), "f2");
-    await userEvent.type(within(dialog).getByLabelText("Nome"), "Banheiro");
-    await userEvent.type(within(dialog).getByLabelText("Descrição"), "Masculino");
-    await userEvent.selectOptions(within(dialog).getByLabelText("Tipo de serviço"), "t2");
-    expect(within(dialog).queryByLabelText("Latitude")).toBeNull();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cadastrar" }));
-
-    await waitFor(() => {
-      expect(api.sent("POST", "/service-points")[0]?.body).toEqual({
-        floor_id: "f2",
-        name: "Banheiro",
-        description: "Masculino",
-        service_type_id: "t2",
-      });
-    });
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).toBeNull();
-    });
-  });
-
-  it("requires a service type", async () => {
-    const api = campusApi();
-
-    renderPage();
-    await selectBlocoCI();
-    await userEvent.click(within(pointsPanel()).getByRole("button", { name: "Novo ponto" }));
-    const dialog = screen.getByRole("dialog", { name: "Novo ponto de serviço" });
-    await userEvent.selectOptions(within(dialog).getByLabelText("Andar"), "f2");
-    await userEvent.type(within(dialog).getByLabelText("Nome"), "Banheiro");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cadastrar" }));
-
-    expect(
-      await within(dialog).findByText(/Preencha os campos obrigatórios:.*Tipo de serviço/),
-    ).toBeInTheDocument();
-    expect(api.sent("POST", "/service-points")).toHaveLength(0);
-  });
-
-  it("groups the service types by company and leaves out the ones without one", async () => {
-    campusApi();
-
-    renderPage();
-    await selectBlocoCI();
-    await userEvent.click(within(pointsPanel()).getByRole("button", { name: "Novo ponto" }));
-    const picker = within(screen.getByRole("dialog")).getByLabelText("Tipo de serviço");
-
-    expect(await within(picker).findByRole("option", { name: "Limpeza" })).toBeInTheDocument();
-    expect(within(picker).getByRole("group", { name: "Limpa Tudo" })).toContainElement(
-      within(picker).getByRole("option", { name: "Limpeza" }),
-    );
-    expect(within(picker).getByRole("group", { name: "Verde Jardins" })).toBeInTheDocument();
-    expect(within(picker).queryByRole("option", { name: "Pintura" })).toBeNull();
-  });
-
-  it("shows each point's type and flags a point without one", async () => {
-    campusApi().on("GET", "/service-points", [POINT, UNTYPED_POINT]);
-
-    renderPage();
-    await selectBlocoCI();
-
-    expect(await within(pointsPanel()).findByText("Sala 103")).toBeInTheDocument();
-    expect(listItemWithText("Sala 101")).toHaveTextContent("Limpeza");
-    expect(listItemWithText("Sala 103")).toHaveTextContent("Sem tipo de serviço");
-    expect(listItemWithText("Sala 101")).not.toHaveTextContent("Sem tipo de serviço");
-  });
-
-  it("edits a point's name and description in a dialog", async () => {
-    const api = campusApi().on("PATCH", "/service-points/p1", { ...POINT, name: "Sala 102" });
-
-    renderPage();
-    await selectBlocoCI();
-    await userEvent.click(
-      await within(pointsPanel()).findByRole("button", { name: "Editar Sala 101" }),
-    );
-    const dialog = screen.getByRole("dialog", { name: "Editar ponto de serviço" });
-    expect(within(dialog).getByLabelText("Andar")).toBeDisabled();
-    await userEvent.clear(within(dialog).getByLabelText("Nome"));
-    await userEvent.type(within(dialog).getByLabelText("Nome"), "Sala 102");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Salvar alterações" }));
-
-    await waitFor(() => {
-      expect(api.sent("PATCH", "/service-points/p1")[0]?.body).toEqual({
-        name: "Sala 102",
-        description: "Sala de aula",
-        service_type_id: "t1",
-      });
-    });
-  });
-
-  it("removes a point after showing what goes with it", async () => {
-    const api = campusApi()
-      .on("GET", "/service-points/p1/deletion-impact", { ...IMPACT, floors: 0 })
-      .on("DELETE", "/service-points/p1", null, 204);
-
-    renderPage();
-    await selectBlocoCI();
-    await userEvent.click(
-      await within(pointsPanel()).findByRole("button", { name: "Remover Sala 101" }),
-    );
-    const dialog = screen.getByRole("dialog", { name: "Remover Sala 101?" });
-    expect(await within(dialog).findByText("3 execuções")).toBeInTheDocument();
-    expect(within(dialog).getByText("1 recurso")).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Remover" }));
-
-    await waitFor(() => {
-      expect(api.sent("DELETE", "/service-points/p1")).toHaveLength(1);
     });
   });
 
@@ -312,7 +191,7 @@ describe("BuildingsPage", () => {
       expect(api.sent("DELETE", "/buildings/b1")).toHaveLength(1);
     });
     await waitFor(() => {
-      expect(screen.queryByRole("region", { name: /Pontos de serviço/ })).toBeNull();
+      expect(screen.queryByRole("region", { name: /Andares e salas/ })).toBeNull();
     });
   });
 
@@ -347,7 +226,7 @@ describe("BuildingsPage", () => {
     await userEvent.type(within(popup).getByLabelText("Área do campus"), "CCT");
     await userEvent.click(within(popup).getByRole("button", { name: "Cadastrar" }));
 
-    // The new building is selected right away: its card and (empty) point list show.
+    // The new building is selected right away: its card and (empty) floor list show.
     await waitFor(() => {
       expect(screen.getByTestId("search")).toHaveTextContent("?predio=b3");
     });
@@ -382,8 +261,10 @@ describe("BuildingsPage", () => {
     const offMap = await screen.findByText(/ainda sem área no mapa/);
     await userEvent.click(within(offMap).getByRole("button", { name: "Bloco CEEI" }));
     expect(screen.getByTestId("search")).toHaveTextContent("?predio=b2");
-    // A building with no outline cannot take points yet: the panel says to draw it first.
-    expect(await within(pointsPanel()).findByText(/Desenhe o contorno/)).toBeInTheDocument();
+    // A building off the map has no card to edit it from: the panel carries the pencil.
+    expect(
+      await within(roomsPanel()).findByRole("button", { name: "Editar Bloco CEEI" }),
+    ).toBeInTheDocument();
   });
 
   // Regression: an expired token's 401 on /floors used to read as "no floors", so every building

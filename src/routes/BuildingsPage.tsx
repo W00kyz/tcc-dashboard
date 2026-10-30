@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 
 import type { components } from "@/api/generated/schema";
 import { BuildingEditDialog } from "@/components/buildings/BuildingEditDialog";
-import { BuildingPointsPanel } from "@/components/buildings/BuildingPointsPanel";
+import { BuildingRoomsPanel } from "@/components/buildings/BuildingRoomsPanel";
 import { BuildingSummaryCard } from "@/components/buildings/BuildingSummaryCard";
 import { CampusBuildingsMap } from "@/components/buildings/CampusBuildingsMap";
 import { NewBuildingForm } from "@/components/buildings/NewBuildingForm";
@@ -162,7 +162,7 @@ function DraftForm(props: { drawing: Drawing; onCreated: (id: string) => void })
 }
 
 /** Every building on campus, on the map. Clicking one opens its card (name, floors, points and
- * the pencil to its edit Dialog) and lists its service points below the map; drawing a rectangle
+ * the pencil to its edit Dialog) and lists its floors below the map; drawing a rectangle
  * registers a new one. All creating and editing happens in Dialogs and map popups. */
 export function BuildingsPage() {
   const { t } = useTranslation();
@@ -221,7 +221,7 @@ export function BuildingsPage() {
         <OffMapBuildings buildings={offMap} onSelect={select} />
       </Panel>
       {selected !== undefined && (
-        <BuildingPointsPanel
+        <BuildingRoomsPanel
           key={selected.id}
           building={selected}
           onEditBuilding={

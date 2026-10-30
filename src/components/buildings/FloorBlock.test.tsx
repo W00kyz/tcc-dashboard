@@ -4,63 +4,77 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
-import { BuildingFloorsSection } from "@/components/buildings/BuildingFloorsSection";
+import { FloorBlock } from "@/components/buildings/FloorBlock";
 import { FakeApi } from "@/test/fakeApi";
-import { listItemWithText } from "@/test/queries";
 
+const FLOOR = { id: "f1", building_id: "b1", label: "Térreo", level: 0 };
 const QR = { id: "qr1", floor_id: "f1", public_code: "abc", version: 1, status: "ACTIVE" };
+const IMPACT = { points: 2, floors: 1, rooms: 3, routes: 0, executions: 4, photos: 0, appeals: 0 };
 
 function floorsApi() {
-  return new FakeApi()
-    .on("GET", "/floors", [{ id: "f1", building_id: "b1", label: "Térreo" }])
-    .install();
+  return new FakeApi().on("GET", "/floors", [FLOOR]).install();
 }
 
-function renderSection() {
+function renderBlock() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BuildingFloorsSection buildingId="b1" />
+        <FloorBlock floor={FLOOR} rooms={[]} points={[]} serviceTypes={[]} />
       </AuthProvider>
     </QueryClientProvider>,
   );
 }
 
-describe("BuildingFloorsSection", () => {
+describe("FloorBlock", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("lists the floors of its own building", async () => {
-    const api = floorsApi();
+  it("shows the floor under its label", async () => {
+    floorsApi();
 
-    renderSection();
+    renderBlock();
 
     expect(await screen.findByText("Térreo")).toBeInTheDocument();
-    expect(api.sent("GET", "/floors")[0]?.query.get("building_id")).toBe("b1");
+    expect(screen.getByRole("group", { name: "Térreo" })).toBeInTheDocument();
   });
 
-  it("creates a floor in this building without asking for a label", async () => {
-    const api = floorsApi().on("POST", "/floors", { id: "f2", building_id: "b1", label: "1" }, 201);
+  it("removes a floor only after showing what goes with it and being confirmed", async () => {
+    const api = floorsApi()
+      .on("GET", "/floors/f1/deletion-impact", IMPACT)
+      .on("DELETE", "/floors/f1", null, 204);
 
-    renderSection();
-    await userEvent.click(screen.getByRole("button", { name: "Novo andar" }));
+    renderBlock();
+    await userEvent.click(await screen.findByRole("button", { name: "Remover andar Térreo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Remover Térreo?" });
+
+    expect(await within(dialog).findByText("3 salas")).toBeInTheDocument();
+    expect(within(dialog).getByText("4 execuções")).toBeInTheDocument();
+    // The floor itself is not "also removed": its own count is left out of the list.
+    expect(within(dialog).queryByText(/andar/)).toBeNull();
+    expect(api.sent("DELETE", "/floors/f1")).toHaveLength(0);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remover" }));
 
     await waitFor(() => {
-      expect(api.sent("POST", "/floors")[0]?.body).toEqual({ building_id: "b1" });
+      expect(api.sent("DELETE", "/floors/f1")).toHaveLength(1);
     });
-    expect(screen.queryByLabelText("Rótulo do andar")).not.toBeInTheDocument();
   });
 
-  it("says when the floor could not be created", async () => {
-    floorsApi().on("POST", "/floors", { detail: "boom" }, 500);
+  it("sends nothing when the removal is cancelled", async () => {
+    const api = floorsApi().on("GET", "/floors/f1/deletion-impact", IMPACT);
 
-    renderSection();
-    await userEvent.click(screen.getByRole("button", { name: "Novo andar" }));
+    renderBlock();
+    await userEvent.click(await screen.findByRole("button", { name: "Remover andar Térreo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Remover Térreo?" });
+    await within(dialog).findByText("3 salas");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível cadastrar");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(api.sent("DELETE", "/floors/f1")).toHaveLength(0);
   });
 
   it("renames a floor", async () => {
@@ -70,8 +84,8 @@ describe("BuildingFloorsSection", () => {
       label: "Subsolo",
     });
 
-    renderSection();
-    await screen.findByText("Térreo");
+    renderBlock();
+    await screen.findByRole("group", { name: "Térreo" });
     await userEvent.click(screen.getByRole("button", { name: /Editar/ }));
     const input = screen.getByLabelText("Rótulo do andar");
     await userEvent.clear(input);
@@ -89,9 +103,9 @@ describe("BuildingFloorsSection", () => {
       .on("POST", "/qr-codes/qr1/revoke", { ...QR, status: "REVOKED" });
     const prompt = vi.spyOn(window, "prompt").mockReturnValue("Emissão inicial");
 
-    renderSection();
-    await screen.findByText("Térreo");
-    const row = listItemWithText("Térreo");
+    renderBlock();
+    await screen.findByRole("group", { name: "Térreo" });
+    const row = screen.getByRole("group", { name: "Térreo" });
     expect(within(row).getByRole("button", { name: "Revogar QR" })).toBeDisabled();
     await userEvent.click(within(row).getByRole("button", { name: "Gerar QR" }));
 
@@ -113,8 +127,8 @@ describe("BuildingFloorsSection", () => {
     const api = floorsApi();
     vi.spyOn(window, "prompt").mockReturnValue(null);
 
-    renderSection();
-    await screen.findByText("Térreo");
+    renderBlock();
+    await screen.findByRole("group", { name: "Térreo" });
     await userEvent.click(screen.getByRole("button", { name: "Gerar QR" }));
 
     expect(api.sent("POST", "/floors/f1/qr-codes")).toHaveLength(0);
@@ -129,8 +143,8 @@ describe("BuildingFloorsSection", () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock-url");
 
-    renderSection();
-    await screen.findByText("Térreo");
+    renderBlock();
+    await screen.findByRole("group", { name: "Térreo" });
     await userEvent.click(screen.getByRole("button", { name: "Baixar PDF" }));
 
     await waitFor(() => {
@@ -143,8 +157,8 @@ describe("BuildingFloorsSection", () => {
     floorsApi().on("GET", "/floors/f1/qr-codes/active/pdf", { detail: "no QR" }, 404);
     const open = vi.spyOn(window, "open").mockReturnValue(null);
 
-    renderSection();
-    await screen.findByText("Térreo");
+    renderBlock();
+    await screen.findByRole("group", { name: "Térreo" });
     await userEvent.click(screen.getByRole("button", { name: "Baixar PDF" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("este andar não tem um QR ativo");

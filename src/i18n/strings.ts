@@ -448,6 +448,8 @@ export const strings = {
   removeTitle: "Remover {name}?",
   pointRemoveItem: "Remover {name}",
   pointsPanelTitle: "Pontos de serviço · {name}",
+  roomsPanelTitle: "Andares e salas · {name}",
+  roomsPanelEmpty: 'Nenhum andar neste prédio. Use "Novo andar" para começar.',
   pointsNew: "Novo ponto",
   pointsNeedOutline: "Desenhe o contorno deste prédio antes de cadastrar pontos de serviço.",
   pointNewTitle: "Novo ponto de serviço",
