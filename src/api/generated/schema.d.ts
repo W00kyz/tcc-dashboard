@@ -3081,9 +3081,9 @@ export interface components {
     /** ServicePointUpdateRequest */
     ServicePointUpdateRequest: {
       /** Name */
-      name: string;
+      name?: string | null;
       /** Description */
-      description: string;
+      description?: string | null;
       /** Service Type Id */
       service_type_id?: string | null;
       /** Active */
