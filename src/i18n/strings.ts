@@ -423,6 +423,7 @@ export const strings = {
   roomsEmpty: "Nenhuma sala neste andar.",
   roomServiceExists: "Esta sala já tem esse serviço.",
   roomsCreateError: "Não foi possível cadastrar a sala. Tente novamente.",
+  roomsLimitReached: "Este andar já tem 99 salas numeradas. Dê um nome à sala.",
   roomsSaveError: "Não foi possível salvar a sala. Tente novamente.",
   roomsFieldRename: "Nome da sala",
   roomsAddServiceSubmit: "Adicionar",

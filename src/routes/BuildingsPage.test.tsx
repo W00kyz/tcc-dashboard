@@ -238,6 +238,39 @@ describe("BuildingsPage", () => {
     });
   });
 
+  it("counts the Térreo of a building just created on its card", async () => {
+    const buildings = [building("b1", "Bloco CI", SQUARE)];
+    const floors = [{ id: "f1", building_id: "b1", label: "Térreo", level: 0 }];
+    const api = campusApi()
+      .onRequest("GET", "/buildings", () => buildings)
+      .onRequest("GET", "/floors", () => floors)
+      .onRequest(
+        "POST",
+        "/buildings",
+        () => {
+          const created = building("b3", "CEEI", DRAWN_RECTANGLE);
+          buildings.push(created);
+          // The server gives every new building its ground floor.
+          floors.push({ id: "f9", building_id: "b3", label: "Térreo", level: 0 });
+
+          return created;
+        },
+        201,
+      );
+
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Desenhar prédio" }));
+    await userEvent.click(screen.getByRole("button", { name: "arrastar um retângulo no mapa" }));
+    const popup = screen.getByRole("group", { name: "popup do prédio desenhado" });
+    await userEvent.type(within(popup).getByLabelText("Nome"), "CEEI");
+    await userEvent.type(within(popup).getByLabelText("Área do campus"), "CCT");
+    await userEvent.click(within(popup).getByRole("button", { name: "Cadastrar" }));
+
+    const card = await screen.findByRole("group", { name: "popup do prédio selecionado" });
+    expect(await within(card).findByText("1 andar · 0 pontos")).toBeInTheDocument();
+    expect(api.sent("GET", "/floors").length).toBeGreaterThan(1);
+  });
+
   it("throws the drawing away when the popup is cancelled", async () => {
     const api = campusApi();
 

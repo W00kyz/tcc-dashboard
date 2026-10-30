@@ -40,6 +40,8 @@ function useCreateBuilding(outline: GeoPolygon, onCreated: (buildingId: string) 
     },
     onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: ["buildings"] });
+      // The server gave the building its Térreo: the campus card counts floors.
+      void queryClient.invalidateQueries({ queryKey: ["floors"] });
       onCreated(created.id);
     },
   });

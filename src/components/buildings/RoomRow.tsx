@@ -35,7 +35,8 @@ function useToggleService() {
     mutationFn: async ({ point, active }: { point: ServicePointOut; active: boolean }) => {
       const { response } = await client.PATCH("/service-points/{point_id}", {
         params: { path: { point_id: point.id } },
-        body: { name: point.name, description: point.description, active },
+        // Only the flag: a cached name could overwrite the one a rename just synced from the room.
+        body: { active },
       });
       assertSaved(response, `PATCH /service-points/${point.id}`);
     },

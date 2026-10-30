@@ -24,18 +24,40 @@ type RoomCreateOut = components["schemas"]["RoomCreateOut"];
 
 export type RoomCleaning = RoomCreateOut["cleaning"];
 
+const MAX_NUMBERED_ROOMS = 99;
+
 /** The number the next unnamed room of the floor takes: the floor's hundred (Térreo 100, andar 1
  * 200…) plus one past the highest number in use. Display only — the backend allocates the real
  * one, so a race between two managers can still land on a different number.
+ * Empty once the floor has its 99 numbered rooms: the backend answers 409 until a name is typed.
  * @example suggestRoomName({ level: 0 }, [{ name: "101" }]) // "102" */
 export function suggestRoomName(floor: Pick<FloorOut, "level">, rooms: RoomOut[]): string {
   const base = (floor.level + 1) * 100;
   const used = rooms
     .filter((room) => /^\d+$/.test(room.name))
     .map((room) => Number(room.name) - base)
-    .filter((offset) => offset >= 1 && offset <= 99);
+    .filter((offset) => offset >= 1 && offset <= MAX_NUMBERED_ROOMS);
 
-  return String(base + Math.max(0, ...used) + 1);
+  const highest = Math.max(0, ...used);
+
+  return highest >= MAX_NUMBERED_ROOMS ? "" : String(base + highest + 1);
+}
+
+const ROOM_LIMIT_REACHED = "ROOM_LIMIT_REACHED";
+
+class RoomLimitReachedError extends Error {
+  constructor() {
+    super("POST /rooms refused: the floor has no default room number left.");
+    this.name = "RoomLimitReachedError";
+  }
+}
+
+// The API answers a full floor with {"detail": {"code": "ROOM_LIMIT_REACHED"}}; a duplicate name
+// is a 409 too, with a plain-text detail.
+function isRoomLimitReached(error: unknown): boolean {
+  const detail = (error as { detail?: { code?: string } } | undefined)?.detail;
+
+  return typeof detail === "object" && detail.code === ROOM_LIMIT_REACHED;
 }
 
 function useCreateRoom(floor: FloorOut, onCreated: (cleaning: RoomCleaning) => void) {
@@ -47,10 +69,13 @@ function useCreateRoom(floor: FloorOut, onCreated: (cleaning: RoomCleaning) => v
   const save = useMutation({
     mutationFn: async () => {
       const typed = name.trim();
-      const { data, response } = await client.POST("/rooms", {
+      const { data, error, response } = await client.POST("/rooms", {
         // Blank means "number it for me": no name key at all.
         body: { floor_id: floor.id, with_cleaning: withCleaning, ...(typed && { name: typed }) },
       });
+      if (response.status === 409 && isRoomLimitReached(error)) {
+        throw new RoomLimitReachedError();
+      }
       assertSaved(response, "POST /rooms");
 
       return data as RoomCreateOut;
@@ -134,7 +159,13 @@ export function NewRoomDialog({ floor, rooms, onCreated }: NewRoomDialogProps) {
               />
               {t("roomsFieldCleaning")}
             </Label>
-            {room.save.isError && <ErrorMessage>{t("roomsCreateError")}</ErrorMessage>}
+            {room.save.isError && (
+              <ErrorMessage>
+                {room.save.error instanceof RoomLimitReachedError
+                  ? t("roomsLimitReached")
+                  : t("roomsCreateError")}
+              </ErrorMessage>
+            )}
             <DialogFooter>
               <Button
                 type="button"

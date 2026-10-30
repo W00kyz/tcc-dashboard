@@ -72,28 +72,20 @@ describe("RoomRow", () => {
     expect(screen.getByRole("checkbox", { name: "Limpeza" })).not.toBeChecked();
   });
 
-  it("unchecking a service deactivates it, keeping the point's name and description", async () => {
+  it("toggling a service sends only the active flag, never a cached name", async () => {
     const api = new FakeApi().on("PATCH", "/service-points/p1", CLEANING).install();
     const view = renderRow([CLEANING]);
 
     await userEvent.click(screen.getByRole("checkbox", { name: "Limpeza" }));
 
     await waitFor(() => {
-      expect(api.sent("PATCH", "/service-points/p1")[0]?.body).toEqual({
-        name: "101",
-        description: "perto da escada",
-        active: false,
-      });
+      expect(api.sent("PATCH", "/service-points/p1")[0]?.body).toEqual({ active: false });
     });
     view.again([{ ...CLEANING, active: false }]);
     await userEvent.click(screen.getByRole("checkbox", { name: "Limpeza" }));
 
     await waitFor(() => {
-      expect(api.sent("PATCH", "/service-points/p1")[1]?.body).toEqual({
-        name: "101",
-        description: "perto da escada",
-        active: true,
-      });
+      expect(api.sent("PATCH", "/service-points/p1")[1]?.body).toEqual({ active: true });
     });
   });
 

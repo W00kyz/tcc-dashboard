@@ -66,6 +66,14 @@ describe("suggestRoomName", () => {
     expect(suggestRoomName({ ...FLOOR, level: 1 }, [named("201")])).toBe("202");
   });
 
+  it("suggests nothing once the floor has its 99 numbered rooms", () => {
+    const named98 = [named("101"), named("198")];
+    const full = [named("101"), named("199")];
+
+    expect(suggestRoomName(FLOOR, named98)).toBe("199");
+    expect(suggestRoomName(FLOOR, full)).toBe("");
+  });
+
   it("ignores names that are not plain numbers of the floor's range", () => {
     const rooms = [named("Auditório Hattori"), named("205"), named("1A1"), named("101")];
 
@@ -100,6 +108,30 @@ describe("NewRoomDialog", () => {
       expect(onCreated).toHaveBeenCalledWith("CREATED");
     });
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("asks for a name when the floor has no default number left", async () => {
+    new FakeApi()
+      .on("POST", "/rooms", { detail: { code: "ROOM_LIMIT_REACHED", detail: "full" } }, 409)
+      .install();
+
+    await openDialog();
+    await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Este andar já tem 99 salas numeradas. Dê um nome à sala.",
+    );
+  });
+
+  it("keeps the generic message for a duplicate name", async () => {
+    new FakeApi().on("POST", "/rooms", { detail: "Room already exists" }, 409).install();
+
+    await openDialog();
+    await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível cadastrar a sala. Tente novamente.",
+    );
   });
 
   it("posts the typed name", async () => {
