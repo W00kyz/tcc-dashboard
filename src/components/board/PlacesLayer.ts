@@ -8,6 +8,13 @@ export interface MapPlace {
   longitude: number;
 }
 
+/** What a place's popup belongs to. The coordinates are part of it: a popup is opened once per
+ * key, so moving the place has to change the key or the popup would stay over the old spot.
+ * @example placePopupKey({ id: "p1", name: "Praça", latitude: -7.2, longitude: -35.9 }) */
+export function placePopupKey(place: MapPlace): string {
+  return `${place.id}@${String(place.latitude)},${String(place.longitude)}`;
+}
+
 export const PIN_WIDTH = 28;
 export const PIN_HEIGHT = 36;
 

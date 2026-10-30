@@ -5,16 +5,20 @@ import type { components } from "@/api/generated/schema";
 import { BuildingEditDialog } from "@/components/buildings/BuildingEditDialog";
 import { BuildingSummaryCard } from "@/components/buildings/BuildingSummaryCard";
 import { CampusBuildingsMap } from "@/components/buildings/CampusBuildingsMap";
+import { EditPlaceDialog } from "@/components/buildings/EditPlaceDialog";
 import { NewBuildingForm } from "@/components/buildings/NewBuildingForm";
 import { NewPlaceDialog } from "@/components/buildings/NewPlaceDialog";
 import { PlaceSummaryCard } from "@/components/buildings/PlaceSummaryCard";
+import { OutsideCampusError } from "@/components/buildings/placeErrors";
 import { RedrawOutlineForm } from "@/components/buildings/RedrawOutlineForm";
 import { useCampusBuildingMap } from "@/components/buildings/useCampusBuildingMap";
 import { useCampusPlaces } from "@/components/buildings/useCampusPlaces";
 import { useMapSelection } from "@/components/buildings/useMapSelection";
-import { usePlacePinning } from "@/components/buildings/usePlacePinning";
+import { useMovePlace } from "@/components/buildings/useMovePlace";
+import { type PinPosition, usePlacePinning } from "@/components/buildings/usePlacePinning";
 import { Page, PageHeader, Panel } from "@/components/layout/Page";
 import { Field } from "@/components/layout/Registry";
+import { ErrorMessage } from "@/components/layout/StateMessages";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -118,6 +122,9 @@ type Drawing = ReturnType<typeof useRectangleDrawing>;
 type Pinning = ReturnType<typeof usePlacePinning>;
 
 function toolHint(t: ReturnType<typeof useTranslation>["t"], drawing: Drawing, pin: Pinning) {
+  if (pin.movingPlaceId !== null) {
+    return t("placesMoveHint");
+  }
   if (pin.pinning) {
     return t("placesPinHint");
   }
@@ -187,7 +194,9 @@ export function BuildingsPage() {
   const { places, servicesOf } = useCampusPlaces();
   const drawing = useRectangleDrawing();
   const pin = usePlacePinning();
+  const move = useMovePlace();
   const [editing, setEditing] = useState(false);
+  const [editingPlace, setEditingPlace] = useState(false);
   const selected = buildings.find((building) => building.id === selectedId);
   const onMap = mapBuildings.some((building) => building.id === selectedId);
   const selectedPlace = places.find((place) => place.id === placeId);
@@ -195,11 +204,25 @@ export function BuildingsPage() {
   // Choosing anything on the map ends the pin tool: the click was meant for the selection.
   const select = (buildingId: string | null) => {
     pin.stop();
+    move.reset();
     selectBuilding(buildingId);
   };
   const selectPlaceOnMap = (id: string | null) => {
     pin.stop();
+    move.reset();
     selectPlace(id);
+  };
+  // The pin tool is on for one click: a new place's Dialog, or the new position of `movingPlaceId`.
+  const onPinned = (position: PinPosition) => {
+    const movingId = pin.movingPlaceId;
+    if (movingId === null) {
+      pin.place(position);
+
+      return;
+    }
+    // The tool ends on the click either way; a refusal (outside the campus) shows below the hint.
+    pin.stop();
+    move.mutate({ placeId: movingId, position });
   };
 
   return (
@@ -222,9 +245,10 @@ export function BuildingsPage() {
           </Button>
           <Button
             type="button"
-            aria-pressed={pin.pinning}
+            aria-pressed={pin.pinning && pin.movingPlaceId === null}
             onClick={() => {
               drawing.stop();
+              move.reset();
               if (!pin.pinning) {
                 selectPlace(null);
               }
@@ -238,6 +262,13 @@ export function BuildingsPage() {
         <p aria-live="polite" className="text-muted-foreground px-1 text-sm">
           {toolHint(t, drawing, pin)}
         </p>
+        {move.isError && (
+          <ErrorMessage>
+            {t(
+              move.error instanceof OutsideCampusError ? "placesOutsideCampus" : "placesSaveError",
+            )}
+          </ErrorMessage>
+        )}
         <CampusBuildingsMap
           buildings={mapBuildings}
           selectedId={selectedId}
@@ -268,11 +299,14 @@ export function BuildingsPage() {
               <PlaceSummaryCard
                 name={selectedPlace.name}
                 servicesCount={servicesOf(selectedPlace.id)}
+                onEdit={() => {
+                  setEditingPlace(true);
+                }}
               />
             )
           }
           pinning={pin.pinning}
-          onPinned={pin.place}
+          onPinned={onPinned}
           onExitPinning={pin.stop}
           draftPin={pin.draft}
         />
@@ -280,6 +314,21 @@ export function BuildingsPage() {
       </Panel>
       {pin.draft !== null && (
         <NewPlaceDialog position={pin.draft} onClose={pin.discard} onCreated={selectPlaceOnMap} />
+      )}
+      {selectedPlace !== undefined && (
+        <EditPlaceDialog
+          place={selectedPlace}
+          open={editingPlace}
+          onOpenChange={setEditingPlace}
+          onMove={() => {
+            drawing.stop();
+            move.reset();
+            pin.startMove(selectedPlace.id);
+          }}
+          onDeleted={() => {
+            selectPlaceOnMap(null);
+          }}
+        />
       )}
       {selected !== undefined && !onMap && (
         <OffMapEditBar

@@ -131,7 +131,8 @@
 
 /* Maps where a click places something (a building corner, a service point) show a crosshair
  * instead of Leaflet's grab hand. */
-.leaflet-container.map-placing.leaflet-grab {
+.leaflet-container.map-placing.leaflet-grab,
+.leaflet-container.map-placing .leaflet-interactive {
   cursor: crosshair;
 }
 

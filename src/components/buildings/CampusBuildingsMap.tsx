@@ -16,6 +16,7 @@ import {
   draftPinIcon,
   drawPlaces,
   type MapPlace,
+  placePopupKey,
   PIN_HEIGHT,
 } from "@/components/board/PlacesLayer";
 import { createCampusMap } from "@/components/map/campusMap";
@@ -322,10 +323,11 @@ export function CampusBuildingsMap(props: CampusBuildingsMapProps) {
   });
   const placeBody = useAnchoredPopup({
     map: handles?.map ?? null,
+    // Keyed by position too: a moved place re-anchors its popup (see placePopupKey).
     key:
       selectedPlace === undefined || props.selectedPlaceCard === undefined
         ? null
-        : selectedPlace.id,
+        : placePopupKey(selectedPlace),
     bounds:
       selectedPlace === undefined
         ? null

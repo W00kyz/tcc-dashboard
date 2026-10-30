@@ -35,54 +35,63 @@ export function groupByCompany(types: ServiceTypeOut[]): [string, ServiceTypeOut
   return [...groups];
 }
 
-const ROOM_SERVICE_EXISTS = "ROOM_SERVICE_EXISTS";
-
-class RoomServiceExistsError extends Error {
-  constructor(roomId: string) {
-    super(`POST /rooms/${roomId}/services refused: the room already has that service type.`);
-    this.name = "RoomServiceExistsError";
+/** The API answered a service type the room or place already has (409 with the entity's own
+ * `*_SERVICE_EXISTS` code). */
+export class ServiceExistsError extends Error {
+  constructor(request: string) {
+    super(`${request} refused: it already has that service type.`);
+    this.name = "ServiceExistsError";
   }
 }
 
-// The API answers a repeated type with {"detail": {"code": "ROOM_SERVICE_EXISTS"}}.
-function isServiceExists(error: unknown): boolean {
+// The API answers a repeated type with {"detail": {"code": "ROOM_SERVICE_EXISTS"}} (or the
+// PLACE_ one), so a 409 for another reason stays a plain save error.
+function isServiceExists(error: unknown, code: string): boolean {
   const detail = (error as { detail?: { code?: string } } | undefined)?.detail;
 
-  return detail?.code === ROOM_SERVICE_EXISTS;
+  return detail?.code === code;
 }
 
-interface AddServiceDialogProps {
-  room: RoomOut;
+/** After a POST of a service type: throws `ServiceExistsError` for the 409 `code`, any other
+ * refusal as a save error.
+ * @example assertServiceAdded(response, error, "PLACE_SERVICE_EXISTS", `POST /places/${id}/services`) */
+export function assertServiceAdded(
+  response: Response,
+  error: unknown,
+  code: string,
+  request: string,
+): void {
+  if (response.status === 409 && isServiceExists(error, code)) {
+    throw new ServiceExistsError(request);
+  }
+  assertSaved(response, request);
+}
+
+interface AddServiceFormProps {
+  /** What the service goes to (the room's or the place's name). */
+  description: string;
   serviceTypes: ServiceTypeOut[];
-  /** Types the room already has: a room takes each type once. */
+  /** Types already there: a room or place takes each type once. */
   usedTypeIds: string[];
+  /** Sends the chosen type; throws `ServiceExistsError` for a repeated one. */
+  onSubmit: (serviceTypeId: string) => Promise<void>;
+  /** The sentence for a repeated type. */
+  existsMessage: string;
 }
 
-/** "Adicionar serviço" and its Dialog: one more service type for the room, grouped by company.
- * @example <AddServiceDialog room={room} serviceTypes={types} usedTypeIds={used} /> */
-export function AddServiceDialog({ room, serviceTypes, usedTypeIds }: AddServiceDialogProps) {
+/** "Adicionar serviço" and its Dialog: one more service type, grouped by company. The room and
+ * the place dialogs differ only in the endpoint they post to, which `onSubmit` owns. */
+export function AddServiceForm(props: AddServiceFormProps) {
   const { t } = useTranslation();
-  const client = useApiClient();
-  const refresh = useRefreshRooms();
   const dialog = useRegistryDialog({ serviceTypeId: "" }, ["serviceTypeId"]);
   const { form } = dialog;
   const save = useMutation({
-    mutationFn: async () => {
-      const { error, response } = await client.POST("/rooms/{room_id}/services", {
-        params: { path: { room_id: room.id } },
-        body: { service_type_id: form.values.serviceTypeId },
-      });
-      if (response.status === 409 && isServiceExists(error)) {
-        throw new RoomServiceExistsError(room.id);
-      }
-      assertSaved(response, `POST /rooms/${room.id}/services`);
-    },
+    mutationFn: () => props.onSubmit(form.values.serviceTypeId),
     onSuccess: () => {
       dialog.close();
-      refresh();
     },
   });
-  const offered = serviceTypes.filter((type) => !usedTypeIds.includes(type.id));
+  const offered = props.serviceTypes.filter((type) => !props.usedTypeIds.includes(type.id));
 
   return (
     <>
@@ -101,20 +110,20 @@ export function AddServiceDialog({ room, serviceTypes, usedTypeIds }: AddService
         dialog={dialog}
         save={save}
         title={t("roomsAddService")}
-        description={room.name}
+        description={props.description}
         createLabel={t("roomsAddServiceSubmit")}
         fieldLabels={{ serviceTypeId: t("servicePointsFieldServiceType") }}
         saveErrorMessage={(error) =>
-          error instanceof RoomServiceExistsError ? t("roomServiceExists") : null
+          error instanceof ServiceExistsError ? props.existsMessage : null
         }
         onSubmit={() => {
           save.mutate();
         }}
       >
         <Field>
-          <Label htmlFor="room-service-type">{t("servicePointsFieldServiceType")}</Label>
+          <Label htmlFor="add-service-type">{t("servicePointsFieldServiceType")}</Label>
           <NativeSelect
-            id="room-service-type"
+            id="add-service-type"
             value={form.values.serviceTypeId}
             aria-invalid={form.isInvalid("serviceTypeId")}
             onChange={(event) => {
@@ -135,6 +144,39 @@ export function AddServiceDialog({ room, serviceTypes, usedTypeIds }: AddService
         </Field>
       </RegistryDialog>
     </>
+  );
+}
+
+interface AddServiceDialogProps {
+  room: RoomOut;
+  serviceTypes: ServiceTypeOut[];
+  /** Types the room already has: a room takes each type once. */
+  usedTypeIds: string[];
+}
+
+/** "Adicionar serviço" for a room: posts the type to the room and refreshes its points.
+ * @example <AddServiceDialog room={room} serviceTypes={types} usedTypeIds={used} /> */
+export function AddServiceDialog({ room, serviceTypes, usedTypeIds }: AddServiceDialogProps) {
+  const { t } = useTranslation();
+  const client = useApiClient();
+  const refresh = useRefreshRooms();
+
+  return (
+    <AddServiceForm
+      description={room.name}
+      serviceTypes={serviceTypes}
+      usedTypeIds={usedTypeIds}
+      existsMessage={t("roomServiceExists")}
+      onSubmit={async (serviceTypeId) => {
+        const request = `POST /rooms/${room.id}/services`;
+        const { error, response } = await client.POST("/rooms/{room_id}/services", {
+          params: { path: { room_id: room.id } },
+          body: { service_type_id: serviceTypeId },
+        });
+        assertServiceAdded(response, error, "ROOM_SERVICE_EXISTS", request);
+        refresh();
+      }}
+    />
   );
 }
 

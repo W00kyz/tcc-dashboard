@@ -1,7 +1,13 @@
 import L from "leaflet";
 import { describe, expect, it, vi } from "vitest";
 
-import { drawPlaces, type MapPlace, PIN_HEIGHT, PIN_WIDTH } from "@/components/board/PlacesLayer";
+import {
+  drawPlaces,
+  type MapPlace,
+  PIN_HEIGHT,
+  PIN_WIDTH,
+  placePopupKey,
+} from "@/components/board/PlacesLayer";
 
 const PLACES: MapPlace[] = [
   { id: "p1", name: "Praça central", latitude: -7.215, longitude: -35.909 },
@@ -68,5 +74,22 @@ describe("drawPlaces", () => {
 
     expect(icon?.options.iconAnchor).toEqual([PIN_WIDTH / 2, PIN_HEIGHT]);
     expect(icon?.options.iconSize).toEqual([PIN_WIDTH, PIN_HEIGHT]);
+  });
+});
+
+describe("placePopupKey", () => {
+  const [place] = PLACES as [MapPlace];
+
+  it("is stable for the same place and position", () => {
+    expect(placePopupKey(place)).toBe(placePopupKey({ ...place, name: "Renomeada" }));
+  });
+
+  it("changes when the place moves, so its popup re-anchors", () => {
+    expect(placePopupKey({ ...place, latitude: -7.2151 })).not.toBe(placePopupKey(place));
+    expect(placePopupKey({ ...place, longitude: -35.9091 })).not.toBe(placePopupKey(place));
+  });
+
+  it("tells two places at the same spot apart", () => {
+    expect(placePopupKey({ ...place, id: "other" })).not.toBe(placePopupKey(place));
   });
 });

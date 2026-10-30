@@ -45,6 +45,17 @@ export function useRefreshRooms() {
   };
 }
 
+/** Refreshes what a place change touches: the places (map pins) and their service points. */
+export function useRefreshPlaces() {
+  const queryClient = useQueryClient();
+
+  return () => {
+    for (const queryKey of [["places"], ["service-points"]]) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  };
+}
+
 /** Every building; the detail page picks its own from the same cached list the board uses. */
 export function useBuildings() {
   const client = useApiClient();

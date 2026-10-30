@@ -30,6 +30,7 @@ function building(id: string, name: string, footprint: unknown = null) {
 }
 
 const POINT = {
+  place_id: null as string | null,
   id: "p1",
   floor_id: "f1",
   name: "Sala 101",
@@ -447,7 +448,9 @@ describe("BuildingsPage places", () => {
     const card = await screen.findByRole("group", { name: "popup do local selecionado" });
     expect(within(card).getByText("Ponto de ônibus")).toBeInTheDocument();
     expect(await within(card).findByText("2 serviços")).toBeInTheDocument();
-    expect(within(card).queryByRole("button")).toBeNull();
+    expect(
+      within(card).getByRole("button", { name: "Editar Ponto de ônibus" }),
+    ).toBeInTheDocument();
   });
 
   it("selecting a place clears the building and the other way round", async () => {
@@ -487,5 +490,134 @@ describe("BuildingsPage places", () => {
 
     expect(pinButton()).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId("search")).toHaveTextContent("?local=pl1");
+  });
+});
+
+const OUTSIDE = { detail: { code: "OUTSIDE_CAMPUS" } };
+const moveToolButton = () =>
+  screen.getByRole("button", { name: "clicar no mapa para marcar o local" });
+
+async function openEditPlace() {
+  await userEvent.click(await screen.findByRole("button", { name: "Editar Ponto de ônibus" }));
+
+  return screen.findByRole("dialog", { name: "Editar local" });
+}
+
+describe("BuildingsPage editing a place", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("opens the place's edit dialog from the pencil of its card", async () => {
+    placesApi().onRequest("GET", "/service-points", (request) =>
+      [POINT, placePoint("p8"), placePoint("p9")].filter(
+        (point) => request.query.get("place_id") === null || point.place_id === "pl1",
+      ),
+    );
+
+    renderPage("/predios?local=pl1");
+    const dialog = await openEditPlace();
+
+    expect(within(dialog).getByText("Ponto de ônibus")).toBeInTheDocument();
+    expect(await within(dialog).findAllByRole("checkbox")).toHaveLength(2);
+  });
+
+  it("moves the pin: the dialog closes, the next map click sends only the position", async () => {
+    const api = placesApi().on("PATCH", "/places/pl1", BUS_STOP);
+
+    renderPage("/predios?local=pl1");
+    const dialog = await openEditPlace();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Mover pin" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      screen.getByText("Clique no mapa para a nova posição do pin. Esc cancela."),
+    ).toBeVisible();
+    expect(api.sent("PATCH", "/places/pl1")).toHaveLength(0);
+    await userEvent.click(moveToolButton());
+
+    await waitFor(() => {
+      expect(api.sent("PATCH", "/places/pl1")[0]?.body).toEqual({
+        latitude: PINNED_POINT.lat,
+        longitude: PINNED_POINT.lng,
+      });
+    });
+    // The tool ended with the click, and no "Novo local" dialog opened.
+    expect(screen.queryByRole("button", { name: "clicar no mapa para marcar o local" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("refetches the places after a move so the pin follows", async () => {
+    const api = placesApi().on("PATCH", "/places/pl1", BUS_STOP);
+
+    renderPage("/predios?local=pl1");
+    const dialog = await openEditPlace();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Mover pin" }));
+    const before = api.sent("GET", "/places").length;
+    await userEvent.click(moveToolButton());
+
+    await waitFor(() => {
+      expect(api.sent("GET", "/places").length).toBeGreaterThan(before);
+    });
+  });
+
+  it("shows the outside-campus message and ends the move when the API refuses the position", async () => {
+    const api = placesApi().on("PATCH", "/places/pl1", OUTSIDE, 422);
+
+    renderPage("/predios?local=pl1");
+    const dialog = await openEditPlace();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Mover pin" }));
+    await userEvent.click(moveToolButton());
+
+    expect(await screen.findByText("O pin precisa estar dentro do campus.")).toBeInTheDocument();
+    expect(api.sent("PATCH", "/places/pl1")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "clicar no mapa para marcar o local" })).toBeNull();
+    expect(pinButton()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("does not move when another thing on the map is chosen first", async () => {
+    const api = placesApi().on("PATCH", "/places/pl1", BUS_STOP);
+
+    renderPage("/predios?local=pl1");
+    const dialog = await openEditPlace();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Mover pin" }));
+    await selectBlocoCI();
+
+    expect(screen.queryByRole("button", { name: "clicar no mapa para marcar o local" })).toBeNull();
+    expect(api.sent("PATCH", "/places/pl1")).toHaveLength(0);
+  });
+
+  it("clears the selection once the place is removed", async () => {
+    const places: unknown[] = [BUS_STOP];
+    const api = placesApi()
+      .onRequest("GET", "/places", () => places)
+      .on("GET", "/places/pl1/deletion-impact", { ...IMPACT, places: 1 })
+      .onRequest(
+        "DELETE",
+        "/places/pl1",
+        () => {
+          places.length = 0;
+
+          return new Response(null, { status: 204 });
+        },
+        204,
+      );
+
+    renderPage("/predios?local=pl1");
+    const dialog = await openEditPlace();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Remover local Ponto de ônibus" }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: "Remover Ponto de ônibus?" });
+    await within(confirm).findByText("3 execuções");
+    expect(api.sent("DELETE", "/places/pl1")).toHaveLength(0);
+    await userEvent.click(within(confirm).getByRole("button", { name: "Remover" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("search")).toHaveTextContent("");
+    });
+    expect(api.sent("DELETE", "/places/pl1")).toHaveLength(1);
+    expect(screen.queryByRole("group", { name: "popup do local selecionado" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

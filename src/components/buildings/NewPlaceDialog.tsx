@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { components } from "@/api/generated/schema";
+import { OutsideCampusError, isOutsideCampus } from "@/components/buildings/placeErrors";
 import { groupByCompany } from "@/components/buildings/RoomDialogs";
 import { useApiClient, useServiceTypes } from "@/components/buildings/useBuildingRecords";
 import { Field } from "@/components/layout/Registry";
@@ -30,27 +31,9 @@ import { useTranslation } from "@/i18n/useTranslation";
 
 type PlaceOut = components["schemas"]["PlaceOut"];
 
-const OUTSIDE_CAMPUS = "OUTSIDE_CAMPUS";
-
-class OutsideCampusError extends Error {
-  constructor(position: LatLng) {
-    super(
-      `POST /places refused: ${String(position.lat)}, ${String(position.lng)} is outside the campus.`,
-    );
-    this.name = "OutsideCampusError";
-  }
-}
-
 interface LatLng {
   lat: number;
   lng: number;
-}
-
-// The API answers a pin off the campus with {"detail": {"code": "OUTSIDE_CAMPUS"}}.
-function isOutsideCampus(error: unknown): boolean {
-  const detail = (error as { detail?: { code?: string } } | undefined)?.detail;
-
-  return typeof detail === "object" && detail.code === OUTSIDE_CAMPUS;
 }
 
 function useCreatePlace(position: LatLng, onCreated: (placeId: string) => void) {
@@ -68,7 +51,7 @@ function useCreatePlace(position: LatLng, onCreated: (placeId: string) => void) 
         },
       });
       if (response.status === 422 && isOutsideCampus(error)) {
-        throw new OutsideCampusError(position);
+        throw new OutsideCampusError("POST /places", position);
       }
       assertSaved(response, "POST /places");
 
