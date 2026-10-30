@@ -6,6 +6,7 @@ import { useAuth } from "@/auth/AuthContext";
 
 type BuildingOut = components["schemas"]["BuildingOut"];
 type FloorOut = components["schemas"]["FloorOut"];
+type PlaceOut = components["schemas"]["PlaceOut"];
 type RoomOut = components["schemas"]["RoomOut"];
 type ServicePointOut = components["schemas"]["ServicePointOut"];
 type ServiceTypeOut = components["schemas"]["ServiceTypeOut"];
@@ -116,6 +117,37 @@ export function useAllFloors() {
       const { data, response } = await client.GET("/floors");
 
       return listOrThrow(data, response, "GET /floors");
+    },
+  });
+}
+
+/** Every external place (a pin on the campus map with no building around it). */
+export function usePlaces() {
+  const client = useApiClient();
+
+  return useQuery({
+    queryKey: ["places"],
+    queryFn: async (): Promise<PlaceOut[]> => {
+      const { data, response } = await client.GET("/places");
+
+      return listOrThrow(data, response, "GET /places");
+    },
+  });
+}
+
+/** The service points of one place. The key starts with "service-points", so the invalidations
+ * a point change already triggers refresh it too. */
+export function usePlacePoints(placeId: string) {
+  const client = useApiClient();
+
+  return useQuery({
+    queryKey: ["service-points", { placeId }],
+    queryFn: async (): Promise<ServicePointOut[]> => {
+      const { data, response } = await client.GET("/service-points", {
+        params: { query: { place_id: placeId } },
+      });
+
+      return listOrThrow(data, response, `GET /service-points?place_id=${placeId}`);
     },
   });
 }

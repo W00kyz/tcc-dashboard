@@ -16,6 +16,7 @@ const IMPACT: DeletionImpact = {
   executions: 1,
   photos: 0,
   appeals: 0,
+  places: 0,
 };
 
 function renderDialog(

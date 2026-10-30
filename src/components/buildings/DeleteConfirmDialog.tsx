@@ -22,6 +22,9 @@ export interface DeletionImpact {
   executions: number;
   photos: number;
   appeals: number;
+  /** Never listed: removing a place takes only its own points, and the place is the thing being
+   * removed, so there is no "also removed" line for it. */
+  places: number;
 }
 
 // Order of the list; each kind with its singular and plural wording.

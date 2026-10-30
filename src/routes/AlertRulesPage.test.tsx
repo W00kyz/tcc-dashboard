@@ -19,6 +19,7 @@ const RULES = [
   { rule_kind: "BATCH_RELEASED", enabled: true, threshold_minutes: null, updated_at: null },
   { rule_kind: "POINTS_UNSERVED", enabled: true, threshold_minutes: null, updated_at: null },
   { rule_kind: "APPEAL_FILED", enabled: false, threshold_minutes: null, updated_at: null },
+  { rule_kind: "COMPLETION_REFUSED", enabled: true, threshold_minutes: null, updated_at: null },
 ];
 
 const SETTINGS = {
@@ -96,7 +97,7 @@ describe("AlertRulesPage", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the five rules with their pt-BR names, in order", async () => {
+  it("renders the six rules with their pt-BR names, in order", async () => {
     renderPage(makeFakeFetch());
 
     await screen.findByText("Sem evidência");
@@ -110,6 +111,7 @@ describe("AlertRulesPage", () => {
       "Lote liberado",
       "Pontos não atendidos",
       "Recurso recebido",
+      "Conclusão recusada",
     ]);
   });
 
@@ -128,13 +130,27 @@ describe("AlertRulesPage", () => {
     expect(await request.clone().json()).toEqual({ enabled: false });
   });
 
+  it("toggling the refusal rule off sends PATCH /alert-rules/COMPLETION_REFUSED", async () => {
+    const fakeFetch = makeFakeFetch();
+    renderPage(fakeFetch);
+
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Conclusão recusada" }));
+
+    await waitFor(() => {
+      expect(patchRequests(fakeFetch)).toHaveLength(1);
+    });
+    const request = firstPatch(fakeFetch);
+    expect(request.url).toContain("/alert-rules/COMPLETION_REFUSED");
+    expect(await request.clone().json()).toEqual({ enabled: false });
+  });
+
   it("offers a threshold only for the timed rule; the event rules fire on the event", async () => {
     renderPage(makeFakeFetch());
 
     expect(await screen.findByLabelText("Sem evidência — Limiar (minutos)")).toHaveValue(25);
     expect(screen.getByText("Padrão global")).toBeInTheDocument();
     expect(screen.queryByLabelText("Ponto impedido — Limiar (minutos)")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Dispara no próprio evento")).toHaveLength(4);
+    expect(screen.getAllByText("Dispara no próprio evento")).toHaveLength(5);
   });
 
   it("typing a threshold commits it on blur as a number", async () => {
