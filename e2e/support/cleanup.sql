@@ -13,9 +13,14 @@ CREATE TEMP TABLE e2e_buildings ON COMMIT DROP AS
   SELECT id FROM buildings WHERE name LIKE 'E2E %';
 CREATE TEMP TABLE e2e_floors ON COMMIT DROP AS
   SELECT id FROM floors WHERE building_id IN (SELECT id FROM e2e_buildings);
+-- Outdoor places: a place's points carry the place's name, so they are found by place_id too.
+CREATE TEMP TABLE e2e_places ON COMMIT DROP AS
+  SELECT id FROM places WHERE name LIKE 'E2E %';
 CREATE TEMP TABLE e2e_points ON COMMIT DROP AS
   SELECT id FROM service_points
-  WHERE floor_id IN (SELECT id FROM e2e_floors) OR name LIKE 'E2E %';
+  WHERE floor_id IN (SELECT id FROM e2e_floors)
+     OR place_id IN (SELECT id FROM e2e_places)
+     OR name LIKE 'E2E %';
 CREATE TEMP TABLE e2e_companies ON COMMIT DROP AS
   SELECT id FROM contractor_companies WHERE name LIKE 'E2E %';
 CREATE TEMP TABLE e2e_users ON COMMIT DROP AS
@@ -63,6 +68,7 @@ CREATE TEMP TABLE e2e_appeals ON COMMIT DROP AS
 -- longer exist.
 DELETE FROM audit_trail WHERE entity_id IN (
   SELECT id FROM e2e_buildings UNION ALL SELECT id FROM e2e_floors
+  UNION ALL SELECT id FROM e2e_places
   UNION ALL SELECT id FROM e2e_points UNION ALL SELECT id FROM e2e_companies
   UNION ALL SELECT id FROM e2e_workers UNION ALL SELECT id FROM e2e_service_types
   UNION ALL SELECT id FROM e2e_users UNION ALL SELECT id FROM e2e_routes
@@ -97,6 +103,8 @@ DELETE FROM routes WHERE id IN (SELECT id FROM e2e_routes);
 
 DELETE FROM qr_codes WHERE id IN (SELECT id FROM e2e_qr_codes);
 DELETE FROM service_points WHERE id IN (SELECT id FROM e2e_points);
+-- After its points: service_points.place_id points at the place.
+DELETE FROM places WHERE id IN (SELECT id FROM e2e_places);
 DELETE FROM rooms WHERE floor_id IN (SELECT id FROM e2e_floors);
 DELETE FROM floors WHERE id IN (SELECT id FROM e2e_floors);
 DELETE FROM buildings WHERE id IN (SELECT id FROM e2e_buildings);
@@ -134,7 +142,7 @@ DELETE FROM consent_records
       'admin@pu.ufcg.edu.br', 'larissa@pu.ufcg.edu.br', 'joao@empresa.com'));
 
 
--- Records a spec removed through the dashboard (building/point removal, which takes the routes'
+-- Records a spec removed through the dashboard (building/place/point removal, which takes the routes'
 -- stops, executions, impediments and appeals with it) are gone before this sweep runs, so the marker cannot find them; their audit entries can: inside the run's window,
 -- an entry about a catalog or route record that no longer exists was left by this run.
 DELETE FROM audit_trail AS entry
@@ -144,6 +152,8 @@ DELETE FROM audit_trail AS entry
         AND NOT EXISTS (SELECT 1 FROM buildings WHERE id = entry.entity_id))
       OR (entry.entity_type = 'floor'
         AND NOT EXISTS (SELECT 1 FROM floors WHERE id = entry.entity_id))
+      OR (entry.entity_type = 'place'
+        AND NOT EXISTS (SELECT 1 FROM places WHERE id = entry.entity_id))
       OR (entry.entity_type = 'service_point'
         AND NOT EXISTS (SELECT 1 FROM service_points WHERE id = entry.entity_id))
       OR (entry.entity_type = 'route'

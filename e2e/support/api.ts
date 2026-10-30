@@ -29,6 +29,12 @@ export const E2E_SITE_OUTLINE = {
   ],
 };
 
+/** An outdoor place as the API returns it. */
+export interface PlaceRecord extends Named {
+  latitude: number;
+  longitude: number;
+}
+
 interface E2eCompany {
   id: string;
   name: string;
@@ -229,6 +235,20 @@ export class SeedApi {
     }
 
     return { company, building, floor, points };
+  }
+
+  /** An outdoor place with its first service (`POST /places`). Its name carries the E2E marker, so
+   * the suite's sweep removes it with its points. The spot is on campus, near `SITE_SPOT` but
+   * shifted per call so two specs' pins do not sit on top of each other. */
+  async createPlace(suffix: string, serviceTypeId: string): Promise<PlaceRecord> {
+    const shift = Math.random() * 0.0004;
+
+    return this.post<PlaceRecord>("/places", {
+      name: `E2E Local ${suffix}`,
+      latitude: -7.2152 - shift,
+      longitude: -35.9094 + shift,
+      service_type_id: serviceTypeId,
+    });
   }
 
   /** Approves a self-registered worker, as the manager's "Aprovar" does. */
