@@ -3165,6 +3165,8 @@ export interface components {
       routing_degraded: boolean;
       /** Current Batch */
       current_batch: number;
+      /** Check Radius Meters */
+      check_radius_meters: number;
       /** Stops */
       stops: components["schemas"]["RouteStopOut"][];
     };
