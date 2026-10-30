@@ -22,6 +22,7 @@ const ROOMS = [
 const POINT = {
   id: "p1",
   floor_id: "f1",
+  place_id: null,
   name: "101",
   description: "",
   latitude: -7.2,

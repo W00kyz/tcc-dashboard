@@ -284,6 +284,7 @@ export const strings = {
   alertRuleBatchReleased: "Lote liberado",
   alertRulePointsUnserved: "Pontos não atendidos",
   alertRuleAppealFiled: "Recurso recebido",
+  alertRuleCompletionRefused: "Conclusão recusada",
   alertRulesEventDriven: "Dispara no próprio evento",
   workerPositionsTitle: "Posições dos profissionais",
   workerPositionsColumnWorker: "Profissional",

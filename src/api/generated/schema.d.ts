@@ -357,6 +357,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/location-completions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create Location Completion */
+    post: operations["create_location_completion_location_completions_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/executions/{execution_id}/evidence/photo": {
     parameters: {
       query?: never;
@@ -882,6 +899,80 @@ export interface paths {
     };
     /** Room Deletion Impact */
     get: operations["room_deletion_impact_rooms__room_id__deletion_impact_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/places": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Places */
+    get: operations["list_places_places_get"];
+    put?: never;
+    /** Create Place */
+    post: operations["create_place_places_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/places/{place_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete Place Endpoint
+     * @description Removes the place with its points and their history; the other places and the buildings
+     *     stay (spec 2026-10-30-locais-externos-design.md §3).
+     */
+    delete: operations["delete_place_endpoint_places__place_id__delete"];
+    options?: never;
+    head?: never;
+    /** Update Place */
+    patch: operations["update_place_places__place_id__patch"];
+    trace?: never;
+  };
+  "/places/{place_id}/services": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add Place Service */
+    post: operations["add_place_service_places__place_id__services_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/places/{place_id}/deletion-impact": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Place Deletion Impact */
+    get: operations["place_deletion_impact_places__place_id__deletion_impact_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1525,7 +1616,12 @@ export interface components {
      * @enum {string}
      */
     AlertKind:
-      "NO_EVIDENCE" | "POINT_IMPEDED" | "BATCH_RELEASED" | "POINTS_UNSERVED" | "APPEAL_FILED";
+      | "NO_EVIDENCE"
+      | "POINT_IMPEDED"
+      | "BATCH_RELEASED"
+      | "POINTS_UNSERVED"
+      | "APPEAL_FILED"
+      | "COMPLETION_REFUSED";
     /** AlertOut */
     AlertOut: {
       /**
@@ -1705,7 +1801,7 @@ export interface components {
       /** Building Name */
       building_name: string;
       /** Floor Label */
-      floor_label: string;
+      floor_label: string | null;
       /**
        * Released At
        * Format: date-time
@@ -2207,6 +2303,11 @@ export interface components {
       appeals: number;
       /** Rooms */
       rooms: number;
+      /**
+       * Places
+       * @default 0
+       */
+      places: number;
     };
     /** EvidenceItemOut */
     EvidenceItemOut: {
@@ -2281,15 +2382,12 @@ export interface components {
       service_point_id: string;
       /** Service Point Name */
       service_point_name: string;
-      /**
-       * Building Id
-       * Format: uuid
-       */
-      building_id: string;
+      /** Building Id */
+      building_id: string | null;
       /** Building Name */
       building_name: string;
       /** Floor Label */
-      floor_label: string;
+      floor_label: string | null;
       /**
        * Checked In At
        * Format: date-time
@@ -2374,15 +2472,12 @@ export interface components {
       service_point_id: string;
       /** Service Point Name */
       service_point_name: string;
-      /**
-       * Building Id
-       * Format: uuid
-       */
-      building_id: string;
+      /** Building Id */
+      building_id: string | null;
       /** Building Name */
       building_name: string;
       /** Floor Label */
-      floor_label: string;
+      floor_label: string | null;
       /**
        * Checked In At
        * Format: date-time
@@ -2605,6 +2700,61 @@ export interface components {
       /** Reason */
       reason: string;
     };
+    /** LocationCompletionRequest */
+    LocationCompletionRequest: {
+      /**
+       * Route Stop Id
+       * Format: uuid
+       */
+      route_stop_id: string;
+      /**
+       * Execution Id
+       * Format: uuid
+       */
+      execution_id: string;
+      /**
+       * Idempotency Key
+       * Format: uuid
+       */
+      idempotency_key: string;
+      /** Latitude */
+      latitude?: number | null;
+      /** Longitude */
+      longitude?: number | null;
+      /** Accuracy M */
+      accuracy_m?: number | null;
+      /**
+       * Completed At
+       * Format: date-time
+       */
+      completed_at: string;
+      /** Client Clock Offset Seconds */
+      client_clock_offset_seconds?: number | null;
+      /** Complaints Suggestions */
+      complaints_suggestions?: string | null;
+    };
+    /** LocationCompletionResponse */
+    LocationCompletionResponse: {
+      /**
+       * Execution Id
+       * Format: uuid
+       */
+      execution_id: string;
+      /**
+       * Route Stop Id
+       * Format: uuid
+       */
+      route_stop_id: string;
+      /**
+       * Completed At
+       * Format: date-time
+       */
+      completed_at: string;
+      /** Validation Flags */
+      validation_flags: string[];
+      /** Review Status */
+      review_status: string;
+    };
     /** LoginRequest */
     LoginRequest: {
       /**
@@ -2741,6 +2891,51 @@ export interface components {
       evidence_summary: components["schemas"]["EvidenceSummaryOut"];
       positions_summary: components["schemas"]["TimeSpanOut"];
       notifications_summary: components["schemas"]["NotificationsSummaryOut"];
+    };
+    /** PlaceCreateRequest */
+    PlaceCreateRequest: {
+      /** Name */
+      name: string;
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+      /**
+       * Service Type Id
+       * Format: uuid
+       */
+      service_type_id: string;
+    };
+    /** PlaceOut */
+    PlaceOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Latitude */
+      latitude: number;
+      /** Longitude */
+      longitude: number;
+    };
+    /** PlaceServiceRequest */
+    PlaceServiceRequest: {
+      /**
+       * Service Type Id
+       * Format: uuid
+       */
+      service_type_id: string;
+    };
+    /** PlaceUpdateRequest */
+    PlaceUpdateRequest: {
+      /** Name */
+      name?: string | null;
+      /** Latitude */
+      latitude?: number | null;
+      /** Longitude */
+      longitude?: number | null;
     };
     /** PolygonFootprint */
     PolygonFootprint: {
@@ -2992,22 +3187,23 @@ export interface components {
        * Format: uuid
        */
       service_point_id: string;
-      /**
-       * Floor Id
-       * Format: uuid
-       */
-      floor_id: string;
+      /** Floor Id */
+      floor_id: string | null;
       /** Service Point Name */
       service_point_name: string;
       /** Floor Label */
-      floor_label: string;
+      floor_label: string | null;
       /** Building Name */
       building_name: string;
+      /** Building Id */
+      building_id: string | null;
+      /** Place Id */
+      place_id: string | null;
       /**
-       * Building Id
-       * Format: uuid
+       * Completion
+       * @enum {string}
        */
-      building_id: string;
+      completion: "QR" | "LOCATION";
       /** Latitude */
       latitude: number;
       /** Longitude */
@@ -3056,11 +3252,10 @@ export interface components {
        * Format: uuid
        */
       id: string;
-      /**
-       * Floor Id
-       * Format: uuid
-       */
-      floor_id: string;
+      /** Floor Id */
+      floor_id: string | null;
+      /** Place Id */
+      place_id: string | null;
       /** Name */
       name: string;
       /** Description */
@@ -3887,6 +4082,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CheckOutResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_location_completion_location_completions_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LocationCompletionRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LocationCompletionResponse"];
         };
       };
       /** @description Validation Error */
@@ -5094,11 +5322,195 @@ export interface operations {
       };
     };
   };
+  list_places_places_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlaceOut"][];
+        };
+      };
+    };
+  };
+  create_place_places_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PlaceCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlaceOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_place_endpoint_places__place_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        place_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_place_places__place_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        place_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PlaceUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlaceOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  add_place_service_places__place_id__services_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        place_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PlaceServiceRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServicePointOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  place_deletion_impact_places__place_id__deletion_impact_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        place_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeletionImpactOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   list_service_points_service_points_get: {
     parameters: {
       query?: {
         floor_id?: string | null;
         building_id?: string | null;
+        place_id?: string | null;
       };
       header?: never;
       path?: never;

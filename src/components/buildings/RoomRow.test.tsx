@@ -11,6 +11,7 @@ const ROOM = { id: "r1", floor_id: "f1", name: "101" };
 const CLEANING = {
   id: "p1",
   floor_id: "f1",
+  place_id: null,
   name: "101",
   description: "perto da escada",
   latitude: -7.2,

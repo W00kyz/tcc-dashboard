@@ -33,6 +33,7 @@ const RULE_ORDER: AlertKind[] = [
   "BATCH_RELEASED",
   "POINTS_UNSERVED",
   "APPEAL_FILED",
+  "COMPLETION_REFUSED",
 ];
 
 const RULE_LABEL_KEY: Record<AlertKind, StringKey> = {
@@ -41,6 +42,7 @@ const RULE_LABEL_KEY: Record<AlertKind, StringKey> = {
   BATCH_RELEASED: "alertRuleBatchReleased",
   POINTS_UNSERVED: "alertRulePointsUnserved",
   APPEAL_FILED: "alertRuleAppealFiled",
+  COMPLETION_REFUSED: "alertRuleCompletionRefused",
 };
 
 // Only a timed rule has a threshold: the `system_settings` field it falls back to when it has no

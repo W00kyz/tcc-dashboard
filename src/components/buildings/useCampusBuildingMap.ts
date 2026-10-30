@@ -70,7 +70,9 @@ export function useCampusBuildingMap() {
   return useMemo(() => {
     const buildingOfFloor = new Map(floors.map((floor) => [floor.id, floor.building_id]));
     const floorCounts = countBy(floors, (floor) => floor.building_id);
-    const pointCounts = countBy(points, (point) => buildingOfFloor.get(point.floor_id));
+    const pointCounts = countBy(points, (point) =>
+      point.floor_id === null ? undefined : buildingOfFloor.get(point.floor_id),
+    );
     const mapBuildings: MapBuilding[] = mapBuildingsFrom(buildings);
     const drawn = new Set(mapBuildings.map((building) => building.id));
 
