@@ -19,6 +19,7 @@ import {
   PIN_HEIGHT,
 } from "@/components/board/PlacesLayer";
 import { createCampusMap } from "@/components/map/campusMap";
+import { popupOffset } from "@/components/map/popupOffset";
 import { startPlacePinTool } from "@/components/map/placePinTool";
 import { DRAFT_RECTANGLE_STYLE, startRectangleTool } from "@/components/map/rectangleTool";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -229,7 +230,7 @@ function useAnchoredPopup({
       minWidth: compact ? 176 : 288,
       maxWidth: compact ? 256 : 288,
       className: compact ? "popup-compact" : "",
-      offset: L.point(0, -riseAbove),
+      offset: popupOffset(riseAbove),
     })
       .setLatLng(L.latLng(anchor.getNorth(), anchor.getCenter().lng))
       .setContent(popupBody)
