@@ -145,12 +145,14 @@ interface AnchoredPopup {
   onDismiss: () => void;
   /** Focus the first field (a form popup). */
   autofocus: boolean;
+  /** A short read-only card (not a form): narrower, with tighter spacing (index.css). */
+  compact: boolean;
 }
 
 // A layout effect, so it runs once React has already filled the body: Leaflet then measures the
 // whole content and pans the map to show it. Never call popup.update() afterwards: Leaflet
 // re-attaches the body and the focused field loses focus.
-function useAnchoredPopup({ map, key, bounds, onDismiss, autofocus }: AnchoredPopup) {
+function useAnchoredPopup({ map, key, bounds, onDismiss, autofocus, compact }: AnchoredPopup) {
   const popupBody = usePopupBody(key);
   const latest = useLatest({ bounds, onDismiss });
 
@@ -162,7 +164,13 @@ function useAnchoredPopup({ map, key, bounds, onDismiss, autofocus }: AnchoredPo
     const dismiss = () => {
       latest.current.onDismiss();
     };
-    const popup = L.popup({ closeOnClick: false, autoClose: false, minWidth: 288, maxWidth: 288 })
+    const popup = L.popup({
+      closeOnClick: false,
+      autoClose: false,
+      minWidth: compact ? 176 : 288,
+      maxWidth: compact ? 256 : 288,
+      className: compact ? "popup-compact" : "",
+    })
       .setLatLng(L.latLng(anchor.getNorth(), anchor.getCenter().lng))
       .setContent(popupBody)
       .openOn(map);
@@ -177,7 +185,7 @@ function useAnchoredPopup({ map, key, bounds, onDismiss, autofocus }: AnchoredPo
       popup.off("remove", dismiss);
       popup.remove();
     };
-  }, [map, key, popupBody, latest, autofocus]);
+  }, [map, key, popupBody, latest, autofocus, compact]);
 
   return popupBody;
 }
@@ -225,6 +233,7 @@ export function CampusBuildingsMap(props: CampusBuildingsMapProps) {
       latest.current.onSelect(null);
     },
     autofocus: false,
+    compact: true,
   });
   const draftBody = useAnchoredPopup({
     map: handles?.map ?? null,
@@ -232,6 +241,7 @@ export function CampusBuildingsMap(props: CampusBuildingsMapProps) {
     bounds: boundsOf(draft?.coordinates[0]),
     onDismiss: () => latest.current.onDiscardDraft?.(),
     autofocus: true,
+    compact: false,
   });
 
   useEffect(() => {

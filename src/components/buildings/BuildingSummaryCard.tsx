@@ -17,7 +17,7 @@ export function BuildingSummaryCard({ name, counts, onEdit }: BuildingSummaryCar
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
         <p className="text-foreground text-sm font-bold">{name}</p>
         <p className="text-muted-foreground text-xs">{countsLine(t, counts)}</p>
@@ -25,7 +25,7 @@ export function BuildingSummaryCard({ name, counts, onEdit }: BuildingSummaryCar
       <Button
         type="button"
         variant="ghost"
-        size="icon"
+        size="icon-sm"
         aria-label={t("registryEditItem").replace("{name}", name)}
         onClick={onEdit}
       >

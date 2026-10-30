@@ -146,3 +146,13 @@
 .leaflet-popup.popup-below .leaflet-popup-tip-container {
   display: none;
 }
+
+/* A building's card is two short lines and a pencil; with Leaflet's default popup spacing (wide
+ * margins, and 1.3em above and below every <p>) it came out as tall as a form. */
+.leaflet-popup.popup-compact .leaflet-popup-content {
+  margin: 8px 28px 8px 12px;
+}
+
+.leaflet-popup.popup-compact .leaflet-popup-content p {
+  margin: 0;
+}
