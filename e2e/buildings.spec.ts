@@ -199,7 +199,8 @@ test("floors and rooms are managed under the map: rooms, services, rename and re
   await addService.getByRole("button", { name: "Adicionar" }).click();
   await expect(addService).toHaveCount(0);
   await expect(room("101").getByLabel(extraService)).toBeChecked();
-  await room("101").getByLabel("Limpeza").uncheck();
+  // Controlled by the server state: click, then wait for the PATCH + refetch to flip it.
+  await room("101").getByLabel("Limpeza").click();
   await expect(room("101").getByLabel("Limpeza")).not.toBeChecked();
 
   await room("102").getByRole("button", { name: "Renomear" }).click();
