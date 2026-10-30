@@ -7,8 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 import { BuildingPanel } from "@/components/board/BuildingPanel";
 
 const FLOORS = [
-  { id: "f0", building_id: "b1", label: "Térreo" },
-  { id: "f1", building_id: "b1", label: "1º andar" },
+  { id: "f0", building_id: "b1", label: "Térreo", level: 0 },
+  { id: "f1", building_id: "b1", label: "1º andar", level: 1 },
 ];
 const POINTS = new Map([
   ["f0", [{ id: "p1", floor_id: "f0", name: "Banheiro térreo", latitude: -7.2, longitude: -35.9 }]],

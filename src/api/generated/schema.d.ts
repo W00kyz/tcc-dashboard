@@ -787,11 +787,107 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    delete?: never;
+    /**
+     * Delete Floor Endpoint
+     * @description Removes the floor with its rooms, QR codes, points and their history (spec
+     *     2026-10-29-andares-salas-design.md §3, same rule as the building).
+     */
+    delete: operations["delete_floor_endpoint_floors__floor_id__delete"];
     options?: never;
     head?: never;
     /** Update Floor */
     patch: operations["update_floor_floors__floor_id__patch"];
+    trace?: never;
+  };
+  "/floors/{floor_id}/deletion-impact": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Floor Deletion Impact */
+    get: operations["floor_deletion_impact_floors__floor_id__deletion_impact_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/rooms": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Rooms */
+    get: operations["list_rooms_rooms_get"];
+    put?: never;
+    /** Create Room */
+    post: operations["create_room_rooms_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/rooms/{room_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete Room Endpoint
+     * @description Removes the room with its points and their history; the floor and the other rooms stay
+     *     (spec 2026-10-29-andares-salas-design.md §4 "Remover sala").
+     */
+    delete: operations["delete_room_endpoint_rooms__room_id__delete"];
+    options?: never;
+    head?: never;
+    /** Update Room */
+    patch: operations["update_room_rooms__room_id__patch"];
+    trace?: never;
+  };
+  "/rooms/{room_id}/services": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add Room Service */
+    post: operations["add_room_service_rooms__room_id__services_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/rooms/{room_id}/deletion-impact": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Room Deletion Impact */
+    get: operations["room_deletion_impact_rooms__room_id__deletion_impact_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/service-points": {
@@ -2109,6 +2205,8 @@ export interface components {
       photos: number;
       /** Appeals */
       appeals: number;
+      /** Rooms */
+      rooms: number;
     };
     /** EvidenceItemOut */
     EvidenceItemOut: {
@@ -2409,6 +2507,8 @@ export interface components {
       building_id: string;
       /** Label */
       label: string;
+      /** Level */
+      level: number;
     };
     /** FloorUpdateRequest */
     FloorUpdateRequest: {
@@ -2780,6 +2880,69 @@ export interface components {
       /** Reason */
       reason: string;
     };
+    /** RoomCreateOut */
+    RoomCreateOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Floor Id
+       * Format: uuid
+       */
+      floor_id: string;
+      /** Name */
+      name: string;
+      /**
+       * Cleaning
+       * @enum {string}
+       */
+      cleaning: "CREATED" | "SKIPPED" | "NO_CLEANING_TYPE" | "NO_OUTLINE";
+    };
+    /** RoomCreateRequest */
+    RoomCreateRequest: {
+      /**
+       * Floor Id
+       * Format: uuid
+       */
+      floor_id: string;
+      /** Name */
+      name?: string | null;
+      /**
+       * With Cleaning
+       * @default true
+       */
+      with_cleaning: boolean;
+    };
+    /** RoomOut */
+    RoomOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Floor Id
+       * Format: uuid
+       */
+      floor_id: string;
+      /** Name */
+      name: string;
+    };
+    /** RoomServiceRequest */
+    RoomServiceRequest: {
+      /**
+       * Service Type Id
+       * Format: uuid
+       */
+      service_type_id: string;
+    };
+    /** RoomUpdateRequest */
+    RoomUpdateRequest: {
+      /** Name */
+      name: string;
+    };
     /** RouteOut */
     RouteOut: {
       /**
@@ -2910,6 +3073,10 @@ export interface components {
       service_type_id: string | null;
       /** Service Type Name */
       service_type_name: string | null;
+      /** Room Id */
+      room_id: string | null;
+      /** Active */
+      active: boolean;
     };
     /** ServicePointUpdateRequest */
     ServicePointUpdateRequest: {
@@ -2919,6 +3086,8 @@ export interface components {
       description: string;
       /** Service Type Id */
       service_type_id?: string | null;
+      /** Active */
+      active?: boolean | null;
     };
     /** ServiceTypeOut */
     ServiceTypeOut: {
@@ -4635,6 +4804,35 @@ export interface operations {
       };
     };
   };
+  delete_floor_endpoint_floors__floor_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        floor_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   update_floor_floors__floor_id__patch: {
     parameters: {
       query?: never;
@@ -4657,6 +4855,232 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["FloorOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  floor_deletion_impact_floors__floor_id__deletion_impact_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        floor_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeletionImpactOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_rooms_rooms_get: {
+    parameters: {
+      query?: {
+        floor_id?: string | null;
+        building_id?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoomOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_room_rooms_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoomCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoomCreateOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_room_endpoint_rooms__room_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_room_rooms__room_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoomUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoomOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  add_room_service_rooms__room_id__services_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoomServiceRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServicePointOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  room_deletion_impact_rooms__room_id__deletion_impact_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeletionImpactOut"];
         };
       };
       /** @description Validation Error */
