@@ -56,7 +56,7 @@ function serviceType(id: string, name: string, company: string | null) {
     contractor_company_name: company,
   };
 }
-const IMPACT = { points: 1, floors: 2, routes: 1, executions: 3, photos: 2, appeals: 1 };
+const IMPACT = { points: 1, floors: 2, rooms: 0, routes: 1, executions: 3, photos: 2, appeals: 1 };
 
 function campusApi() {
   return new FakeApi()

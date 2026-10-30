@@ -6,6 +6,7 @@ import { useAuth } from "@/auth/AuthContext";
 
 type BuildingOut = components["schemas"]["BuildingOut"];
 type FloorOut = components["schemas"]["FloorOut"];
+type RoomOut = components["schemas"]["RoomOut"];
 type ServicePointOut = components["schemas"]["ServicePointOut"];
 type ServiceTypeOut = components["schemas"]["ServiceTypeOut"];
 
@@ -46,7 +47,7 @@ export function useBuildings() {
   });
 }
 
-/** Floors of one building, in registration order. */
+/** Floors of one building, ordered by level. */
 export function useBuildingFloors(buildingId: string) {
   const client = useApiClient();
 
@@ -58,6 +59,22 @@ export function useBuildingFloors(buildingId: string) {
       });
 
       return listOrThrow(data, response, `GET /floors?building_id=${buildingId}`);
+    },
+  });
+}
+
+/** Rooms of one building, across its floors. */
+export function useBuildingRooms(buildingId: string) {
+  const client = useApiClient();
+
+  return useQuery({
+    queryKey: ["rooms", { buildingId }],
+    queryFn: async (): Promise<RoomOut[]> => {
+      const { data, response } = await client.GET("/rooms", {
+        params: { query: { building_id: buildingId } },
+      });
+
+      return listOrThrow(data, response, `GET /rooms?building_id=${buildingId}`);
     },
   });
 }

@@ -17,6 +17,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 export interface DeletionImpact {
   points: number;
   floors: number;
+  rooms: number;
   routes: number;
   executions: number;
   photos: number;
@@ -26,6 +27,7 @@ export interface DeletionImpact {
 // Order of the list; each kind with its singular and plural wording.
 const IMPACT_LINES: { kind: keyof DeletionImpact; one: StringKey; many: StringKey }[] = [
   { kind: "floors", one: "deletionImpactFloorsOne", many: "deletionImpactFloors" },
+  { kind: "rooms", one: "deletionImpactRoomsOne", many: "deletionImpactRooms" },
   { kind: "points", one: "deletionImpactPointsOne", many: "deletionImpactPoints" },
   { kind: "routes", one: "deletionImpactRoutesOne", many: "deletionImpactRoutes" },
   { kind: "executions", one: "deletionImpactExecutionsOne", many: "deletionImpactExecutions" },
@@ -42,11 +44,14 @@ interface DeleteConfirmDialogProps {
   loadImpact: () => Promise<DeletionImpact>;
   onConfirm: () => Promise<void>;
   onDeleted: () => void;
+  /** Kinds left out of the list: removing a floor reports itself as `floors: 1`, which "Também
+   * será removido" must not echo. */
+  omit?: (keyof DeletionImpact)[];
 }
 
-function ImpactList({ impact }: { impact: DeletionImpact }) {
+function ImpactList({ impact, omit }: { impact: DeletionImpact; omit: (keyof DeletionImpact)[] }) {
   const { t } = useTranslation();
-  const lines = IMPACT_LINES.filter(({ kind }) => impact[kind] > 0);
+  const lines = IMPACT_LINES.filter(({ kind }) => !omit.includes(kind) && impact[kind] > 0);
   if (lines.length === 0) {
     return <p className="text-sm">{t("deletionImpactNothingElse")}</p>;
   }
@@ -65,7 +70,7 @@ function ImpactList({ impact }: { impact: DeletionImpact }) {
   );
 }
 
-/** Asks before removing a building or a service point, listing the history that goes with it
+/** Asks before removing a building, floor, room or service point, listing the history that goes with it
  * (decided by the product owner: removal deletes the history).
  * @example <DeleteConfirmDialog open title="Remover Bloco CI?" impactKey={id} ... /> */
 export function DeleteConfirmDialog(props: DeleteConfirmDialogProps) {
@@ -95,7 +100,7 @@ export function DeleteConfirmDialog(props: DeleteConfirmDialogProps) {
         </DialogHeader>
         {impact.isPending && <LoadingMessage>{t("deletionImpactLoading")}</LoadingMessage>}
         {impact.isError && <ErrorMessage>{t("deletionImpactError")}</ErrorMessage>}
-        {impact.data !== undefined && <ImpactList impact={impact.data} />}
+        {impact.data !== undefined && <ImpactList impact={impact.data} omit={props.omit ?? []} />}
         {removal.isError && <ErrorMessage>{t("deletionError")}</ErrorMessage>}
         <DialogFooter>
           <Button
