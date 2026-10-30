@@ -421,7 +421,9 @@ export function ExecutionHistoryPage() {
                     <TableCell>
                       <span className="font-semibold">{item.service_point_name}</span>
                       <span className="text-muted-foreground block text-xs">
-                        {item.building_name} · {item.floor_label}
+                        {[item.building_name, item.floor_label]
+                          .filter((part) => part !== null)
+                          .join(" · ")}
                       </span>
                     </TableCell>
                     <TableCell>{formatDateTime(item.checked_in_at)}</TableCell>

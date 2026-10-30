@@ -2,7 +2,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { components } from "@/api/generated/schema";
-import { pointStatusesForToday, summarisePoints } from "@/lib/buildingInterior";
+import {
+  placeStatusesForToday,
+  pointStatusesForToday,
+  summarisePoints,
+} from "@/lib/buildingInterior";
 
 type RouteOut = components["schemas"]["RouteOut"];
 
@@ -59,5 +63,53 @@ describe("summarisePoints", () => {
       total: 4,
       done: 1,
     });
+  });
+});
+
+function placeRoute(id: string, stops: [string | null, string][]): RouteOut {
+  return {
+    id,
+    status: "IN_PROGRESS",
+    stops: stops.map(([placeId, status], index) => ({
+      id: `${id}-${String(index)}`,
+      order_index: index + 1,
+      status,
+      service_point_id: `${id}-point-${String(index)}`,
+      place_id: placeId,
+    })),
+  } as unknown as RouteOut;
+}
+
+describe("placeStatusesForToday", () => {
+  it("reads a place's status off the stops that carry its id, the most urgent winning", () => {
+    const statuses = placeStatusesForToday([
+      placeRoute("r1", [
+        ["pl1", "DONE"],
+        ["pl1", "PENDING"],
+        ["pl2", "DONE"],
+      ]),
+    ]);
+
+    expect(statuses.get("pl1")).toBe("PENDING");
+    expect(statuses.get("pl2")).toBe("DONE");
+  });
+
+  it("leaves building stops out: they carry no place id", () => {
+    const statuses = placeStatusesForToday([placeRoute("r1", [[null, "PENDING"]])]);
+
+    expect(statuses.size).toBe(0);
+  });
+
+  it("shows RELEASED only when nothing else of the place is on the board", () => {
+    const statuses = placeStatusesForToday([
+      placeRoute("r1", [
+        ["pl1", "RELEASED"],
+        ["pl2", "RELEASED"],
+      ]),
+      placeRoute("r2", [["pl2", "IN_PROGRESS"]]),
+    ]);
+
+    expect(statuses.get("pl1")).toBe("RELEASED");
+    expect(statuses.get("pl2")).toBe("IN_PROGRESS");
   });
 });

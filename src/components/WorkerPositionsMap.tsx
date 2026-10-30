@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 
 import type { components } from "@/api/generated/schema";
 import { drawBuildings, type MapBuilding } from "@/components/board/BuildingsLayer";
+import { drawPlaces, type MapPlace, type PinStatuses } from "@/components/board/PlacesLayer";
 import { nextViewAction, type ViewAction } from "@/components/board/viewMemory";
 import { createCampusMap } from "@/components/map/campusMap";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -37,12 +38,17 @@ interface WorkerPositionsMapProps {
   buildings?: MapBuilding[];
   selectedBuildingId?: string | null;
   onSelectBuilding?: (buildingId: string | null) => void;
+  places?: MapPlace[];
+  selectedPlaceId?: string | null;
+  onSelectPlace?: (placeId: string | null) => void;
+  pinStatuses?: PinStatuses;
   className?: string;
 }
 
 // With 50–100 workers on one campus, permanent name labels pile into an unreadable mass. Only
 // the worker the manager picked keeps the label; the rest show it on hover.
 const NO_BUILDINGS: MapBuilding[] = [];
+const NO_PLACES: MapPlace[] = [];
 
 // Close enough to tell one building from the next; a manager already zoomed in further keeps
 // their zoom.
@@ -121,6 +127,7 @@ function drawWorkers(drawing: WorkerDrawing): void {
 
 interface MapLayers {
   buildings: L.LayerGroup;
+  places: L.LayerGroup;
   workers: L.LayerGroup;
 }
 
@@ -137,10 +144,11 @@ function useLatest<T>(value: T): React.RefObject<T> {
   return ref;
 }
 
-// Added bottom-up: buildings, then workers, so workers stay clickable on top.
+// Added bottom-up: buildings, places, then workers, so workers stay clickable on top.
 function createLayers(map: L.Map): MapLayers {
   return {
     buildings: L.layerGroup().addTo(map),
+    places: L.layerGroup().addTo(map),
     workers: L.layerGroup().addTo(map),
   };
 }
@@ -261,6 +269,26 @@ function useBuildingsLayer(handle: CampusMapHandle, props: WorkerPositionsMapPro
   useGlideToBuilding(handle.mapRef, polygonsRef, selectedBuildingId);
 }
 
+function usePlacesLayer(handle: CampusMapHandle, props: WorkerPositionsMapProps): void {
+  const { places = NO_PLACES, selectedPlaceId = null, pinStatuses } = props;
+  const onSelectRef = useLatest(props.onSelectPlace);
+
+  useEffect(() => {
+    if (handle.layersRef.current === null) {
+      return;
+    }
+    drawPlaces(
+      handle.layersRef.current.places,
+      places,
+      selectedPlaceId,
+      (id) => {
+        onSelectRef.current?.(id);
+      },
+      pinStatuses,
+    );
+  }, [handle.layersRef, places, selectedPlaceId, pinStatuses, onSelectRef]);
+}
+
 function useWorkersLayer(handle: CampusMapHandle, props: WorkerPositionsMapProps): void {
   const { positions, selectedWorkerId = null } = props;
   const onSelectRef = useLatest(props.onSelectWorker);
@@ -280,14 +308,19 @@ function useWorkersLayer(handle: CampusMapHandle, props: WorkerPositionsMapProps
 }
 
 /** RF42: the latest position each field worker reported, on a map, with the campus buildings
- * under them. Leaflet is driven imperatively from
+ * under them and the outdoor places as pins. Leaflet is driven imperatively from
  * effects — the component owns one map for its lifetime and only redraws the layer whose
  * input changed. */
 export function WorkerPositionsMap(props: WorkerPositionsMapProps) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
-  const handle = useCampusMapLayers(containerRef, () => props.onSelectBuilding?.(null));
+  // Empty map: nothing stays open, building or place.
+  const handle = useCampusMapLayers(containerRef, () => {
+    props.onSelectBuilding?.(null);
+    props.onSelectPlace?.(null);
+  });
   useBuildingsLayer(handle, props);
+  usePlacesLayer(handle, props);
   useWorkersLayer(handle, props);
 
   return (

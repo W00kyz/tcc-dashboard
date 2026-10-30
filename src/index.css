@@ -172,6 +172,25 @@
   fill: var(--color-signal);
 }
 
+/* On the operations board a pin also wears today's visit status (PlacesLayer PinStatuses), with the
+ * same tokens as the status plates. A place with no stop today keeps the plain navy drop. */
+.place-pin-status-pending .place-pin-shape path {
+  fill: var(--color-status-pending);
+}
+
+.place-pin-status-in-progress .place-pin-shape path {
+  fill: var(--color-status-progress);
+}
+
+.place-pin-status-done .place-pin-shape path {
+  fill: var(--color-status-done);
+}
+
+.place-pin-status-released .place-pin-shape path {
+  fill: var(--color-status-pending);
+  fill-opacity: 0.45;
+}
+
 /* The rectangle tool owns the mouse drag while it is on (src/components/map/rectangleTool.ts). */
 .leaflet-container.map-drawing,
 .leaflet-container.map-drawing .leaflet-interactive {

@@ -9,6 +9,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { BoardKpiStrip } from "@/components/board/BoardKpiStrip";
 import { BoardPager } from "@/components/board/BoardPager";
 import { BuildingPanel } from "@/components/board/BuildingPanel";
+import { PlacePanel } from "@/components/board/PlacePanel";
 import { OpenAlertsPanel } from "@/components/board/OpenAlertsPanel";
 import { OperationsMapPanel } from "@/components/board/OperationsMapPanel";
 import { RouteBoardFilters, type RouteFilters } from "@/components/board/RouteBoardFilters";
@@ -244,7 +245,8 @@ export function RouteBoardPage() {
     queryFn: () => fetchRoutes(client, dayFilters),
   });
 
-  // Buildings are drawn on the map; opening one swaps the alert rail for its floors and points.
+  // Buildings and places are drawn on the map; opening one swaps the alert rail for its floors
+  // (or services) and today's status of each point.
   const board = useBoardBuildings({ dayRoutes: dayRoutes ?? [] });
 
   // Any filter change (all of them live in the query string) starts again at page 1.
@@ -307,10 +309,15 @@ export function RouteBoardPage() {
           buildings={board.mapBuildings}
           selectedBuildingId={board.selectedBuildingId}
           onSelectBuilding={board.selectBuilding}
+          places={board.mapPlaces}
+          selectedPlaceId={board.selectedPlaceId}
+          onSelectPlace={board.selectPlace}
+          pinStatuses={board.pinStatuses}
         />
         <aside className="space-y-6">
           {board.panelProps !== null && <BuildingPanel {...board.panelProps} />}
-          {board.panelProps === null && (
+          {board.placePanelProps !== null && <PlacePanel {...board.placePanelProps} />}
+          {board.panelProps === null && board.placePanelProps === null && (
             <OpenAlertsPanel
               alerts={openAlerts}
               onAcknowledge={(alertId) => {

@@ -136,6 +136,19 @@ describe("ExecutionHistoryPage", () => {
     expect(screen.getByText(checkIn)).toBeInTheDocument();
   });
 
+  it("shows just the place's name when an outdoor visit has no floor", async () => {
+    const outdoor = {
+      ...EXECUTION_A,
+      building_id: null,
+      building_name: "Praça central",
+      floor_label: null,
+    };
+    renderPage(makeFakeFetch(1, [outdoor]));
+
+    expect(await screen.findByText("Praça central")).toBeInTheDocument();
+    expect(screen.queryByText(/Praça central ·/)).not.toBeInTheDocument();
+  });
+
   it("names the origin of each execution, an accepted appeal as 'Por recurso'", async () => {
     renderPage(makeFakeFetch());
 

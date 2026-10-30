@@ -157,7 +157,16 @@ function requestUrl(input: RequestInfo | URL): string {
   return input instanceof URL ? input.toString() : input.url;
 }
 
-function makeFakeFetch(routes: unknown[] = [RUNNING_ROUTE, PAUSED_ROUTE], board = snapshot()) {
+interface CampusExtras {
+  places?: unknown[];
+  points?: unknown[];
+}
+
+function makeFakeFetch(
+  routes: unknown[] = [RUNNING_ROUTE, PAUSED_ROUTE],
+  board = snapshot(),
+  { places = [], points = [POINT] }: CampusExtras = {},
+) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = requestUrl(input);
     const reply = (body: unknown) =>
@@ -171,6 +180,9 @@ function makeFakeFetch(routes: unknown[] = [RUNNING_ROUTE, PAUSED_ROUTE], board 
     if (url.includes("/monitoring/board")) {
       return reply(board);
     }
+    if (url.includes("/places")) {
+      return reply(places);
+    }
     if (url.includes("/buildings")) {
       return reply([BUILDING]);
     }
@@ -178,7 +190,7 @@ function makeFakeFetch(routes: unknown[] = [RUNNING_ROUTE, PAUSED_ROUTE], board 
       return reply([FLOOR]);
     }
     if (url.includes("/service-points")) {
-      return reply([POINT]);
+      return reply(points);
     }
     if (url.includes("/alerts/")) {
       return reply({ id: "a1" });
@@ -621,5 +633,104 @@ describe("RouteBoardPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Voltar aos alertas" }));
 
     expect(await screen.findByRole("heading", { name: "Alertas abertos" })).toBeInTheDocument();
+  });
+  describe("outdoor places", () => {
+    const PLACE = { id: "pl1", name: "Praça central", latitude: -7.2105, longitude: -35.8985 };
+    const placePoint = (id: string, typeName: string, active = true) => ({
+      id,
+      floor_id: null,
+      place_id: "pl1",
+      name: typeName,
+      description: "",
+      latitude: PLACE.latitude,
+      longitude: PLACE.longitude,
+      service_type_id: `t-${id}`,
+      service_type_name: typeName,
+      room_id: null,
+      active,
+    });
+    const POINTS = [POINT, placePoint("sa", "Limpeza"), placePoint("sb", "Jardinagem")];
+    // A place stop: completed by location, no building, no floor.
+    const placeStop = (id: string, order: number, status: string, pointId: string) => ({
+      ...stop(id, order, 1, status),
+      service_point_id: pointId,
+      service_point_name: "Limpeza",
+      building_name: PLACE.name,
+      building_id: null,
+      floor_id: null,
+      floor_label: null,
+      place_id: "pl1",
+      completion: "LOCATION",
+    });
+    const PLACE_ROUTE = {
+      ...RUNNING_ROUTE,
+      current_batch: 1,
+      stops: [placeStop("sp1", 1, "DONE", "sa"), placeStop("sp2", 2, "PENDING", "sb")],
+    };
+
+    async function placePin(name: RegExp) {
+      return screen.findByRole("button", { name }, { timeout: 3000 });
+    }
+
+    function buildingOutline() {
+      const region = screen.getByRole("region", { name: /mapa das posições/i });
+      const found = region.querySelector("path.leaflet-interactive");
+      if (found === null) {
+        throw new Error("expected the building outline on the map; found none.");
+      }
+
+      return found;
+    }
+
+    it("draws a pin per place and lists its services with today's states when selected", async () => {
+      renderPage(makeFakeFetch([PLACE_ROUTE], snapshot(), { places: [PLACE], points: POINTS }));
+
+      fireEvent.click(await placePin(/Praça central, Pendente/));
+
+      expect(await screen.findByRole("heading", { name: "Praça central" })).toBeInTheDocument();
+      const done = within(await screen.findByRole("listitem", { name: /Limpeza/ }));
+      expect(done.getByText("Feito")).toBeInTheDocument();
+      const pending = within(screen.getByRole("listitem", { name: /Jardinagem/ }));
+      expect(pending.getByText("Pendente")).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Alertas abertos" })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Voltar aos alertas" }));
+
+      expect(await screen.findByRole("heading", { name: "Alertas abertos" })).toBeInTheDocument();
+    });
+
+    it("shows a place with no stop today in the neutral state", async () => {
+      renderPage(makeFakeFetch([], snapshot(), { places: [PLACE], points: POINTS }));
+
+      expect(await placePin(/Praça central, Sem visita hoje/)).toBeInTheDocument();
+    });
+
+    it("closes the open building when a place is picked, and the place when a building is", async () => {
+      renderPage(makeFakeFetch([PLACE_ROUTE], snapshot(), { places: [PLACE], points: POINTS }));
+      const pin = await placePin(/Praça central/);
+
+      await waitFor(() => {
+        buildingOutline();
+      });
+      fireEvent.click(buildingOutline());
+      expect(await screen.findByRole("heading", { name: "Bloco CD" })).toBeInTheDocument();
+
+      fireEvent.click(pin);
+      expect(await screen.findByRole("heading", { name: "Praça central" })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Bloco CD" })).not.toBeInTheDocument();
+
+      fireEvent.click(buildingOutline());
+      expect(await screen.findByRole("heading", { name: "Bloco CD" })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Praça central" })).not.toBeInTheDocument();
+    });
+
+    it("renders a route whose stops are place stops: table, strip and KPIs", async () => {
+      renderPage(makeFakeFetch([PLACE_ROUTE], snapshot(), { places: [PLACE], points: POINTS }));
+
+      const row = await screen.findByRole("row", { name: /João da Silva/ });
+
+      expect(within(row).getByLabelText("Ponto 1: Concluído")).toBeInTheDocument();
+      expect(within(row).getByLabelText("Ponto 2: Pendente")).toBeInTheDocument();
+    });
   });
 });

@@ -1,5 +1,6 @@
 import type { components } from "@/api/generated/schema";
 import type { MapBuilding } from "@/components/board/BuildingsLayer";
+import type { MapPlace, PinStatuses } from "@/components/board/PlacesLayer";
 import { WorkerPositionsMap } from "@/components/WorkerPositionsMap";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -11,6 +12,7 @@ const LEGEND: { key: StringKey; swatch: string }[] = [
   { key: "boardMapLegendLive", swatch: "bg-primary" },
   { key: "boardMapLegendStale", swatch: "bg-muted border-status-pending border-2" },
   { key: "boardMapLegendBuilding", swatch: "bg-primary/15 border-primary rounded-[2px] border" },
+  { key: "boardMapLegendPlace", swatch: "bg-primary rounded-[2px]" },
 ];
 
 interface OperationsMapPanelProps {
@@ -20,9 +22,14 @@ interface OperationsMapPanelProps {
   buildings?: MapBuilding[];
   selectedBuildingId?: string | null;
   onSelectBuilding?: (buildingId: string | null) => void;
+  places?: MapPlace[];
+  selectedPlaceId?: string | null;
+  onSelectPlace?: (placeId: string | null) => void;
+  pinStatuses?: PinStatuses;
 }
 
-/** The board's centrepiece: where every worker is right now, and the campus buildings. */
+/** The board's centrepiece: where every worker is right now, the campus buildings and the
+ * outdoor places. */
 export function OperationsMapPanel({
   positions,
   selectedWorkerId,
@@ -30,6 +37,10 @@ export function OperationsMapPanel({
   buildings,
   selectedBuildingId,
   onSelectBuilding,
+  places,
+  selectedPlaceId,
+  onSelectPlace,
+  pinStatuses,
 }: OperationsMapPanelProps) {
   const { t } = useTranslation();
 
@@ -66,6 +77,10 @@ export function OperationsMapPanel({
           buildings={buildings}
           selectedBuildingId={selectedBuildingId}
           onSelectBuilding={onSelectBuilding}
+          places={places}
+          selectedPlaceId={selectedPlaceId}
+          onSelectPlace={onSelectPlace}
+          pinStatuses={pinStatuses}
           className="h-[min(62vh,40rem)] min-h-[22rem] rounded-[4px] border-0"
         />
         <p className="text-muted-foreground px-1 pt-2 text-xs">

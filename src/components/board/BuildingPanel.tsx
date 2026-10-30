@@ -1,10 +1,11 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
 import type { components } from "@/api/generated/schema";
 import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { STATUS_BADGE } from "@/components/board/pointStatusBadge";
+import { useEscapeKey } from "@/components/board/useEscapeKey";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { StringKey } from "@/i18n/strings";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -19,13 +20,6 @@ type PanelPoint = Pick<
 // A floor id, or "all" for every floor of the building.
 type FloorChoice = string;
 type Translate = (key: StringKey) => string;
-
-const STATUS_BADGE: Record<PointVisitStatus, { label: StringKey; tone: BadgeTone | "outline" }> = {
-  IN_PROGRESS: { label: "pointStatusInProgress", tone: "progress" },
-  PENDING: { label: "pointStatusPending", tone: "pending" },
-  DONE: { label: "pointStatusDone", tone: "done" },
-  NOT_SCHEDULED: { label: "pointStatusNotScheduled", tone: "outline" },
-};
 
 export interface BuildingPanelProps {
   building: { id: string; name: string; campusArea: string };
@@ -191,24 +185,6 @@ function PanelBody(props: BuildingPanelProps) {
       <PointList {...props} />
     </div>
   );
-}
-
-// Escape is a document-level shortcut so it works wherever focus is, e.g. after a map click.
-function useEscapeKey(onEscape: () => void) {
-  useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
-      // Radix menus/dialogs consume their own Escape with preventDefault; closing the panel as
-      // well would drop the building when the manager only meant to dismiss a menu.
-      if (event.key === "Escape" && !event.defaultPrevented) {
-        onEscape();
-      }
-    }
-    document.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [onEscape]);
 }
 
 function PanelHeader({ building, statuses, onClose }: PanelHeaderProps) {

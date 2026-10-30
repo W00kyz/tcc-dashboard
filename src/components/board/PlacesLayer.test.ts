@@ -77,6 +77,37 @@ describe("drawPlaces", () => {
   });
 });
 
+describe("drawPlaces status", () => {
+  function drawWithStatus() {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const map = L.map(container).setView([-7.215, -35.909], 17);
+    const group = L.layerGroup().addTo(map);
+    drawPlaces(group, PLACES, null, vi.fn(), {
+      of: (id) => (id === "p1" ? "IN_PROGRESS" : "NOT_SCHEDULED"),
+      label: (status) => (status === "IN_PROGRESS" ? "Em andamento" : "Sem visita hoje"),
+    });
+
+    return markersOf(group).map((marker) => marker.getElement());
+  }
+
+  it("adds a status modifier to the pin and names the status for assistive tech", () => {
+    const [first, second] = drawWithStatus();
+
+    expect(first?.querySelector(".place-pin-status-in-progress")).not.toBeNull();
+    expect(second?.querySelector(".place-pin-status-not-scheduled")).not.toBeNull();
+    expect(first?.getAttribute("aria-label")).toBe("Praça central, Em andamento");
+  });
+
+  it("draws the plain pin when no status is given", () => {
+    const { group } = setup();
+    const element = markersOf(group)[0]?.getElement();
+
+    expect(element?.querySelector("[class*='place-pin-status']")).toBeNull();
+    expect(element?.getAttribute("aria-label")).toBe("Praça central");
+  });
+});
+
 describe("placePopupKey", () => {
   const [place] = PLACES as [MapPlace];
 

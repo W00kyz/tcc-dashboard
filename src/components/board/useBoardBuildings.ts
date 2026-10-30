@@ -6,6 +6,7 @@ import type { components } from "@/api/generated/schema";
 import { useAuth } from "@/auth/AuthContext";
 import type { BuildingPanelProps } from "@/components/board/BuildingPanel";
 import { type MapBuilding, mapBuildingsFrom } from "@/components/board/BuildingsLayer";
+import { useBoardPlaces } from "@/components/board/useBoardPlaces";
 import { useBuildingInterior } from "@/components/board/useBuildingInterior";
 import { type PointVisitStatus, pointStatusesForToday } from "@/lib/buildingInterior";
 
@@ -36,9 +37,11 @@ interface BoardBuildingsInput {
   dayRoutes: RouteOut[];
 }
 
+// A building and a place are never open together: each selection replaces the other.
 interface Selection {
   buildingId: string | null;
   floorId: string;
+  placeId: string | null;
 }
 
 function useCampusBuildings() {
@@ -57,11 +60,19 @@ type Interior = ReturnType<typeof useBuildingInterior>;
 type BuildingSelection = ReturnType<typeof useBuildingSelection>;
 
 function useBuildingSelection() {
-  const [selection, setSelection] = useState<Selection>({ buildingId: null, floorId: "all" });
+  const [selection, setSelection] = useState<Selection>({
+    buildingId: null,
+    floorId: "all",
+    placeId: null,
+  });
   const [selectedPointId, selectPoint] = useState<string | null>(null);
   // A new building starts on "all floors" with nothing highlighted.
   const selectBuilding = (buildingId: string | null) => {
-    setSelection({ buildingId, floorId: "all" });
+    setSelection({ buildingId, floorId: "all", placeId: null });
+    selectPoint(null);
+  };
+  const selectPlace = (placeId: string | null) => {
+    setSelection({ buildingId: null, floorId: "all", placeId });
     selectPoint(null);
   };
   const selectFloor = (floorId: string) => {
@@ -71,7 +82,20 @@ function useBuildingSelection() {
     selectBuilding(null);
   };
 
-  return { ...selection, selectedPointId, selectPoint, selectBuilding, selectFloor, closeBuilding };
+  const closePlace = () => {
+    selectPlace(null);
+  };
+
+  return {
+    ...selection,
+    selectedPointId,
+    selectPoint,
+    selectBuilding,
+    selectPlace,
+    selectFloor,
+    closeBuilding,
+    closePlace,
+  };
 }
 
 function buildPanelProps(
@@ -108,8 +132,8 @@ function openBuildingView(
   };
 }
 
-/** Everything the board needs to show buildings: outlines for the map, the open building's panel
- * and the selection state behind both.
+/** Everything the board needs to show buildings and outdoor places: outlines and pins for the
+ * map, the open building's or place's panel and the selection state behind them.
  * @example const { mapBuildings, panelProps } = useBoardBuildings({ dayRoutes }); */
 export function useBoardBuildings({ dayRoutes }: BoardBuildingsInput) {
   const selection = useBuildingSelection();
@@ -117,9 +141,17 @@ export function useBoardBuildings({ dayRoutes }: BoardBuildingsInput) {
   const interior = useBuildingInterior(selection.buildingId);
   const statuses = useMemo(() => pointStatusesForToday(dayRoutes), [dayRoutes]);
   const open = buildings.find((building) => building.id === selection.buildingId);
+  const places = useBoardPlaces({
+    dayRoutes,
+    pointStatuses: statuses,
+    selectedPlaceId: selection.placeId,
+    onClose: selection.closePlace,
+  });
 
   return {
     mapBuildings,
+    selectPlace: selection.selectPlace,
+    ...places,
     selectBuilding: selection.selectBuilding,
     selectedBuildingId: open?.id ?? null,
     selectedPointId: selection.selectedPointId,

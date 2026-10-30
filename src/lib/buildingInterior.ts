@@ -33,6 +33,39 @@ export function pointStatusesForToday(routes: RouteOut[]): Map<string, PointVisi
   return statuses;
 }
 
+/** What a place's pin shows: the visit states plus RELEASED, for a place whose every stop went
+ * back to the pool. NOT_SCHEDULED is the neutral pin of a place with no stop today. */
+export type PlacePinStatus = PointVisitStatus | "RELEASED";
+
+const PIN_URGENCY: Record<PlacePinStatus, number> = {
+  IN_PROGRESS: 0,
+  PENDING: 1,
+  DONE: 2,
+  RELEASED: 3,
+  NOT_SCHEDULED: 4,
+};
+
+/** Today's status per outdoor place, from the stops that carry its `place_id`; the most urgent
+ * stop wins. Unlike a point, a place with only released stops is not blank: the pin says so.
+ * A place absent from the map has no stop today.
+ * @example placeStatusesForToday(dayRoutes).get(placeId) // "PENDING" */
+export function placeStatusesForToday(routes: RouteOut[]): Map<string, PlacePinStatus> {
+  const statuses = new Map<string, PlacePinStatus>();
+  for (const stop of routes.flatMap((route) => route.stops)) {
+    // Building stops (and any older payload) carry no place id.
+    if (typeof stop.place_id !== "string") {
+      continue;
+    }
+    const next: PlacePinStatus = toStopStatus(stop.status);
+    const previous = statuses.get(stop.place_id);
+    if (previous === undefined || PIN_URGENCY[next] < PIN_URGENCY[previous]) {
+      statuses.set(stop.place_id, next);
+    }
+  }
+
+  return statuses;
+}
+
 /** Header numbers of the building panel. @example summarisePoints([...statuses.values()]) */
 export function summarisePoints(statuses: PointVisitStatus[]): { total: number; done: number } {
   return {
