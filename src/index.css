@@ -135,6 +135,42 @@
   cursor: crosshair;
 }
 
+/* An outdoor place on the campus map (src/components/board/PlacesLayer.ts): an inverted drop whose
+ * tip sits on the coordinate. Selected: the navy drop gets a signal outline and a soft shadow. */
+.leaflet-marker-icon.place-pin-marker {
+  background: none;
+  border: 0;
+}
+
+.place-pin-marker:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+
+.place-pin .place-pin-shape {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgb(31 35 41 / 0.35));
+}
+
+.place-pin .place-pin-shape path {
+  fill: var(--color-primary);
+  stroke: var(--color-primary-foreground);
+}
+
+.place-pin .place-pin-shape circle {
+  fill: var(--color-primary-foreground);
+}
+
+.place-pin-selected .place-pin-shape path {
+  stroke: var(--color-signal);
+  stroke-width: 3;
+}
+
+.place-pin-selected .place-pin-shape circle {
+  fill: var(--color-signal);
+}
+
 /* The rectangle tool owns the mouse drag while it is on (src/components/map/rectangleTool.ts). */
 .leaflet-container.map-drawing,
 .leaflet-container.map-drawing .leaflet-interactive {

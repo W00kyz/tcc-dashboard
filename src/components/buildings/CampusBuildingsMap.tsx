@@ -12,7 +12,14 @@ import {
 import { createPortal } from "react-dom";
 
 import { drawBuildings, type MapBuilding } from "@/components/board/BuildingsLayer";
+import {
+  draftPinIcon,
+  drawPlaces,
+  type MapPlace,
+  PIN_HEIGHT,
+} from "@/components/board/PlacesLayer";
 import { createCampusMap } from "@/components/map/campusMap";
+import { startPlacePinTool } from "@/components/map/placePinTool";
 import { DRAFT_RECTANGLE_STYLE, startRectangleTool } from "@/components/map/rectangleTool";
 import { useTranslation } from "@/i18n/useTranslation";
 import type { GeoPolygon } from "@/lib/osmBuildings";
@@ -33,6 +40,22 @@ export interface CampusBuildingsMapProps {
   draft?: GeoPolygon | null;
   draftForm?: ReactNode;
   onDiscardDraft?: () => void;
+  /** Outdoor places, drawn as pins. Selecting one and selecting a building is the page's call. */
+  places?: MapPlace[];
+  selectedPlaceId?: string | null;
+  /** A pin was clicked (its id), or its popup was closed (null). A click on the empty map
+   * still reports `onSelect(null)`: the page clears the place selection there too. */
+  onSelectPlace?: (placeId: string | null) => void;
+  /** Shown in a compact popup over the selected pin. */
+  selectedPlaceCard?: ReactNode;
+  /** The pin tool is on: the next click on the map places a pin. Wins over `drawing`. */
+  pinning?: boolean;
+  onPinned?: (latLng: { lat: number; lng: number }) => void;
+  onExitPinning?: () => void;
+  /** The point of a new place waiting for its form; `draftPinForm` opens in a popup over it. */
+  draftPin?: { lat: number; lng: number } | null;
+  draftPinForm?: ReactNode;
+  onDiscardDraftPin?: () => void;
   className?: string;
 }
 
@@ -40,6 +63,8 @@ interface MapHandles {
   map: L.Map;
   buildings: L.LayerGroup;
   draft: L.LayerGroup;
+  places: L.LayerGroup;
+  draftPin: L.LayerGroup;
 }
 
 // The latest value of a prop, read at event time, so a new identity never rebuilds layers.
@@ -66,7 +91,13 @@ function useCampusLeaflet(
     map.on("click", () => {
       onEmpty.current();
     });
-    setHandles({ map, buildings: L.layerGroup().addTo(map), draft: L.layerGroup().addTo(map) });
+    setHandles({
+      map,
+      buildings: L.layerGroup().addTo(map),
+      draft: L.layerGroup().addTo(map),
+      places: L.layerGroup().addTo(map),
+      draftPin: L.layerGroup().addTo(map),
+    });
 
     return () => {
       dispose();
@@ -79,7 +110,8 @@ function useCampusLeaflet(
 
 function useRectangleTool(handles: MapHandles | null, props: CampusBuildingsMapProps) {
   const latest = useLatest(props);
-  const { drawing = false } = props;
+  // The pin tool and the rectangle tool never share the mouse: pinning wins.
+  const drawing = props.drawing === true && props.pinning !== true;
 
   useEffect(() => {
     if (handles === null || !drawing) {
@@ -91,6 +123,23 @@ function useRectangleTool(handles: MapHandles | null, props: CampusBuildingsMapP
       onExit: () => latest.current.onExitDrawing?.(),
     });
   }, [handles, drawing, latest]);
+}
+
+function usePinTool(handles: MapHandles | null, props: CampusBuildingsMapProps) {
+  const latest = useLatest(props);
+  const pinning = props.pinning === true;
+
+  useEffect(() => {
+    if (handles === null || !pinning) {
+      return;
+    }
+
+    return startPlacePinTool(
+      handles.map,
+      ({ lat, lng }) => latest.current.onPinned?.({ lat, lng }),
+      () => latest.current.onExitPinning?.(),
+    );
+  }, [handles, pinning, latest]);
 }
 
 const toLatLngs = (outline: [number, number][]): L.LatLngTuple[] =>
@@ -147,12 +196,22 @@ interface AnchoredPopup {
   autofocus: boolean;
   /** A short read-only card (not a form): narrower, with tighter spacing (index.css). */
   compact: boolean;
+  /** Pixels the popup rises above its anchor: a pin's body stands above the point it marks. */
+  riseAbove?: number;
 }
 
 // A layout effect, so it runs once React has already filled the body: Leaflet then measures the
 // whole content and pans the map to show it. Never call popup.update() afterwards: Leaflet
 // re-attaches the body and the focused field loses focus.
-function useAnchoredPopup({ map, key, bounds, onDismiss, autofocus, compact }: AnchoredPopup) {
+function useAnchoredPopup({
+  map,
+  key,
+  bounds,
+  onDismiss,
+  autofocus,
+  compact,
+  riseAbove = 0,
+}: AnchoredPopup) {
   const popupBody = usePopupBody(key);
   const latest = useLatest({ bounds, onDismiss });
 
@@ -170,6 +229,7 @@ function useAnchoredPopup({ map, key, bounds, onDismiss, autofocus, compact }: A
       minWidth: compact ? 176 : 288,
       maxWidth: compact ? 256 : 288,
       className: compact ? "popup-compact" : "",
+      offset: L.point(0, -riseAbove),
     })
       .setLatLng(L.latLng(anchor.getNorth(), anchor.getCenter().lng))
       .setContent(popupBody)
@@ -185,7 +245,7 @@ function useAnchoredPopup({ map, key, bounds, onDismiss, autofocus, compact }: A
       popup.off("remove", dismiss);
       popup.remove();
     };
-  }, [map, key, popupBody, latest, autofocus, compact]);
+  }, [map, key, popupBody, latest, autofocus, compact, riseAbove]);
 
   return popupBody;
 }
@@ -203,6 +263,26 @@ function useDraftShape(handles: MapHandles | null, draft: GeoPolygon | null) {
   }, [handles, draft]);
 }
 
+function useDraftPin(handles: MapHandles | null, draftPin: { lat: number; lng: number } | null) {
+  useEffect(() => {
+    if (handles === null || draftPin === null) {
+      return;
+    }
+    L.marker([draftPin.lat, draftPin.lng], { icon: draftPinIcon(), interactive: false }).addTo(
+      handles.draftPin,
+    );
+
+    return () => {
+      handles.draftPin.clearLayers();
+    };
+  }, [handles, draftPin]);
+}
+
+// A single point as bounds of zero area: north, south and centre all fall on the point, so the
+// popup logic written for shapes anchors at the pin's tip (placeBesideShape included).
+const pointBounds = (lat: number, lng: number): L.LatLngBounds =>
+  L.latLngBounds([lat, lng], [lat, lng]);
+
 function boundsOf(outline: [number, number][] | undefined): L.LatLngBounds | null {
   return outline === undefined || outline.length === 0 ? null : L.latLngBounds(toLatLngs(outline));
 }
@@ -217,13 +297,17 @@ export function CampusBuildingsMap(props: CampusBuildingsMapProps) {
   const latest = useLatest(props);
   const handles = useCampusLeaflet(containerRef, () => {
     // While drawing, the mouse belongs to the rectangle tool.
-    if (latest.current.drawing !== true) {
+    if (latest.current.drawing !== true && latest.current.pinning !== true) {
       latest.current.onSelect(null);
     }
   });
   useRectangleTool(handles, props);
-  const { draft = null, selectedId, buildings } = props;
+  usePinTool(handles, props);
+  const { draft = null, selectedId, buildings, places = [], selectedPlaceId = null } = props;
+  const { draftPin = null } = props;
   useDraftShape(handles, draft);
+  useDraftPin(handles, draftPin);
+  const selectedPlace = places.find((place) => place.id === selectedPlaceId);
   const selected = buildings.find((building) => building.id === selectedId);
   const cardBody = useAnchoredPopup({
     map: handles?.map ?? null,
@@ -234,6 +318,32 @@ export function CampusBuildingsMap(props: CampusBuildingsMapProps) {
     },
     autofocus: false,
     compact: true,
+  });
+  const placeBody = useAnchoredPopup({
+    map: handles?.map ?? null,
+    key:
+      selectedPlace === undefined || props.selectedPlaceCard === undefined
+        ? null
+        : selectedPlace.id,
+    bounds:
+      selectedPlace === undefined
+        ? null
+        : pointBounds(selectedPlace.latitude, selectedPlace.longitude),
+    onDismiss: () => {
+      latest.current.onSelectPlace?.(null);
+    },
+    autofocus: false,
+    compact: true,
+    riseAbove: PIN_HEIGHT,
+  });
+  const draftPinBody = useAnchoredPopup({
+    map: handles?.map ?? null,
+    key: draftPin === null || props.draftPinForm === undefined ? null : JSON.stringify(draftPin),
+    bounds: draftPin === null ? null : pointBounds(draftPin.lat, draftPin.lng),
+    onDismiss: () => latest.current.onDiscardDraftPin?.(),
+    autofocus: true,
+    compact: false,
+    riseAbove: PIN_HEIGHT,
   });
   const draftBody = useAnchoredPopup({
     map: handles?.map ?? null,
@@ -252,6 +362,14 @@ export function CampusBuildingsMap(props: CampusBuildingsMapProps) {
     }
   }, [handles, buildings, selectedId, latest]);
 
+  useEffect(() => {
+    if (handles !== null) {
+      drawPlaces(handles.places, places, selectedPlaceId, (id) => {
+        latest.current.onSelectPlace?.(id);
+      });
+    }
+  }, [handles, places, selectedPlaceId, latest]);
+
   return (
     <>
       <div
@@ -264,6 +382,8 @@ export function CampusBuildingsMap(props: CampusBuildingsMapProps) {
         )}
       />
       {cardBody !== null && createPortal(props.selectedCard, cardBody)}
+      {placeBody !== null && createPortal(props.selectedPlaceCard, placeBody)}
+      {draftPinBody !== null && createPortal(props.draftPinForm, draftPinBody)}
       {draftBody !== null && createPortal(props.draftForm, draftBody)}
     </>
   );
