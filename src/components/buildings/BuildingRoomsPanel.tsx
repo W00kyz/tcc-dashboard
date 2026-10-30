@@ -50,6 +50,10 @@ export function BuildingRoomsPanel({ building, onEditBuilding }: BuildingRoomsPa
   const points = useBuildingPoints(building.id);
   const serviceTypes = useServiceTypes();
   const createFloor = useCreateFloor(building.id);
+  // IMPORTANT: floors render only once rooms and points loaded too — until then a floor would read
+  // as having no rooms and "Nova sala" would suggest a number that may already be taken.
+  const queries = [floors, rooms, points];
+  const loaded = floors.isSuccess && rooms.isSuccess && points.isSuccess;
   const title = t("roomsPanelTitle").replace("{name}", building.name);
 
   return (
@@ -79,18 +83,22 @@ export function BuildingRoomsPanel({ building, onEditBuilding }: BuildingRoomsPa
         </div>
       </div>
       {createFloor.isError && <ErrorMessage>{t("floorsCreateError")}</ErrorMessage>}
-      {floors.isPending && <LoadingMessage>{t("buildingPanelLoading")}</LoadingMessage>}
-      {floors.isError && <ErrorMessage>{t("buildingPanelError")}</ErrorMessage>}
-      {floors.data?.length === 0 && <EmptyState>{t("roomsPanelEmpty")}</EmptyState>}
-      {floors.data?.map((floor) => (
-        <FloorBlock
-          key={floor.id}
-          floor={floor}
-          rooms={(rooms.data ?? []).filter((room) => room.floor_id === floor.id)}
-          points={(points.data ?? []).filter((point) => point.floor_id === floor.id)}
-          serviceTypes={serviceTypes.data ?? []}
-        />
-      ))}
+      {queries.some((query) => query.isError) ? (
+        <ErrorMessage>{t("buildingPanelError")}</ErrorMessage>
+      ) : (
+        !loaded && <LoadingMessage>{t("buildingPanelLoading")}</LoadingMessage>
+      )}
+      {loaded && floors.data.length === 0 && <EmptyState>{t("roomsPanelEmpty")}</EmptyState>}
+      {loaded &&
+        floors.data.map((floor) => (
+          <FloorBlock
+            key={floor.id}
+            floor={floor}
+            rooms={rooms.data.filter((room) => room.floor_id === floor.id)}
+            points={points.data.filter((point) => point.floor_id === floor.id)}
+            serviceTypes={serviceTypes.data ?? []}
+          />
+        ))}
     </section>
   );
 }

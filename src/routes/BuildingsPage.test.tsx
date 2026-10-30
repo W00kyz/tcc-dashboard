@@ -57,6 +57,7 @@ function campusApi() {
       { id: "f1", building_id: "b1", label: "Térreo" },
       { id: "f2", building_id: "b1", label: "1º andar" },
     ])
+    .on("GET", "/rooms", [])
     .on("GET", "/service-points", [POINT])
     .on("GET", "/service-types", [
       serviceType("t1", "Limpeza", "Limpa Tudo"),

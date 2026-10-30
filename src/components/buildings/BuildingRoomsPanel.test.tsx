@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { BuildingRoomsPanel } from "@/components/buildings/BuildingRoomsPanel";
@@ -76,6 +76,44 @@ describe("BuildingRoomsPanel", () => {
     renderPanel();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar");
+  });
+
+  it("does not claim the floors are empty when the rooms could not be loaded", async () => {
+    panelApi().on("GET", "/rooms", { detail: "boom" }, 500);
+
+    renderPanel();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar");
+    expect(screen.queryByText("Nenhuma sala neste andar.")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Nova sala" })).toBeNull();
+  });
+
+  it("says so when the service points could not be loaded", async () => {
+    panelApi().on("GET", "/service-points", { detail: "boom" }, 500);
+
+    renderPanel();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar");
+    expect(screen.queryByRole("group", { name: "Térreo" })).toBeNull();
+  });
+
+  it("shows no empty room list while the rooms are still loading", async () => {
+    panelApi();
+    // FakeApi answers at once; a request that never settles is how "still loading" is staged.
+    const answer = fetch;
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+      new Request(input, init).url.includes("/rooms")
+        ? new Promise<Response>(() => undefined)
+        : answer(input, init),
+    );
+
+    renderPanel();
+    await screen.findByText("Carregando andares e pontos…");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(screen.getByText("Carregando andares e pontos…")).toBeInTheDocument();
+    expect(screen.queryByText("Nenhuma sala neste andar.")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Térreo" })).toBeNull();
   });
 
   it("creates a floor in this building without asking for a label", async () => {
