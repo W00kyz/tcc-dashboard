@@ -12,7 +12,7 @@ import {
 } from "@/components/buildings/useBuildingRecords";
 import { RegistryNewButton } from "@/components/layout/Registry";
 import { assertSaved } from "@/components/layout/registryForm";
-import { EmptyState, ErrorMessage } from "@/components/layout/StateMessages";
+import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
 
@@ -79,6 +79,8 @@ export function BuildingRoomsPanel({ building, onEditBuilding }: BuildingRoomsPa
         </div>
       </div>
       {createFloor.isError && <ErrorMessage>{t("floorsCreateError")}</ErrorMessage>}
+      {floors.isPending && <LoadingMessage>{t("buildingPanelLoading")}</LoadingMessage>}
+      {floors.isError && <ErrorMessage>{t("buildingPanelError")}</ErrorMessage>}
       {floors.data?.length === 0 && <EmptyState>{t("roomsPanelEmpty")}</EmptyState>}
       {floors.data?.map((floor) => (
         <FloorBlock

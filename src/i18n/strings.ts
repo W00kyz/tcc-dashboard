@@ -424,6 +424,8 @@ export const strings = {
   roomServiceExists: "Esta sala já tem esse serviço.",
   roomsCreateError: "Não foi possível cadastrar a sala. Tente novamente.",
   roomsSaveError: "Não foi possível salvar a sala. Tente novamente.",
+  roomsFieldRename: "Nome da sala",
+  roomsAddServiceSubmit: "Adicionar",
   deletionIrreversible: "Esta ação não pode ser desfeita.",
   deletionImpactHeading: "Também será removido:",
   deletionImpactNothingElse: "Nada mais será removido junto.",

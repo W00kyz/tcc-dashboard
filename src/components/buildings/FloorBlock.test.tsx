@@ -15,13 +15,30 @@ function floorsApi() {
   return new FakeApi().on("GET", "/floors", [FLOOR]).install();
 }
 
-function renderBlock() {
+const ROOMS = [
+  { id: "r1", floor_id: "f1", name: "101" },
+  { id: "r2", floor_id: "f1", name: "Auditório Hattori" },
+];
+const POINT = {
+  id: "p1",
+  floor_id: "f1",
+  name: "101",
+  description: "",
+  latitude: -7.2,
+  longitude: -35.9,
+  service_type_id: "t1",
+  service_type_name: "Limpeza",
+  room_id: "r1",
+  active: true,
+};
+
+function renderBlock(rooms: typeof ROOMS = [], points: (typeof POINT)[] = []) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <FloorBlock floor={FLOOR} rooms={[]} points={[]} serviceTypes={[]} />
+        <FloorBlock floor={FLOOR} rooms={rooms} points={points} serviceTypes={[]} />
       </AuthProvider>
     </QueryClientProvider>,
   );
@@ -163,5 +180,43 @@ describe("FloorBlock", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("este andar não tem um QR ativo");
     expect(open).not.toHaveBeenCalled();
+  });
+
+  it("says the floor has no rooms yet", async () => {
+    floorsApi();
+
+    renderBlock();
+
+    expect(await screen.findByText("Nenhuma sala neste andar.")).toBeInTheDocument();
+  });
+
+  it("lists each room with only its own services", async () => {
+    floorsApi();
+    const other = { ...POINT, id: "p2", service_type_name: "Elétrica", room_id: "r2" };
+
+    renderBlock(ROOMS, [POINT, other]);
+
+    const first = await screen.findByRole("group", { name: "101" });
+    expect(within(first).getByRole("checkbox", { name: "Limpeza" })).toBeChecked();
+    expect(within(first).queryByRole("checkbox", { name: "Elétrica" })).toBeNull();
+    const second = screen.getByRole("group", { name: "Auditório Hattori" });
+    expect(within(second).getAllByRole("checkbox")).toHaveLength(1);
+    expect(screen.queryByText("Nenhuma sala neste andar.")).toBeNull();
+  });
+
+  it("creates a room and warns when it got no cleaning point", async () => {
+    const api = floorsApi().on(
+      "POST",
+      "/rooms",
+      { id: "r3", floor_id: "f1", name: "101", cleaning: "NO_CLEANING_TYPE" },
+      201,
+    );
+
+    renderBlock();
+    await userEvent.click(await screen.findByRole("button", { name: "Nova sala" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("cadastre o tipo de serviço");
+    expect(api.sent("POST", "/rooms")[0]?.body).toEqual({ floor_id: "f1", with_cleaning: true });
   });
 });

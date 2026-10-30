@@ -62,6 +62,22 @@ describe("BuildingRoomsPanel", () => {
     expect(await screen.findByText(/Nenhum andar neste prédio/)).toBeInTheDocument();
   });
 
+  it("shows a loading line while the floors load", () => {
+    panelApi();
+
+    renderPanel();
+
+    expect(screen.getByText("Carregando andares e pontos…")).toBeInTheDocument();
+  });
+
+  it("says when the floors could not be loaded", async () => {
+    panelApi().on("GET", "/floors", { detail: "boom" }, 500);
+
+    renderPanel();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar");
+  });
+
   it("creates a floor in this building without asking for a label", async () => {
     const api = panelApi().on("POST", "/floors", { ...FLOORS[1], id: "f3" }, 201);
 

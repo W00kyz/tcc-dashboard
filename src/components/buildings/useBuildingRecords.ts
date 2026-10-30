@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiBaseUrl, createApiClient } from "@/api/client";
 import type { components } from "@/api/generated/schema";
@@ -32,6 +32,17 @@ function listOrThrow<T>(data: T[] | undefined, response: Response, request: stri
 
 // Query keys are shared with the Quadro de rotas (useBoardBuildings / useBuildingInterior), so a
 // change saved here refreshes the board's map and panel too.
+
+/** Refreshes what a room change touches: the rooms and, through them, their service points. */
+export function useRefreshRooms() {
+  const queryClient = useQueryClient();
+
+  return () => {
+    for (const queryKey of [["rooms"], ["service-points"]]) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  };
+}
 
 /** Every building; the detail page picks its own from the same cached list the board uses. */
 export function useBuildings() {
