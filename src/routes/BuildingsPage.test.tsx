@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/auth/AuthContext";
 import { BuildingsPage } from "@/routes/BuildingsPage";
-import { DRAWN_RECTANGLE } from "@/test/FakeCampusBuildingsMap";
+import { DRAWN_RECTANGLE, PINNED_POINT } from "@/test/FakeCampusBuildingsMap";
 import { FakeApi } from "@/test/fakeApi";
 
 vi.mock("@/components/buildings/CampusBuildingsMap", async () => ({
@@ -58,6 +58,7 @@ function campusApi() {
       { id: "f2", building_id: "b1", label: "1º andar" },
     ])
     .on("GET", "/rooms", [])
+    .on("GET", "/places", [])
     .on("GET", "/service-points", [POINT])
     .on("GET", "/service-types", [
       serviceType("t1", "Limpeza", "Limpa Tudo"),
@@ -325,5 +326,166 @@ describe("BuildingsPage", () => {
     await waitFor(() => {
       expect(floorCalls).toBeGreaterThanOrEqual(2);
     });
+  });
+});
+
+const BUS_STOP = { id: "pl1", name: "Ponto de ônibus", latitude: -7.2155, longitude: -35.9085 };
+const placePoint = (id: string) => ({ ...POINT, id, floor_id: null, place_id: "pl1" });
+
+function placesApi() {
+  return campusApi()
+    .on("GET", "/places", [BUS_STOP])
+    .on("GET", "/service-points", [POINT, placePoint("p8"), placePoint("p9")]);
+}
+
+const pinButton = () => screen.getByRole("button", { name: "Marcar local" });
+const placeCard = () => screen.getByRole("group", { name: "popup do local selecionado" });
+
+describe("BuildingsPage places", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("turns the pin tool on and shows its hint", async () => {
+    campusApi();
+
+    renderPage();
+    expect(pinButton()).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(pinButton());
+
+    expect(pinButton()).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Clique no mapa para marcar o local.")).toBeInTheDocument();
+    await userEvent.click(pinButton());
+    expect(screen.queryByText("Clique no mapa para marcar o local.")).toBeNull();
+  });
+
+  it("never has the pin tool and the rectangle tool on together", async () => {
+    campusApi();
+
+    renderPage();
+    await userEvent.click(screen.getByRole("button", { name: "Desenhar prédio" }));
+    await userEvent.click(pinButton());
+    expect(screen.queryByRole("button", { name: "arrastar um retângulo no mapa" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "clicar no mapa para marcar o local" }),
+    ).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: "Desenhar prédio" }));
+    expect(screen.queryByRole("button", { name: "clicar no mapa para marcar o local" })).toBeNull();
+    expect(screen.getByRole("button", { name: "arrastar um retângulo no mapa" })).toBeVisible();
+    expect(pinButton()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("turns the pin tool off when a building is selected", async () => {
+    campusApi();
+
+    renderPage();
+    await userEvent.click(pinButton());
+    await selectBlocoCI();
+
+    expect(pinButton()).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("button", { name: "clicar no mapa para marcar o local" })).toBeNull();
+  });
+
+  it("opens the dialog with the placed position and registers the place, then selects it", async () => {
+    const places: unknown[] = [];
+    const points: unknown[] = [POINT];
+    const api = campusApi()
+      .onRequest("GET", "/places", () => places)
+      .onRequest("GET", "/service-points", () => points)
+      .onRequest(
+        "POST",
+        "/places",
+        () => {
+          places.push(BUS_STOP);
+          points.push(placePoint("p8"));
+
+          return BUS_STOP;
+        },
+        201,
+      );
+
+    renderPage();
+    await userEvent.click(pinButton());
+    await userEvent.click(
+      screen.getByRole("button", { name: "clicar no mapa para marcar o local" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "Novo local" });
+    expect(within(dialog).getByText(/-7\.2155, -35\.9085/)).toBeInTheDocument();
+    // The modal dialog hides the page behind it from the accessibility tree.
+    expect(screen.getByRole("button", { name: "Marcar local", hidden: true })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await userEvent.type(within(dialog).getByLabelText("Nome do local"), "Ponto de ônibus");
+    await userEvent.selectOptions(await within(dialog).findByLabelText("Serviço"), "t1");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cadastrar" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("search")).toHaveTextContent("?local=pl1");
+    });
+    expect(api.sent("POST", "/places")[0]?.body).toEqual({
+      name: "Ponto de ônibus",
+      latitude: PINNED_POINT.lat,
+      longitude: PINNED_POINT.lng,
+      service_type_id: "t1",
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      await within(
+        await screen.findByRole("group", { name: "popup do local selecionado" }),
+      ).findByText("1 serviço"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the card of a place given in the address, with its services", async () => {
+    placesApi();
+
+    renderPage("/predios?local=pl1");
+
+    const card = await screen.findByRole("group", { name: "popup do local selecionado" });
+    expect(within(card).getByText("Ponto de ônibus")).toBeInTheDocument();
+    expect(await within(card).findByText("2 serviços")).toBeInTheDocument();
+    expect(within(card).queryByRole("button")).toBeNull();
+  });
+
+  it("selecting a place clears the building and the other way round", async () => {
+    placesApi();
+
+    renderPage("/predios?predio=b1");
+    await within(map()).findByRole("button", { name: "Ponto de ônibus" });
+    expect(screen.getByRole("group", { name: "popup do prédio selecionado" })).toBeInTheDocument();
+
+    await userEvent.click(within(map()).getByRole("button", { name: "Ponto de ônibus" }));
+    expect(screen.getByTestId("search")).toHaveTextContent("?local=pl1");
+    expect(screen.queryByRole("group", { name: "popup do prédio selecionado" })).toBeNull();
+    expect(placeCard()).toBeInTheDocument();
+
+    await selectBlocoCI();
+    expect(screen.getByTestId("search")).toHaveTextContent("?predio=b1");
+    expect(screen.queryByRole("group", { name: "popup do local selecionado" })).toBeNull();
+  });
+
+  it("clears the place selection on a click on the empty map", async () => {
+    placesApi();
+
+    renderPage("/predios?local=pl1");
+    await screen.findByRole("group", { name: "popup do local selecionado" });
+    await userEvent.click(screen.getByRole("button", { name: "clicar fora dos prédios" }));
+
+    expect(screen.queryByRole("group", { name: "popup do local selecionado" })).toBeNull();
+    expect(screen.getByTestId("search")).toHaveTextContent("");
+  });
+
+  it("turns the pin tool off when a place is selected", async () => {
+    placesApi();
+
+    renderPage();
+    await userEvent.click(pinButton());
+    await userEvent.click(await within(map()).findByRole("button", { name: "Ponto de ônibus" }));
+
+    expect(pinButton()).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("search")).toHaveTextContent("?local=pl1");
   });
 });

@@ -510,6 +510,7 @@ export const strings = {
   placesPinTool: "Marcar local",
   placesPinHint: "Clique no mapa para marcar o local.",
   placesNewTitle: "Novo local",
+  placesPosition: "Posição: {lat}, {lng}",
   placesFieldName: "Nome do local",
   placesFieldService: "Serviço",
   placesCreateError: "Não foi possível criar o local. Tente novamente.",

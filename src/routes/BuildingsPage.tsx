@@ -1,14 +1,18 @@
-import { Pencil, SquareDashed } from "lucide-react";
+import { MapPin, Pencil, SquareDashed } from "lucide-react";
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
 
 import type { components } from "@/api/generated/schema";
 import { BuildingEditDialog } from "@/components/buildings/BuildingEditDialog";
 import { BuildingSummaryCard } from "@/components/buildings/BuildingSummaryCard";
 import { CampusBuildingsMap } from "@/components/buildings/CampusBuildingsMap";
 import { NewBuildingForm } from "@/components/buildings/NewBuildingForm";
+import { NewPlaceDialog } from "@/components/buildings/NewPlaceDialog";
+import { PlaceSummaryCard } from "@/components/buildings/PlaceSummaryCard";
 import { RedrawOutlineForm } from "@/components/buildings/RedrawOutlineForm";
 import { useCampusBuildingMap } from "@/components/buildings/useCampusBuildingMap";
+import { useCampusPlaces } from "@/components/buildings/useCampusPlaces";
+import { useMapSelection } from "@/components/buildings/useMapSelection";
+import { usePlacePinning } from "@/components/buildings/usePlacePinning";
 import { Page, PageHeader, Panel } from "@/components/layout/Page";
 import { Field } from "@/components/layout/Registry";
 import { Button } from "@/components/ui/button";
@@ -20,19 +24,6 @@ import type { GeoPolygon } from "@/lib/osmBuildings";
 type BuildingOut = components["schemas"]["BuildingOut"];
 
 const byName = (a: BuildingOut, b: BuildingOut) => a.name.localeCompare(b.name, "pt-BR");
-
-// The selected building lives in the address (`?predio=`), so a link — and the old
-// /predios/:id pages, now redirects — lands with it open.
-function useSelectedBuilding() {
-  const [params, setParams] = useSearchParams();
-
-  return {
-    selectedId: params.get("predio"),
-    select: (buildingId: string | null) => {
-      setParams(buildingId === null ? {} : { predio: buildingId });
-    },
-  };
-}
 
 // Polygons are SVG paths with no accessible name: this picker is the keyboard and screen reader
 // route to the same buildings.
@@ -124,7 +115,12 @@ function useRectangleDrawing() {
 
 type Drawing = ReturnType<typeof useRectangleDrawing>;
 
-function drawingHint(t: ReturnType<typeof useTranslation>["t"], drawing: Drawing): string {
+type Pinning = ReturnType<typeof usePlacePinning>;
+
+function toolHint(t: ReturnType<typeof useTranslation>["t"], drawing: Drawing, pin: Pinning) {
+  if (pin.pinning) {
+    return t("placesPinHint");
+  }
   if (drawing.redrawFor !== null) {
     return t("redrawHint").replace("{name}", drawing.redrawFor.name);
   }
@@ -186,13 +182,25 @@ function DraftForm(props: { drawing: Drawing; onCreated: (id: string) => void })
  * registers a new one. All creating and editing happens in Dialogs and map popups. */
 export function BuildingsPage() {
   const { t } = useTranslation();
-  const { selectedId, select } = useSelectedBuilding();
+  const { buildingId: selectedId, placeId, selectBuilding, selectPlace } = useMapSelection();
   const { buildings, mapBuildings, offMap, countsOf } = useCampusBuildingMap();
+  const { places, servicesOf } = useCampusPlaces();
   const drawing = useRectangleDrawing();
+  const pin = usePlacePinning();
   const [editing, setEditing] = useState(false);
   const selected = buildings.find((building) => building.id === selectedId);
   const onMap = mapBuildings.some((building) => building.id === selectedId);
+  const selectedPlace = places.find((place) => place.id === placeId);
   const busyDrawing = drawing.drawing || drawing.draft !== null;
+  // Choosing anything on the map ends the pin tool: the click was meant for the selection.
+  const select = (buildingId: string | null) => {
+    pin.stop();
+    selectBuilding(buildingId);
+  };
+  const selectPlaceOnMap = (id: string | null) => {
+    pin.stop();
+    selectPlace(id);
+  };
 
   return (
     <Page width="wide">
@@ -204,6 +212,7 @@ export function BuildingsPage() {
             type="button"
             aria-pressed={drawing.drawing && drawing.redrawFor === null}
             onClick={() => {
+              pin.stop();
               select(null);
               drawing.toggle();
             }}
@@ -211,9 +220,23 @@ export function BuildingsPage() {
             <SquareDashed aria-hidden="true" />
             {t(drawing.drawing ? "buildingsDrawingStop" : "buildingsDrawRectangle")}
           </Button>
+          <Button
+            type="button"
+            aria-pressed={pin.pinning}
+            onClick={() => {
+              drawing.stop();
+              if (!pin.pinning) {
+                selectPlace(null);
+              }
+              pin.toggle();
+            }}
+          >
+            <MapPin aria-hidden="true" />
+            {t("placesPinTool")}
+          </Button>
         </div>
         <p aria-live="polite" className="text-muted-foreground px-1 text-sm">
-          {drawingHint(t, drawing)}
+          {toolHint(t, drawing, pin)}
         </p>
         <CampusBuildingsMap
           buildings={mapBuildings}
@@ -237,9 +260,27 @@ export function BuildingsPage() {
           draft={drawing.draft}
           onDiscardDraft={drawing.discard}
           draftForm={<DraftForm drawing={drawing} onCreated={select} />}
+          places={places}
+          selectedPlaceId={placeId}
+          onSelectPlace={selectPlaceOnMap}
+          selectedPlaceCard={
+            selectedPlace === undefined || busyDrawing ? undefined : (
+              <PlaceSummaryCard
+                name={selectedPlace.name}
+                servicesCount={servicesOf(selectedPlace.id)}
+              />
+            )
+          }
+          pinning={pin.pinning}
+          onPinned={pin.place}
+          onExitPinning={pin.stop}
+          draftPin={pin.draft}
         />
         <OffMapBuildings buildings={offMap} onSelect={select} />
       </Panel>
+      {pin.draft !== null && (
+        <NewPlaceDialog position={pin.draft} onClose={pin.discard} onCreated={selectPlaceOnMap} />
+      )}
       {selected !== undefined && !onMap && (
         <OffMapEditBar
           building={selected}
