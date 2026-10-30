@@ -157,14 +157,19 @@ test("Eventos was removed: no menu entry, no page, no event fields on rooms", as
   await api.dispose();
 
   await page.goto(`/predios?predio=${site.building.id}`);
-  // Points are made through rooms now: the room dialog asks for a name and Limpeza, nothing more.
+  // Checked before the dialog opens: behind a modal the page is aria-hidden and these would pass blindly.
+  await expect(page.getByRole("link", { name: "Eventos", exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Mostrar arquivados")).toHaveCount(0);
+  // Points are made through rooms now, in the building's dialog: a name and Limpeza, nothing more.
+  await page
+    .locator(".leaflet-popup")
+    .getByRole("button", { name: `Editar ${site.building.name}` })
+    .click();
   await page.getByRole("button", { name: "Nova sala" }).click();
   const points = page.getByRole("dialog", { name: "Nova sala" });
   await expect(points.getByLabel("Nome da sala (opcional)")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Eventos", exact: true })).toHaveCount(0);
   await expect(points.getByLabel("Tipo", { exact: true })).toHaveCount(0);
   await expect(points.getByLabel("Evento")).toHaveCount(0);
-  await expect(page.getByLabel("Mostrar arquivados")).toHaveCount(0);
 
   await page.goto("/eventos");
   await expect(page.getByRole("heading", { name: "Página não encontrada" })).toBeVisible();

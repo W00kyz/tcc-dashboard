@@ -99,7 +99,6 @@ const map = () => screen.getByRole("region", { name: "mapa dos prédios" });
 const selectBlocoCI = async () => {
   await userEvent.click(await within(map()).findByRole("button", { name: "Bloco CI" }));
 };
-const roomsPanel = () => screen.getByRole("region", { name: /Andares e salas/ });
 
 describe("BuildingsPage", () => {
   afterEach(() => {
@@ -112,11 +111,10 @@ describe("BuildingsPage", () => {
     renderPage();
 
     expect(await within(map()).findByRole("button", { name: "Bloco CI" })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: /Andares e salas/ })).toBeNull();
     expect(screen.queryByRole("group", { name: "popup do prédio selecionado" })).toBeNull();
   });
 
-  it("selecting a building shows its card on the map and its floors below", async () => {
+  it("selecting a building shows its card on the map; its floors are in the edit dialog", async () => {
     campusApi();
 
     renderPage();
@@ -126,10 +124,14 @@ describe("BuildingsPage", () => {
     expect(within(card).getByText("Bloco CI")).toBeInTheDocument();
     expect(await within(card).findByText("2 andares · 1 ponto")).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Editar Bloco CI" })).toBeInTheDocument();
-    const floors = await within(roomsPanel()).findAllByRole("group");
-    expect(floors.map((floor) => floor.getAttribute("aria-label"))).toEqual(["Térreo", "1º andar"]);
-    expect(screen.getByRole("region", { name: "Andares e salas · Bloco CI" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /Andares e salas/ })).toBeNull();
     expect(screen.getByTestId("search")).toHaveTextContent("?predio=b1");
+
+    await userEvent.click(within(card).getByRole("button", { name: "Editar Bloco CI" }));
+    const dialog = screen.getByRole("dialog", { name: "Editar prédio" });
+    const panel = within(dialog).getByRole("region", { name: "Andares e salas · Bloco CI" });
+    const floors = await within(panel).findAllByRole("group");
+    expect(floors.map((floor) => floor.getAttribute("aria-label"))).toEqual(["Térreo", "1º andar"]);
   });
 
   it("clicking outside the buildings clears the selection", async () => {
@@ -139,7 +141,6 @@ describe("BuildingsPage", () => {
     await selectBlocoCI();
     await userEvent.click(within(map()).getByRole("button", { name: "clicar fora dos prédios" }));
 
-    expect(screen.queryByRole("region", { name: /Andares e salas/ })).toBeNull();
     expect(screen.queryByRole("group", { name: "popup do prédio selecionado" })).toBeNull();
   });
 
@@ -148,11 +149,11 @@ describe("BuildingsPage", () => {
 
     renderPage("/predios?predio=b1");
 
-    const panel = await screen.findByRole("region", { name: /Andares e salas/ });
-    expect(await within(panel).findByRole("group", { name: "Térreo" })).toBeInTheDocument();
+    const card = await screen.findByRole("group", { name: "popup do prédio selecionado" });
+    expect(within(card).getByText("Bloco CI")).toBeInTheDocument();
   });
 
-  it("the pencil opens the building's edit dialog with its data but no floors", async () => {
+  it("the pencil opens the building's edit dialog with its data and its floors", async () => {
     const api = campusApi().on("PATCH", "/buildings/b1", building("b1", "Bloco CI 2", SQUARE));
 
     renderPage();
@@ -160,8 +161,7 @@ describe("BuildingsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Editar Bloco CI" }));
 
     const dialog = screen.getByRole("dialog", { name: "Editar prédio" });
-    expect(within(dialog).queryByRole("heading", { name: /Andares/ })).toBeNull();
-    expect(within(dialog).queryByText("1º andar")).toBeNull();
+    expect(await within(dialog).findByRole("group", { name: "1º andar" })).toBeInTheDocument();
     const name = within(dialog).getByLabelText("Nome", { selector: "#building-name" });
     await userEvent.clear(name);
     await userEvent.type(name, "Bloco CI 2");
@@ -178,7 +178,8 @@ describe("BuildingsPage", () => {
   it("removes a building from its dialog and clears the selection", async () => {
     const api = campusApi()
       .on("GET", "/buildings/b1/deletion-impact", IMPACT)
-      .on("DELETE", "/buildings/b1", null, 204);
+      // A 204 cannot carry a body: FakeApi lets a ready Response through for it.
+      .onRequest("DELETE", "/buildings/b1", () => new Response(null, { status: 204 }));
 
     renderPage();
     await selectBlocoCI();
@@ -192,8 +193,9 @@ describe("BuildingsPage", () => {
       expect(api.sent("DELETE", "/buildings/b1")).toHaveLength(1);
     });
     await waitFor(() => {
-      expect(screen.queryByRole("region", { name: /Andares e salas/ })).toBeNull();
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
+    expect(screen.queryByRole("group", { name: "popup do prédio selecionado" })).toBeNull();
   });
 
   it("redraws a building's outline with the rectangle and confirms it in the popup", async () => {
@@ -295,10 +297,14 @@ describe("BuildingsPage", () => {
     const offMap = await screen.findByText(/ainda sem área no mapa/);
     await userEvent.click(within(offMap).getByRole("button", { name: "Bloco CEEI" }));
     expect(screen.getByTestId("search")).toHaveTextContent("?predio=b2");
-    // A building off the map has no card to edit it from: the panel carries the pencil.
-    expect(
-      await within(roomsPanel()).findByRole("button", { name: "Editar Bloco CEEI" }),
-    ).toBeInTheDocument();
+    // A building off the map has no card to edit it from: a bar under the map carries the pencil.
+    const pencils = await screen.findAllByRole("button", { name: "Editar Bloco CEEI" });
+    const barPencil = pencils.find((pencil) => !map().contains(pencil));
+    if (barPencil === undefined) {
+      throw new Error("No edit button outside the map for Bloco CEEI; expected the off-map bar's.");
+    }
+    await userEvent.click(barPencil);
+    expect(screen.getByRole("dialog", { name: "Editar prédio" })).toBeInTheDocument();
   });
 
   // Regression: an expired token's 401 on /floors used to read as "no floors", so every building

@@ -1,10 +1,9 @@
-import { SquareDashed } from "lucide-react";
+import { Pencil, SquareDashed } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import type { components } from "@/api/generated/schema";
 import { BuildingEditDialog } from "@/components/buildings/BuildingEditDialog";
-import { BuildingRoomsPanel } from "@/components/buildings/BuildingRoomsPanel";
 import { BuildingSummaryCard } from "@/components/buildings/BuildingSummaryCard";
 import { CampusBuildingsMap } from "@/components/buildings/CampusBuildingsMap";
 import { NewBuildingForm } from "@/components/buildings/NewBuildingForm";
@@ -133,6 +132,27 @@ function drawingHint(t: ReturnType<typeof useTranslation>["t"], drawing: Drawing
   return t(drawing.drawing ? "buildingsDrawingHint" : "buildingsMapHint");
 }
 
+/** A building without an outline has no card on the map to open its edit Dialog from. */
+function OffMapEditBar(props: { building: BuildingOut; onEdit: () => void }) {
+  const { t } = useTranslation();
+  const { building } = props;
+
+  return (
+    <Panel className="flex flex-wrap items-center justify-between gap-3 p-3">
+      <span className="text-foreground text-sm font-semibold">{building.name}</span>
+      <Button
+        type="button"
+        variant="outline"
+        aria-label={t("registryEditItem").replace("{name}", building.name)}
+        onClick={props.onEdit}
+      >
+        <Pencil aria-hidden="true" />
+        {t("registryEdit")}
+      </Button>
+    </Panel>
+  );
+}
+
 function DraftForm(props: { drawing: Drawing; onCreated: (id: string) => void }) {
   const { drawing } = props;
   if (drawing.draft === null) {
@@ -162,7 +182,7 @@ function DraftForm(props: { drawing: Drawing; onCreated: (id: string) => void })
 }
 
 /** Every building on campus, on the map. Clicking one opens its card (name, floors, points and
- * the pencil to its edit Dialog) and lists its floors below the map; drawing a rectangle
+ * the pencil to its edit Dialog, where its floors and rooms are managed); drawing a rectangle
  * registers a new one. All creating and editing happens in Dialogs and map popups. */
 export function BuildingsPage() {
   const { t } = useTranslation();
@@ -220,17 +240,12 @@ export function BuildingsPage() {
         />
         <OffMapBuildings buildings={offMap} onSelect={select} />
       </Panel>
-      {selected !== undefined && (
-        <BuildingRoomsPanel
-          key={selected.id}
+      {selected !== undefined && !onMap && (
+        <OffMapEditBar
           building={selected}
-          onEditBuilding={
-            onMap
-              ? undefined
-              : () => {
-                  setEditing(true);
-                }
-          }
+          onEdit={() => {
+            setEditing(true);
+          }}
         />
       )}
       {selected !== undefined && (

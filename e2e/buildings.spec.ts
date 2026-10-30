@@ -101,9 +101,14 @@ test("a building is drawn as a rectangle and, once registered, is selected with 
   await expect(card(page).getByText(name)).toBeVisible();
   // A new building is born with its Térreo, so it already has one floor and no rooms.
   await expect(card(page).getByText("1 andar · 0 pontos")).toBeVisible();
-  const panel = page.getByRole("region", { name: `Andares e salas · ${name}` });
-  await expect(panel).toBeVisible();
+  await card(page)
+    .getByRole("button", { name: `Editar ${name}` })
+    .click();
+  const panel = page
+    .getByRole("dialog", { name: "Editar prédio" })
+    .getByRole("region", { name: `Andares e salas · ${name}` });
   await expect(panel.getByRole("group", { name: "Térreo", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   const created = await buildingNamed(name);
   expect(page.url()).toContain(`predio=${created.id}`);
   expect(created.footprint_source).toBe("drawn");
@@ -121,14 +126,14 @@ test("closing the drawing's popup throws the drawing away", async ({ page }) => 
   await expect(page.locator(".leaflet-popup")).toHaveCount(0);
 });
 
-test("nothing shows below the map until a building is selected", async ({ page }) => {
+test("no floors section sits under the map: it lives in the building dialog", async ({ page }) => {
   await page.goto("/predios");
   await expect(page.getByRole("region", { name: MAP })).toBeVisible();
 
   await expect(page.getByRole("region", { name: /^Andares e salas/ })).toHaveCount(0);
 });
 
-test("the pencil opens the building's dialog to rename it; QR codes live on the floor", async ({
+test("the pencil opens the building's dialog to rename it and to issue a floor's QR code", async ({
   page,
 }) => {
   page.on("dialog", (dialog) => void dialog.accept("E2E: primeira impressão"));
@@ -145,18 +150,14 @@ test("the pencil opens the building's dialog to rename it; QR codes live on the 
   await nameField.fill(`${site.building.name} editado`);
   await dialog.getByRole("button", { name: "Salvar alterações" }).first().click();
   await expect(dialog.getByText("Dados do prédio salvos.")).toBeVisible();
-  // The dialog no longer lists floors: they, and their QR codes, are managed under the map.
-  await expect(dialog.getByText("Andares e QR Codes")).toHaveCount(0);
-  await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
-
-  const floor = page.getByRole("group", { name: site.floor.label, exact: true });
+  // Floors, and their QR codes, are managed in the same dialog.
+  const floor = dialog.getByRole("group", { name: site.floor.label, exact: true });
   await floor.getByRole("button", { name: "Gerar QR" }).click();
   await expect(floor.getByRole("status").filter({ hasText: "QR Code gerado" })).toBeVisible();
   await expect(floor.getByRole("button", { name: "Revogar QR" })).toBeEnabled();
 });
 
-test("floors and rooms are managed under the map: rooms, services, rename and removal", async ({
+test("floors and rooms are managed in the building dialog: rooms, services, rename, removal", async ({
   page,
 }) => {
   const api = await SeedApi.signIn("manager");
@@ -164,7 +165,12 @@ test("floors and rooms are managed under the map: rooms, services, rename and re
   const namedRoom = `E2E Auditório ${uniqueSuffix()}`;
   const extraService = site.company?.serviceType.name ?? "";
   await openBuildingFromAddress(page, site.building.id);
-  const panel = page.getByRole("region", { name: `Andares e salas · ${site.building.name}` });
+  await card(page)
+    .getByRole("button", { name: `Editar ${site.building.name}` })
+    .click();
+  const panel = page
+    .getByRole("dialog", { name: "Editar prédio" })
+    .getByRole("region", { name: `Andares e salas · ${site.building.name}` });
   const terreo = panel.getByRole("group", { name: "Térreo", exact: true });
   const room = (name: string) => terreo.getByRole("group", { name, exact: true });
 
@@ -284,9 +290,7 @@ test("old building addresses land on the map with the building selected", async 
 
   await page.goto(`/predios/${site.building.id}/andares`);
   await expect(page).toHaveURL(new RegExp(`/predios\\?predio=${site.building.id}$`));
-  await expect(
-    page.getByRole("region", { name: `Andares e salas · ${site.building.name}` }),
-  ).toBeVisible();
+  await expect(card(page).getByText(site.building.name)).toBeVisible();
 
   await page.goto("/pontos-de-servico");
   await expect(page).toHaveURL(/\/predios$/);

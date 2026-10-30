@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pencil } from "lucide-react";
 
 import type { components } from "@/api/generated/schema";
 import { FloorBlock } from "@/components/buildings/FloorBlock";
@@ -13,15 +12,12 @@ import {
 import { RegistryNewButton } from "@/components/layout/Registry";
 import { assertSaved } from "@/components/layout/registryForm";
 import { EmptyState, ErrorMessage, LoadingMessage } from "@/components/layout/StateMessages";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
 
 type BuildingOut = components["schemas"]["BuildingOut"];
 
 interface BuildingRoomsPanelProps {
   building: BuildingOut;
-  /** Shown when the building is not on the map (no outline), where its card cannot be. */
-  onEditBuilding?: () => void;
 }
 
 function useCreateFloor(buildingId: string) {
@@ -41,9 +37,9 @@ function useCreateFloor(buildingId: string) {
   });
 }
 
-/** The selected building's floors, under the map: one block per floor, and "Novo andar".
- * @example <BuildingRoomsPanel building={selected} /> */
-export function BuildingRoomsPanel({ building, onEditBuilding }: BuildingRoomsPanelProps) {
+/** A building's floors and rooms, inside its edit Dialog: one block per floor, and "Novo andar".
+ * @example <BuildingRoomsPanel building={building} /> */
+export function BuildingRoomsPanel({ building }: BuildingRoomsPanelProps) {
   const { t } = useTranslation();
   const floors = useBuildingFloors(building.id);
   const rooms = useBuildingRooms(building.id);
@@ -62,25 +58,12 @@ export function BuildingRoomsPanel({ building, onEditBuilding }: BuildingRoomsPa
         <h2 id="rooms-panel-heading" className="text-foreground text-base font-bold">
           {title}
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {onEditBuilding !== undefined && (
-            <Button
-              type="button"
-              variant="outline"
-              aria-label={t("registryEditItem").replace("{name}", building.name)}
-              onClick={onEditBuilding}
-            >
-              <Pencil aria-hidden="true" />
-              {t("registryEdit")}
-            </Button>
-          )}
-          <RegistryNewButton
-            label={t("floorsNew")}
-            onClick={() => {
-              createFloor.mutate();
-            }}
-          />
-        </div>
+        <RegistryNewButton
+          label={t("floorsNew")}
+          onClick={() => {
+            createFloor.mutate();
+          }}
+        />
       </div>
       {createFloor.isError && <ErrorMessage>{t("floorsCreateError")}</ErrorMessage>}
       {queries.some((query) => query.isError) ? (

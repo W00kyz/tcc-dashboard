@@ -29,13 +29,13 @@ function panelApi(floors: unknown[] = FLOORS) {
     .install();
 }
 
-function renderPanel(onEditBuilding?: () => void) {
+function renderPanel() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BuildingRoomsPanel building={BUILDING} onEditBuilding={onEditBuilding} />
+        <BuildingRoomsPanel building={BUILDING} />
       </AuthProvider>
     </QueryClientProvider>,
   );
@@ -135,17 +135,5 @@ describe("BuildingRoomsPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Novo andar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível cadastrar");
-  });
-
-  it("offers to edit the building only when the page asks for it", async () => {
-    panelApi();
-    let edited = 0;
-
-    renderPanel(() => {
-      edited += 1;
-    });
-    await userEvent.click(screen.getByRole("button", { name: "Editar Bloco CI" }));
-
-    expect(edited).toBe(1);
   });
 });
