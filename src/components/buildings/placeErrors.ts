@@ -13,7 +13,7 @@ export class OutsideCampusError extends Error {
 /** True for a pin off the campus: the API answers {"detail": {"code": "OUTSIDE_CAMPUS"}}.
  * @example if (response.status === 422 && isOutsideCampus(error)) throw new OutsideCampusError(...) */
 export function isOutsideCampus(error: unknown): boolean {
-  const detail = (error as { detail?: { code?: string } } | undefined)?.detail;
+  const detail = (error as { detail?: { code?: string } | null } | undefined)?.detail;
 
-  return typeof detail === "object" && detail.code === OUTSIDE_CAMPUS;
+  return typeof detail === "object" && detail !== null && detail.code === OUTSIDE_CAMPUS;
 }
