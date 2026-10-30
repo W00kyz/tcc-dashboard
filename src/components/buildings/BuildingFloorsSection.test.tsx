@@ -42,24 +42,44 @@ describe("BuildingFloorsSection", () => {
     expect(api.sent("GET", "/floors")[0]?.query.get("building_id")).toBe("b1");
   });
 
-  it("creates a floor in this building", async () => {
-    const api = floorsApi().on(
-      "POST",
-      "/floors",
-      { id: "f2", building_id: "b1", label: "1º" },
-      201,
-    );
+  it("creates a floor in this building without asking for a label", async () => {
+    const api = floorsApi().on("POST", "/floors", { id: "f2", building_id: "b1", label: "1" }, 201);
 
     renderSection();
     await userEvent.click(screen.getByRole("button", { name: "Novo andar" }));
-    await userEvent.type(screen.getByLabelText("Rótulo do andar"), "1º andar");
-    await userEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
 
     await waitFor(() => {
-      expect(api.sent("POST", "/floors")[0]?.body).toEqual({
-        building_id: "b1",
-        label: "1º andar",
-      });
+      expect(api.sent("POST", "/floors")[0]?.body).toEqual({ building_id: "b1" });
+    });
+    expect(screen.queryByLabelText("Rótulo do andar")).not.toBeInTheDocument();
+  });
+
+  it("says when the floor could not be created", async () => {
+    floorsApi().on("POST", "/floors", { detail: "boom" }, 500);
+
+    renderSection();
+    await userEvent.click(screen.getByRole("button", { name: "Novo andar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível cadastrar");
+  });
+
+  it("renames a floor", async () => {
+    const api = floorsApi().on("PATCH", "/floors/f1", {
+      id: "f1",
+      building_id: "b1",
+      label: "Subsolo",
+    });
+
+    renderSection();
+    await screen.findByText("Térreo");
+    await userEvent.click(screen.getByRole("button", { name: /Editar/ }));
+    const input = screen.getByLabelText("Rótulo do andar");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Subsolo");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => {
+      expect(api.sent("PATCH", "/floors/f1")[0]?.body).toEqual({ label: "Subsolo" });
     });
   });
 

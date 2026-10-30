@@ -2393,7 +2393,7 @@ export interface components {
        */
       building_id: string;
       /** Label */
-      label: string;
+      label?: string | null;
     };
     /** FloorOut */
     FloorOut: {
@@ -2829,6 +2829,11 @@ export interface components {
        * Format: uuid
        */
       service_point_id: string;
+      /**
+       * Floor Id
+       * Format: uuid
+       */
+      floor_id: string;
       /** Service Point Name */
       service_point_name: string;
       /** Floor Label */

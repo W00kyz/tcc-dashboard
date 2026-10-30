@@ -41,29 +41,35 @@ export function BuildingFloorsSection({ buildingId }: { buildingId: string }) {
   // the page can show a real message instead.
   const [pdfDownloadError, setPdfDownloadError] = useState<string | null>(null);
 
+  // The dialog only renames: a new floor takes the next label (Térreo, 1, 2…) from the backend.
   const dialog = useRegistryDialog({ label: "" }, ["label"]);
   const { form } = dialog;
+  const refreshFloors = () => {
+    // Prefix match: the board's floor lists and the point form's floor picker refresh too.
+    void queryClient.invalidateQueries({ queryKey: ["floors"] });
+  };
+  const create = useMutation({
+    mutationFn: async () => {
+      const { response } = await client.POST("/floors", { body: { building_id: buildingId } });
+      assertSaved(response, "POST /floors");
+    },
+    onSuccess: refreshFloors,
+  });
   const save = useMutation({
     mutationFn: async () => {
-      const label = form.values.label.trim();
-      if (form.editingId !== null) {
-        const { response } = await client.PATCH("/floors/{floor_id}", {
-          params: { path: { floor_id: form.editingId } },
-          body: { label },
-        });
-        assertSaved(response, `PATCH /floors/${form.editingId}`);
-
+      const editingId = form.editingId;
+      if (editingId === null) {
         return;
       }
-      const { response } = await client.POST("/floors", {
-        body: { building_id: buildingId, label },
+      const { response } = await client.PATCH("/floors/{floor_id}", {
+        params: { path: { floor_id: editingId } },
+        body: { label: form.values.label.trim() },
       });
-      assertSaved(response, "POST /floors");
+      assertSaved(response, `PATCH /floors/${editingId}`);
     },
     onSuccess: () => {
       dialog.close();
-      // Prefix match: the board's floor lists and the point form's floor picker refresh too.
-      void queryClient.invalidateQueries({ queryKey: ["floors"] });
+      refreshFloors();
     },
   });
 
@@ -169,12 +175,12 @@ export function BuildingFloorsSection({ buildingId }: { buildingId: string }) {
         <RegistryNewButton
           label={t("floorsNew")}
           onClick={() => {
-            save.reset();
-            dialog.openNew();
+            create.mutate();
           }}
         />
       }
     >
+      {create.isError && <ErrorMessage>{t("floorsCreateError")}</ErrorMessage>}
       {pdfDownloadError !== null && <ErrorMessage>{pdfDownloadError}</ErrorMessage>}
       {/* The generate/revoke buttons used to give no sign that anything happened. */}
       {generateQr.isSuccess && (
@@ -246,7 +252,7 @@ export function BuildingFloorsSection({ buildingId }: { buildingId: string }) {
       <RegistryDialog
         dialog={dialog}
         save={save}
-        createLabel={t("floorsSubmitCreate")}
+        createLabel={t("registrySubmitEdit")}
         fieldLabels={{ label: t("floorsFieldLabel") }}
         onSubmit={() => {
           save.mutate();
