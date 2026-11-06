@@ -34,6 +34,7 @@ export const settingsSchema = z
     outside_campus_release_minutes: releaseMinutes(),
     location_silence_warning_minutes: releaseMinutes(),
     location_silence_release_minutes: releaseMinutes(),
+    workday_start_time: z.string().min(1, strings.settingsWorkdayStartRequired),
     workday_end_time: z.string().min(1, strings.settingsWorkdayEndRequired),
     service_weekdays: z.array(z.number()).min(1, strings.settingsServiceWeekdaysRequired),
     appeal_window_hours: intField(1, 720, strings.settingsAppealWindowRange),
@@ -46,6 +47,15 @@ export const settingsSchema = z
     message: strings.settingsLongitudeOrder,
     path: ["campus_min_lng"],
   })
+  // Both are zero-padded "HH:MM" from the `time` input, so string order is clock order. An empty
+  // field already has its own message: the order is only judged once both are filled.
+  .refine(
+    (values) =>
+      values.workday_start_time === "" ||
+      values.workday_end_time === "" ||
+      values.workday_start_time < values.workday_end_time,
+    { message: strings.settingsWorkdayOrder, path: ["workday_start_time"] },
+  )
   // The app warns the worker before their points are released, never after.
   .refine(
     (values) => values.location_silence_release_minutes > values.location_silence_warning_minutes,
@@ -55,7 +65,7 @@ export const settingsSchema = z
 export type SettingsFormValues = z.infer<typeof settingsSchema>;
 export type NumericSettingName = Exclude<
   keyof SettingsFormValues,
-  "workday_end_time" | "service_weekdays"
+  "workday_start_time" | "workday_end_time" | "service_weekdays"
 >;
 
 export interface NumericFieldDescriptor {
@@ -121,24 +131,29 @@ export const WEEKDAY_LABEL_KEYS: StringKey[] = [
   "settingsWeekdaySun",
 ];
 
-/** The stored settings as form values: the `time` input only takes "HH:MM".
+/** The stored settings as form values: the `time` inputs only take "HH:MM".
  * @example formValuesFrom(settings).workday_end_time // "17:00" */
 export function formValuesFrom(settings: Settings): SettingsFormValues {
   // `updated_at` is the one field the form does not edit; it must not ride along into the PUT.
   const values: Omit<Settings, "updated_at"> & { updated_at?: string | null } = { ...settings };
   delete values.updated_at;
 
-  return { ...values, workday_end_time: settings.workday_end_time.slice(0, 5) };
+  return {
+    ...values,
+    workday_start_time: settings.workday_start_time.slice(0, 5),
+    workday_end_time: settings.workday_end_time.slice(0, 5),
+  };
 }
 
-/** The form values as the PUT body, weekdays in calendar order and the end time with seconds.
- * @example settingsBodyFrom(values).workday_end_time // "17:00:00" */
+/** The form values as the PUT body, weekdays in calendar order and the times with seconds.
+ * @example settingsBodyFrom(values).workday_start_time // "07:00:00" */
 export function settingsBodyFrom(values: SettingsFormValues): SettingsUpdate {
-  const time = values.workday_end_time;
+  const withSeconds = (time: string) => (time.length === 5 ? `${time}:00` : time);
 
   return {
     ...values,
-    workday_end_time: time.length === 5 ? `${time}:00` : time,
+    workday_start_time: withSeconds(values.workday_start_time),
+    workday_end_time: withSeconds(values.workday_end_time),
     service_weekdays: [...values.service_weekdays].sort((a, b) => a - b),
   };
 }

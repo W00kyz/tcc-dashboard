@@ -2773,9 +2773,23 @@ export interface components {
     /**
      * MyDayOut
      * @description The worker's day for the app: today's route, if any, and the location-silence limits it
-     *     warns the worker about (spec §7.3).
+     *     warns the worker about (spec §7.3). `server_time` is the server clock, so the app counts down to
+     *     `start_opens_at` without trusting the device clock; `workday_over` is true only on a service
+     *     day after the workday ended.
+     *
+     *     Example: ``{"server_time": "2026-10-20T09:56:00Z", "start_opens_at": "2026-10-20T10:00:00Z",
+     *     "workday_over": false, ...}``
      */
     MyDayOut: {
+      /**
+       * Server Time
+       * Format: date-time
+       */
+      server_time: string;
+      /** Start Opens At */
+      start_opens_at: string | null;
+      /** Workday Over */
+      workday_over: boolean;
       /** Service Day */
       service_day: boolean;
       route: components["schemas"]["RouteOut"] | null;
@@ -3351,6 +3365,11 @@ export interface components {
       /** Location Silence Release Minutes */
       location_silence_release_minutes: number;
       /**
+       * Workday Start Time
+       * Format: time
+       */
+      workday_start_time: string;
+      /**
        * Workday End Time
        * Format: time
        */
@@ -3388,6 +3407,8 @@ export interface components {
       location_silence_warning_minutes?: number | null;
       /** Location Silence Release Minutes */
       location_silence_release_minutes?: number | null;
+      /** Workday Start Time */
+      workday_start_time?: string | null;
       /** Workday End Time */
       workday_end_time?: string | null;
       /** Service Weekdays */

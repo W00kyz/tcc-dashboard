@@ -122,12 +122,29 @@ function ServiceWeekdays({ form, onEdit }: FieldProps) {
 
 function WorkdaySection({ form, onEdit }: FieldProps) {
   const { t } = useTranslation();
+  const registeredStart = form.register("workday_start_time");
+  const startError = form.formState.errors.workday_start_time;
   const registered = form.register("workday_end_time");
   const fieldError = form.formState.errors.workday_end_time;
 
   return (
     <fieldset className="space-y-4">
       <legend className={LEGEND_CLASS}>{t("settingsSectionWorkday")}</legend>
+      <div className="space-y-1.5">
+        <Label htmlFor="settings-workday_start_time">{t("settingsWorkdayStartLabel")}</Label>
+        <Input
+          id="settings-workday_start_time"
+          type="time"
+          className="w-40"
+          {...registeredStart}
+          onChange={(changeEvent) => {
+            onEdit();
+            void registeredStart.onChange(changeEvent);
+          }}
+        />
+        <p className="text-muted-foreground text-sm">{t("settingsWorkdayStartHint")}</p>
+        {startError && <FieldError>{startError.message}</FieldError>}
+      </div>
       <div className="space-y-1.5">
         <Label htmlFor="settings-workday_end_time">{t("settingsWorkdayEndLabel")}</Label>
         <Input

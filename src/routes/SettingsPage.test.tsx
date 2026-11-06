@@ -23,6 +23,7 @@ const SETTINGS = {
   outside_campus_release_minutes: 10,
   location_silence_warning_minutes: 30,
   location_silence_release_minutes: 45,
+  workday_start_time: "07:00:00",
   workday_end_time: "17:00:00",
   service_weekdays: [0, 1, 2, 3, 4],
   appeal_window_hours: 48,
@@ -100,6 +101,7 @@ describe("SettingsPage", () => {
       30,
     );
     expect(screen.getByLabelText("Minutos sem localização até liberar os pontos")).toHaveValue(45);
+    expect(screen.getByLabelText("Início do expediente")).toHaveValue("07:00");
     expect(screen.getByLabelText("Fim do expediente")).toHaveValue("17:00");
     expect(screen.getByLabelText("Prazo para recorrer (horas)")).toHaveValue(48);
     for (const day of ["Seg", "Ter", "Qua", "Qui", "Sex"]) {
@@ -159,6 +161,33 @@ describe("SettingsPage", () => {
     expect(putRequests(fakeFetch)).toHaveLength(0);
   });
 
+  it("blocks submit when the workday start is cleared", async () => {
+    const fakeFetch = makeFakeFetch();
+    renderSettingsPage(fakeFetch);
+    const input = await screen.findByLabelText("Início do expediente");
+
+    await userEvent.clear(input);
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(
+      await screen.findByText("Informe o horário de início do expediente."),
+    ).toBeInTheDocument();
+    expect(putRequests(fakeFetch)).toHaveLength(0);
+  });
+
+  it("blocks a workday that does not start before it ends", async () => {
+    const fakeFetch = makeFakeFetch({ workday_start_time: "18:00:00" });
+    renderSettingsPage(fakeFetch);
+    await screen.findByLabelText("Início do expediente");
+
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(
+      await screen.findByText("O início do expediente deve ser antes do fim."),
+    ).toBeInTheDocument();
+    expect(putRequests(fakeFetch)).toHaveLength(0);
+  });
+
   it("blocks submit when no service day is left", async () => {
     const fakeFetch = makeFakeFetch({ service_weekdays: [0] });
     renderSettingsPage(fakeFetch);
@@ -202,6 +231,7 @@ describe("SettingsPage", () => {
       outside_campus_release_minutes: 10,
       location_silence_warning_minutes: 30,
       location_silence_release_minutes: 45,
+      workday_start_time: "07:00:00",
       workday_end_time: "17:00:00",
       service_weekdays: [0, 1, 2, 3, 5],
       appeal_window_hours: 48,

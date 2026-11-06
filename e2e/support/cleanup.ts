@@ -89,20 +89,26 @@ export function markRunStart(): void {
   writeFileSync(SEED_ROWS_FILE, JSON.stringify(rows));
 }
 
-/** The run widens the settings to a service day all week (serviceDay.ts). Finding them already
- * widened means a killed run's snapshot was lost (e2e/.auth cleaned): taking them as the
+/** The run widens the settings to a service day all week, midnight to midnight (serviceDay.ts).
+ * Finding them already widened means a killed run's snapshot was lost (e2e/.auth cleaned): taking them as the
  * starting point would make the widening permanent, so stop and say how to recover. */
 function refuseWidenedSettings(settingsJson: string): void {
   const settings = JSON.parse(settingsJson) as {
     service_weekdays: number[];
+    workday_start_time: string;
     workday_end_time: string;
   };
-  if (settings.service_weekdays.length === 7 && settings.workday_end_time === "23:59:59") {
+  if (
+    settings.service_weekdays.length === 7 &&
+    settings.workday_start_time === "00:00:00" &&
+    settings.workday_end_time === "23:59:59"
+  ) {
     throw new Error(
-      `system_settings already has service_weekdays=${JSON.stringify(settings.service_weekdays)} ` +
-        `and workday_end_time="${settings.workday_end_time}", the e2e run's own service day: ` +
+      `system_settings already has service_weekdays=${JSON.stringify(settings.service_weekdays)}, ` +
+        `workday_start_time="${settings.workday_start_time}" and ` +
+        `workday_end_time="${settings.workday_end_time}", the e2e run's own service day: ` +
         "a killed run left them and its snapshot is gone. Put the real values back in " +
-        "Configurações (default Mon–Fri, 17:00) and run again.",
+        "Configurações (07:00–17:00, seg–sex) and run again.",
     );
   }
 }
